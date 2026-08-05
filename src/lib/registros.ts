@@ -6,6 +6,9 @@
 
 import { supabase } from './supabase';
 import { formatarDuracaoMin, formatarMomento, minutosEntre } from './horario';
+import { paginar, type CursorRegistro, type Pagina } from './paginacao';
+
+export type { CursorRegistro } from './paginacao';
 import type {
   ConteudoFralda,
   DiaperRecord,
@@ -145,6 +148,20 @@ export type RegistroRecente = {
   /** Só o sono sem ended_at — a Home oferece encerrar. */
   emAndamento: boolean;
 };
+
+export type OpcoesListagem = {
+  /** Início da janela. Null = sem limite inferior (é o que a Home usa). */
+  desde?: Date | null;
+  /** Quantos registros por página. */
+  limite?: number;
+  /** Null na primeira página; depois, o `proximoCursor` da anterior. */
+  cursor?: CursorRegistro | null;
+  /** Null ou lista vazia = todos os tipos. */
+  tipos?: TipoRegistro[] | null;
+  agora?: Date;
+};
+
+export type PaginaRegistros = Pagina<RegistroRecente>;
 
 // ============================================================
 // ESCRITA
@@ -535,47 +552,90 @@ export async function buscarRegistro(
   };
 }
 
+/** Quais tabelas precisam ser consultadas pra atender os tipos pedidos. */
+function tabelasPara(tipos: TipoRegistro[] | null | undefined): {
+  alimentacao: 'ambos' | 'breast' | 'bottle' | null;
+  sono: boolean;
+  fralda: boolean;
+  humor: boolean;
+  sintoma: boolean;
+} {
+  const todos = !tipos || tipos.length === 0;
+  const tem = (t: TipoRegistro) => todos || tipos!.includes(t);
+
+  const peito = tem('amamentar');
+  const mamadeira = tem('mamadeira');
+
+  return {
+    // Uma tabela só pros dois. Pedindo só um deles, o filtro vai na coluna `type` —
+    // sem isso "carregar mais" de amamentação traria mamadeira junto.
+    alimentacao: peito && mamadeira ? 'ambos' : peito ? 'breast' : mamadeira ? 'bottle' : null,
+    sono: tem('sono'),
+    fralda: tem('fralda'),
+    humor: tem('humor'),
+    sintoma: tem('sintoma'),
+  };
+}
+
 /**
- * Junta as 5 tabelas numa lista só, da mais recente pra mais antiga.
+ * Uma página da lista unificada, da mais recente pra mais antiga.
+ *
+ * COMO A PAGINAÇÃO FUNCIONA COM 5 TABELAS
+ *
+ * Cada tabela devolve suas `limite + 1` linhas mais recentes que ainda estão
+ * atrás do cursor. A união dessas fatias contém, com certeza, as `limite` linhas
+ * mais recentes da união inteira — é o argumento do merge de k listas ordenadas:
+ * a i-ésima linha do resultado global não pode estar além da i-ésima posição de
+ * nenhuma tabela isolada.
+ *
+ * Por isso não dá pra paginar cada tabela por conta própria: cinco cursores
+ * independentes andam em velocidades diferentes e "carregar mais" traria janelas
+ * de tempo desalinhadas por tipo — a mãe veria sono de terça ao lado de mamada de
+ * domingo.
+ *
+ * O `+1` também é quem responde `temMais` sem consulta extra: sobrou candidato
+ * além do limite, há mais; não sobrou, nenhuma tabela chegou a ser truncada e a
+ * janela acabou.
+ *
  * Se uma das buscas falhar, devolve o que deu certo e ainda assim reporta o erro —
- * some com um pedaço da lista, não com a lista inteira.
+ * some com um pedaço da lista, não com a lista inteira. `data` e `error` são
+ * independentes de propósito: lista vazia e falha de rede são estados diferentes,
+ * e a tela precisa dizer coisas diferentes pra cada um.
  */
-export async function listarRegistrosRecentes(
+export async function listarRegistros(
   babyId: string,
-  limite: number = 8,
-  agora: Date = new Date()
-): Promise<Resultado<RegistroRecente[]>> {
+  opcoes: OpcoesListagem = {}
+): Promise<Resultado<PaginaRegistros>> {
+  const { desde = null, limite = 8, cursor = null, tipos = null, agora = new Date() } = opcoes;
+
+  const alvo = tabelasPara(tipos);
+  const teto = limite + 1;
+
+  // Uma consulta por tabela, todas com a mesma janela e o mesmo cursor.
+  function consultar(tabela: string, coluna: 'started_at' | 'recorded_at') {
+    let q = supabase.from(tabela).select('*').eq('baby_id', babyId);
+    if (desde) q = q.gte(coluna, desde.toISOString());
+    // `lte` e não `lt`: o cursor pode ter empatado no instante com outra linha, e
+    // essas empatadas precisam vir pra serem desempatadas por id aqui no cliente.
+    if (cursor) q = q.lte(coluna, cursor.ocorridoEm);
+    return q.order(coluna, { ascending: false }).limit(teto);
+  }
+
+  const vazio = { data: null, error: null } as const;
+
   const [alimentacao, sono, fralda, humor, sintoma] = await Promise.all([
-    supabase
-      .from('feeding_records')
-      .select('*')
-      .eq('baby_id', babyId)
-      .order('started_at', { ascending: false })
-      .limit(limite),
-    supabase
-      .from('sleep_records')
-      .select('*')
-      .eq('baby_id', babyId)
-      .order('started_at', { ascending: false })
-      .limit(limite),
-    supabase
-      .from('diaper_records')
-      .select('*')
-      .eq('baby_id', babyId)
-      .order('recorded_at', { ascending: false })
-      .limit(limite),
-    supabase
-      .from('mood_records')
-      .select('*')
-      .eq('baby_id', babyId)
-      .order('recorded_at', { ascending: false })
-      .limit(limite),
-    supabase
-      .from('symptom_records')
-      .select('*')
-      .eq('baby_id', babyId)
-      .order('recorded_at', { ascending: false })
-      .limit(limite),
+    alvo.alimentacao
+      ? (() => {
+          const q = consultar('feeding_records', 'started_at');
+          return alvo.alimentacao === 'ambos'
+            ? q
+            : q.eq('type', alvo.alimentacao === 'breast' ? 'breast' : 'bottle');
+        })()
+      : vazio,
+    alvo.sono ? consultar('sleep_records', 'started_at') : vazio,
+    alvo.fralda ? consultar('diaper_records', 'recorded_at') : vazio,
+    alvo.humor ? consultar('mood_records', 'recorded_at') : vazio,
+    alvo.sintoma ? consultar('symptom_records', 'recorded_at') : vazio,
   ]);
 
   const falhas = [alimentacao.error, sono.error, fralda.error, humor.error, sintoma.error].filter(
@@ -583,7 +643,7 @@ export async function listarRegistrosRecentes(
   );
   falhas.forEach((erro) => console.warn('[registros] falha ao listar:', erro?.message));
 
-  const linhas: RegistroRecente[] = [
+  const candidatos: RegistroRecente[] = [
     ...((alimentacao.data ?? []) as FeedingRecord[]).map((r) => ({
       id: r.id,
       tipo: (r.type === 'bottle' ? 'mamadeira' : 'amamentar') as TipoRegistro,
@@ -621,10 +681,24 @@ export async function listarRegistrosRecentes(
     })),
   ];
 
-  linhas.sort((a, b) => new Date(b.ocorridoEm).getTime() - new Date(a.ocorridoEm).getTime());
-
   return {
-    data: linhas.slice(0, limite),
+    data: paginar(candidatos, limite, cursor),
     error: falhas.length > 0 ? ERRO_LISTAR : null,
   };
+}
+
+/**
+ * Os últimos registros do bebê, sem janela e sem paginação — o que a Home consome.
+ *
+ * Assinatura preservada de propósito: `listarRegistros` nasceu debaixo dela, não no
+ * lugar dela. Os defaults reproduzem exatamente a chamada antiga (sem `desde`, sem
+ * `cursor`, todos os tipos), então a Home não muda de comportamento nem de código.
+ */
+export async function listarRegistrosRecentes(
+  babyId: string,
+  limite: number = 8,
+  agora: Date = new Date()
+): Promise<Resultado<RegistroRecente[]>> {
+  const { data, error } = await listarRegistros(babyId, { limite, agora });
+  return { data: data.registros, error };
 }

@@ -298,10 +298,32 @@ termo LGPD sem dar nada em troca no beta.
 **Pendente de execução sua:** rodar o `002` (§11.3), rodar o script de RLS
 (§11.4) e salvar humor e sintoma pelo app contra o banco real.
 
-### D5 — Camada de leitura do histórico
-Generalizar `listarRegistrosRecentes`: janela de datas, paginação, filtro por
-tipo. Semear ~40 registros de teste.
-**Ao final:** a função devolve 7 dias paginados sem quebrar a Home.
+### D5 — Camada de leitura do histórico ✅ CÓDIGO FEITO
+`listarRegistros(babyId, { desde, limite, cursor, tipos })` devolve uma página da
+lista unificada. `listarRegistrosRecentes` **manteve a assinatura** e virou um
+wrapper de duas linhas em cima dela — a Home não mudou de código nem de
+comportamento.
+
+**Paginação por cursor `(ocorridoEm, id)`, nunca offset.** Com offset, um
+registro novo entrando no topo enquanto a mãe pagina empurra tudo uma casa e a
+página seguinte repete ou pula item — e registro entrando no topo é o caso normal
+aqui, ela pagina o histórico enquanto amamenta e salva a mamada no meio.
+
+O `id` desempata porque colisão de instante é **comum, não teórica**: a máscara
+HH:MM zera os segundos, então fralda e humor salvos no mesmo minuto caem no mesmo
+timestamp.
+
+**Uma janela, cinco tabelas.** Cada tabela devolve `limite + 1` linhas atrás do
+cursor; a união contém com certeza as `limite` mais recentes do todo (merge de k
+listas ordenadas). Cinco cursores independentes andariam em velocidades
+diferentes e "carregar mais" traria janelas desalinhadas por tipo — sono de terça
+ao lado de mamada de domingo. O `+1` também responde `temMais` sem consulta
+extra.
+
+A lógica pura saiu para `src/lib/paginacao.ts`, sem Supabase e sem React Native,
+para poder rodar fora do Expo — ver §12.
+
+**Pendente de execução sua:** preencher `SEMEAR_*` no `.env` e semear a massa.
 
 ### D6 — Tela Rotina v1
 Lista agrupada por dia, cabeçalho "Hoje" / "Ontem" / "3 de agosto", item com
@@ -436,6 +458,33 @@ celular que não é o de desenvolvimento.** Não é avaliação, é checklist.
 | R10 | Supabase free pausa por inatividade e limita e-mail | Verificar no D1; com uso diário não pausa | D1 |
 | R11 | Escopo se expandindo (o mais provável de todos) | Este documento; toda ideia nova vai para §10 | diário |
 | R12 | Bundle de 1,86 MB pesado em 4G | Medir tempo de carga no D17; só otimizar se doer | D17 |
+
+## 9-bis. Scripts (`scripts/`)
+
+Não são código do app: rodam no Node, fora do Expo, e não entram no bundle.
+
+| Script | Para quê |
+|---|---|
+| `node scripts/teste-rls-delete.mjs` | RLS de DELETE entre duas contas (§11.4). Pré-requisito de qualquer mexida em policy |
+| `node scripts/teste-paginacao.ts` | Cursor, desempate e bordas da paginação. Puro, sem banco |
+| `node scripts/semear-registros.mjs` | 7 dias de rotina plausível na sua conta. `--limpar` desfaz |
+
+**Por que `paginacao.ts` mora separado de `registros.ts`:** para não importar
+Supabase nem React Native, e assim poder rodar no Node. Cursor com desempate é a
+classe de lógica que erra em silêncio — a lista parece certa e um item some entre
+a página 2 e a 3 só quando dois registros caem no mesmo minuto. Isso não se acha
+olhando a tela.
+
+O teste foi conferido por mutação: removendo o desempate por `id`, **7 dos 17
+registros do cenário empatado desaparecem** e três verificações quebram. Um teste
+que não falha quando o código quebra não é teste.
+
+**A massa semeada é gabarito, não enchimento.** Ela alimenta o motor do D8, e
+motor com ruído produz número sem sentido — aí não dá pra saber se o erro é da
+matemática ou dos dados. Por isso o bebê semeado tem rotina de bebê (mama a cada
+~3h, três sonecas em faixas estáveis, noite por volta das 20h) e a semente do
+gerador é fixa: duas execuções produzem a mesma massa, então "conferi o intervalo
+médio na calculadora" continua valendo na execução seguinte.
 
 ## 10. Depois do beta
 
