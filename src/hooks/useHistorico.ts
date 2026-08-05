@@ -1,6 +1,11 @@
 import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { listarRegistros, type CursorRegistro, type RegistroRecente } from '../lib/registros';
+import {
+  listarRegistros,
+  type CursorRegistro,
+  type RegistroRecente,
+  type TipoRegistro,
+} from '../lib/registros';
 import { chaveDoDia } from '../lib/horario';
 
 /** Um dia da lista, com os registros daquele dia já ordenados. */
@@ -20,7 +25,20 @@ const PAGINA = 20;
  * quando a mãe volta do detalhe de um registro. Um hook só, tentando servir aos
  * dois, ou recarregaria demais ou de menos.
  */
-export function useHistorico(babyId: string | null, janelaDias: number | null = null) {
+export function useHistorico(
+  babyId: string | null,
+  /**
+   * Null = todos os tipos.
+   *
+   * O filtro desce para a CONSULTA, não é aplicado sobre a página já carregada.
+   * Filtrando só o que está em memória, "Amamentação" mostraria 2 itens porque
+   * os outros estão na página 3 — e a mãe concluiria que quase não amamentou na
+   * semana. Trocar de filtro reinicia o cursor: é outra lista, não um recorte
+   * da mesma.
+   */
+  tipo: TipoRegistro | null = null,
+  janelaDias: number | null = null
+) {
   const [grupos, setGrupos] = useState<GrupoDoDia[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [carregandoMais, setCarregandoMais] = useState(false);
@@ -59,6 +77,7 @@ export function useHistorico(babyId: string | null, janelaDias: number | null = 
         desde: janela(),
         limite: PAGINA,
         cursor: continuando ? cursor.current : null,
+        tipos: tipo ? [tipo] : null,
       });
 
       if (token !== requisicaoAtual.current) return;
@@ -73,13 +92,13 @@ export function useHistorico(babyId: string | null, janelaDias: number | null = 
       setCarregando(false);
       setCarregandoMais(false);
     },
-    [babyId, janela]
+    [babyId, janela, tipo]
   );
 
-  // Recarrega do zero a cada foco: é o que faz o registro apagado no detalhe
-  // sumir da lista quando a mãe volta. Perde a paginação acumulada, e isso é o
-  // certo — lista que continua mostrando um registro que já não existe é pior
-  // que rolagem perdida.
+  // Recarrega do zero a cada foco — e também quando `tipo` muda, porque `carregar`
+  // é dependência daqui. É o que faz o registro apagado no detalhe sumir da lista
+  // quando a mãe volta. Perde a paginação acumulada, e isso é o certo: lista que
+  // continua mostrando um registro que já não existe é pior que rolagem perdida.
   useFocusEffect(
     useCallback(() => {
       cursor.current = null;

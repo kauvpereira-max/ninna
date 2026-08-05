@@ -339,17 +339,46 @@ sei".
 
 **Agrupamento em hora local, nunca UTC** (`chaveDoDia` em `horario.ts`). Em UTC-3
 a mamada das 23h50 de terça é 02h50 de quarta em UTC: agrupando por UTC, a mãe
-procuraria em "Ontem" o registro que acabou de fazer. Coberto por
-`scripts/teste-horario.ts`, que se re-executa com `TZ=America/Sao_Paulo` — numa
-máquina em UTC o teste seria teatro, porque lá a implementação errada passa.
+procuraria em "Ontem" o registro que acabou de fazer.
+
+Coberto por `scripts/teste-horario.ts` — e o teste passou por uma correção que
+vale registrar. A primeira versão se re-executava com `TZ=America/Sao_Paulo`.
+**Era teatro:** neste ambiente (Node no Windows) a variável `TZ` é ignorada para
+nomes IANA — só `UTC` tem efeito. Conferido: `TZ=Asia/Tokyo` e
+`TZ=America/New_York` devolvem `America/Sao_Paulo`. O teste rodava no fuso da
+máquina achando que rodava no fuso pedido, e passava só porque a máquina já
+estava em São Paulo. Num runner em UTC daria verde para a implementação errada,
+porque em offset zero data local e data UTC coincidem.
+
+A versão atual não mexe em `TZ`. Usa o fuso ambiente e **prova em tempo de
+execução que consegue distinguir** a implementação certa da errada — se não
+conseguir (offset zero), falha dizendo isso em vez de dar verde.
 
 O item da lista virou `src/components/ItemRegistro.tsx`, compartilhado com a
 Home: duas listas de registro com aparências diferentes seria a mãe achando que
 são duas coisas.
 
-### D7 — Tela Rotina v2
-Filtros por tipo, "carregar mais", pull-to-refresh, estados vazio/erro/carregando.
-**Ao final:** filtrar por "Sono" mostra só sono; histórico navegável ponta a ponta.
+### D7 — Tela Rotina v2 ✅ FEITO
+Chips de filtro (Tudo + os 6 tipos), "carregar mais", atualizar, e os estados.
+
+**O filtro desce para a consulta**, não recorta a página já carregada — e trocar
+de filtro reinicia o cursor. Filtrando em memória, "Amamentação" mostraria 2
+itens porque os outros estão na página 3, e a mãe concluiria que quase não
+amamentou na semana. O parâmetro `tipos` de `listarRegistros` já existia do D5,
+então não foi preciso carregar a janela inteira em memória.
+
+**Vazio tem duas variantes.** Sem filtro, ela nunca registrou nada e o que falta
+é o primeiro registro. Com filtro, ela pode ter 200 registros e nenhum daquele
+tipo — mandá-la "registrar o primeiro" diria que o histórico dela sumiu. Ali a
+ação é *Mostrar tudo*.
+
+**Atualizar é botão, não gesto.** `RefreshControl` está no lugar para o nativo,
+mas no `react-native-web` ele é no-op, e no Safari do iPhone o gesto de puxar
+competiria com o reload do próprio navegador. No canal do beta, o botão é o
+mecanismo principal — não a alternativa. Confirmar o gesto no D17.
+
+O spinner de tela cheia só aparece na primeira carga: sumir com a lista durante
+um "atualizar" faz parecer que os registros se perderam.
 
 ### D8 — Motor: matemática pura, sem UI ⚠️ dia pesado
 `padroes.ts` com as 3 métricas, separação soneca/noite, média circular e
@@ -484,7 +513,7 @@ Não são código do app: rodam no Node, fora do Expo, e não entram no bundle.
 |---|---|
 | `node scripts/teste-rls-delete.mjs` | RLS de DELETE entre duas contas (§11.4). Pré-requisito de qualquer mexida em policy |
 | `node scripts/teste-paginacao.ts` | Cursor, desempate e bordas da paginação. Puro, sem banco |
-| `node scripts/teste-horario.ts` | Agrupamento por dia em hora local. Re-executa com `TZ=America/Sao_Paulo` |
+| `node scripts/teste-horario.ts` | Agrupamento por dia em hora local. Recusa rodar em offset zero, onde não provaria nada |
 | `node scripts/semear-registros.mjs` | 7 dias de rotina plausível num bebê dedicado. `--limpar` desfaz |
 
 **Por que `paginacao.ts` mora separado de `registros.ts`:** para não importar
