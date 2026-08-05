@@ -1,0 +1,399 @@
+# Ninna — Beta das Embaixadoras Fundadoras
+
+**Prazo: 21 dias. Escopo travado no D1. Este documento tem precedência sobre
+qualquer ideia que apareça no meio do caminho.**
+
+Objetivo único do beta: uma mãe abre a Ninna, cria conta, cadastra o bebê,
+registra a rotina por alguns dias e **recebe um insight verdadeiro sobre o
+próprio bebê**. Nada além disso é requisito.
+
+Não é objetivo: publicar em loja, cobrir os 20 tipos de registro, ter app
+nativo, ter push, ter assinatura.
+
+---
+
+## 1. Escopo — o que ENTRA
+
+| # | Item | Estado no D1 |
+|---|---|---|
+| 1 | Autenticação e-mail/senha | pronto |
+| 2 | Cadastro da mãe (nome) | a fazer — D2 |
+| 3 | Cadastro do bebê | pronto |
+| 4 | Home | pronta, falta o card de insight real |
+| 5 | Registro de amamentação | pronto |
+| 6 | Registro de mamadeira | pronto |
+| 7 | Registro de sono (+ em andamento) | pronto |
+| 8 | Registro de fralda | pronto |
+| 9 | Histórico dos registros | a fazer — D5–D7 |
+| 10 | Motor de personalização (3 métricas) | a fazer — D8–D9 |
+| 11 | Card de insight na Home | a fazer — D10 |
+| 12 | Supabase configurado | pronto (5 tabelas + RLS) |
+| 13 | Interface próxima ao protótipo | parcial — D11–D13 |
+| 14 | Recuperar senha | a fazer — D3 |
+| 15 | Apagar registro | a fazer — D4 |
+| 16 | PWA instalável de verdade | a fazer — D16–D17 |
+| 17 | Termo LGPD com via de saída | a fazer — D18 |
+
+Os itens 14 a 17 não estavam no pedido original e foram incluídos por decisão
+técnica. A justificativa de cada um está em §3.
+
+**Bônus já construído, mantido sem custo:** registro de humor, registro de
+sintoma, múltiplos bebês com seletor, idade corrigida para prematuros.
+Remover daria trabalho; manter é grátis.
+
+## 2. Escopo — o que NÃO entra
+
+Assinaturas · RevenueCat · Stripe · publicação em lojas · notificações push ·
+vacina · habilidade · medicação · vitamina · introdução alimentar · extração ·
+banho · peso/altura/perímetro · atividade · passeio · leitura · hidratação ·
+relatórios e gráficos · compartilhamento entre cuidadores · animações
+complexas · edição de registro · modo offline · chat da Ninna.
+
+**Regra de congelamento:** toda ideia nova vai para §9 ("Depois do beta").
+Nenhuma entra no escopo dos 21 dias. Sem exceção, sem discussão de mérito.
+
+---
+
+## 3. Decisões de arquitetura (travadas)
+
+### 3.1 Distribuição: PWA instalada, canal único
+Build web estático → Vercel → a mãe instala pela tela de início.
+
+Sem loja, sem Apple Developer Program, sem EAS. O alvo web já é como este
+projeto valida build desde a fase 1, então é o caminho com menos risco novo.
+
+**"Instalada" é requisito funcional, não recomendação.** No iOS, site aberto no
+Safari sem "Adicionar à Tela de Início" tem o storage limpo pelo sistema em
+torno de 7 dias de inatividade. A mãe é deslogada, perde o acesso e conclui que
+o app quebrou — no exato momento em que o motor finalmente teria dados para dar
+um insight. PWA instalada não sofre essa limpeza.
+
+Consequência prática: o app precisa **conduzir** a instalação, não torcer por
+ela (banner no primeiro acesso via Safari, D16), e o fluxo de instalação
+precisa ser testado em iPhone real, não só o carregamento da página (D17).
+
+### 3.2 Motor no cliente, não em Edge Function
+`src/lib/padroes.ts` é função pura: recebe registros, devolve três números.
+
+Edge Function traria Deno, deploy separado, secrets e um segundo ambiente para
+depurar às 2h da manhã. O ganho seria performance sobre milhares de registros —
+o volume real é ~40 registros por bebê por semana.
+
+A tabela `baby_patterns` fica no banco **sem uso** no beta. Quando o volume
+justificar, o motor migra para lá sem reescrever a matemática.
+
+### 3.3 As três métricas
+Janela móvel de 7 dias, sempre em **hora local do dispositivo** (nunca UTC —
+"horário médio da soneca" é conceito de hora local).
+
+1. **Intervalo médio entre mamadas** — diferenças entre `started_at`
+   consecutivos de `feeding_records`.
+2. **Duração média da soneca** — só sonecas.
+3. **Horário médio da soneca** — **média circular**, não aritmética.
+
+**Média circular é obrigatória.** Hora do dia é um círculo: sonecas às 23h e à
+1h têm média 0h, não 12h. A média ingênua diria "a soneca de Liz costuma ser ao
+meio-dia" para um bebê que dorme à meia-noite — erro que destrói a confiança na
+primeira semana.
+
+**Soneca e noite são separadas.** Sono iniciado entre 19h e 6h = noite; o resto
+= soneca. Misturar uma noite de 9h com sonecas de 40min produz "média de 3h20",
+que não descreve nenhum sono que aquele bebê teve. As três métricas usam
+apenas sonecas.
+
+**Limiar de confiança: mínimo de 5 registros da métrica na janela.** Abaixo
+disso o card mostra a frase de aprendizado e **nenhum número**. Silêncio honesto
+é infinitamente melhor que número errado — mesmo princípio da copy de saúde.
+
+### 3.4 Cadastro da mãe sem tabela nova
+Campo "Como você quer ser chamada?" no signup → `user_metadata` do Supabase
+Auth. Zero migration, zero rota nova, zero ramo novo no `RootNavigator`.
+
+Uma tabela `profiles` exigiria trigger de criação, RLS própria e uma quarta via
+de roteamento (sem sessão → sem perfil → sem bebê → tabs). Dois dias e um ponto
+de falha, para guardar um campo de texto. Migra quando o perfil tiver mais de
+três campos.
+
+### 3.5 Zero dependências novas de produção
+Este projeto já teve `@react-native-community/datetimepicker` quebrar o
+`expo export --platform web`. Cada pacote novo é risco de matar o único canal
+de distribuição do beta.
+
+Nada de `date-fns` (`horario.ts` e `idade.ts` já resolvem), nada de biblioteca
+de gráfico (o beta não tem gráfico — insight é frase), nada de Sentry
+(substituído por canal humano, §3.7).
+
+### 3.6 Apagar registro e recuperar senha entram
+- **Apagar** (~4h): sem isso, a mãe que digitou 350ml em vez de 35ml convive
+  com o erro para sempre — e o motor calcula em cima do lixo. É proteção do
+  produto principal, não conveniência.
+- **Recuperar senha** (~3h): embaixadora que esquece a senha no dia 3 está fora
+  do piloto permanentemente. É o bug mais caro e mais barato de evitar.
+
+### 3.7 Observabilidade é humana, não ferramenta
+Com 3 embaixadoras, um grupo de WhatsApp + link "Relatar problema" na aba Mais
+detecta mais bugs que Sentry, e custa 1h em vez de 1 dia.
+
+---
+
+## 4. Arquitetura
+
+```
+APP  Expo SDK 54 · expo-router · React Native Web
+  telas       app/
+  estado      AuthContext → BabyContext (aninhado)
+  dados       src/lib/*.ts — funções que nunca lançam, devolvem { data, error }
+  motor       src/lib/padroes.ts — único módulo novo de lógica
+
+SUPABASE  plano free
+  Auth: e-mail/senha + user_metadata.nome
+  Postgres: 7 tabelas, RLS em todas
+
+DISTRIBUIÇÃO  expo export --platform web → Vercel → PWA instalada
+```
+
+Fluxo do motor:
+
+```
+Home monta
+  → carrega 7 dias de feeding + sleep do bebê ativo
+  → calcularPadroes(registros)          função pura, síncrona, testável isolada
+      ├─ intervaloMedioMamadas()
+      ├─ duracaoMediaSoneca()           só sonecas
+      └─ horarioMedioSoneca()           média circular
+  → { valor, confianca } por métrica
+  → confiança < 5 registros?  card mostra "ainda estou conhecendo"
+  → confiança ok?             card mostra o insight
+```
+
+## 5. Telas (12 rotas)
+
+| Rota | Estado |
+|---|---|
+| `(auth)/login` | pronta |
+| `(auth)/signup` | + campo nome (D2) |
+| `(auth)/recuperar-senha` | **nova** (D3) |
+| `(onboarding)/cadastro-bebe` | pronta |
+| `(tabs)/index` — Home | + card de insight (D10) |
+| `(tabs)/rotina` — Histórico | **reescrever** (D6–D7) |
+| `(tabs)/mais` | + nome, sobre, feedback, sair (D2/D18) |
+| `registro/[tipo]` modal, 6 tipos | + apagar (D4) |
+| `bebes/index` modal | pronta |
+| `bebes/novo` modal | pronta |
+
+Removidas no D1: `(tabs)/ninna`, `(tabs)/insights`, `(tabs)/evolucao`.
+
+## 6. Banco — nenhuma migration nova
+
+`001_schema_inicial.sql` já cobre 100% do beta.
+
+```
+babies            usar
+feeding_records   usar    breast + bottle via coluna type
+sleep_records     usar    ended_at null = em andamento
+diaper_records    usar
+mood_records      usar
+symptom_records   usar
+baby_patterns     existe, NÃO usar no beta (motor é client-side)
+auth.users        user_metadata.nome ← cadastro da mãe
+```
+
+Os índices `(baby_id, started_at desc)` já existem e são exatamente os que o
+motor e o histórico precisam. Migration em produção com mães reais dentro é a
+operação mais arriscada do projeto — o beta não faz nenhuma.
+
+---
+
+## 7. Cronograma
+
+### D1 — Poda e escopo travado ✅ FEITO
+Repositório git criado (não havia — 21 dias sem undo era risco inaceitável
+antes de apagar arquivos). Tab bar 6→3. Telas placeholder removidas. Quatro
+dependências mortas removidas. `.env` fora do versionamento. Este documento.
+**Ao final:** nenhuma tela diz "não implementada"; `tsc` e export web passam.
+
+### D2 — Cadastro da mãe
+Campo nome no signup → `user_metadata`. Home cumprimenta pelo nome. Aba Mais
+mostra nome e e-mail.
+**Ao final:** conta nova nasce com nome e a Home diz "Oi, Marina".
+
+### D3 — Recuperar senha + erros em português
+Fluxo de reset com redirect. Traduzir mensagens do Supabase (hoje voltam em
+inglês: *"Invalid login credentials"*).
+**Ao final:** reset testado ponta a ponta **num Gmail que não é o meu**, com
+confirmação de que chegou na caixa de entrada e não em spam.
+**Este dia não fecha sem o remetente resolvido (§8/R2).**
+
+### D4 — Apagar registro + fechar dívida de humor/sintoma
+Long-press → confirmar → delete, nos 6 tipos. Salvar humor e sintoma de verdade
+no Supabase (nunca foram exercitados contra o banco real).
+**Ao final:** os 6 tipos gravam e voltam; registro errado some da lista e do banco.
+
+### D5 — Camada de leitura do histórico
+Generalizar `listarRegistrosRecentes`: janela de datas, paginação, filtro por
+tipo. Semear ~40 registros de teste.
+**Ao final:** a função devolve 7 dias paginados sem quebrar a Home.
+
+### D6 — Tela Rotina v1
+Lista agrupada por dia, cabeçalho "Hoje" / "Ontem" / "3 de agosto", item com
+ícone, rótulo, hora e duração.
+**Ao final:** a aba Rotina mostra os registros reais agrupados por dia.
+
+### D7 — Tela Rotina v2
+Filtros por tipo, "carregar mais", pull-to-refresh, estados vazio/erro/carregando.
+**Ao final:** filtrar por "Sono" mostra só sono; histórico navegável ponta a ponta.
+
+### D8 — Motor: matemática pura, sem UI ⚠️ dia pesado
+`padroes.ts` com as 3 métricas, separação soneca/noite, média circular e
+limiares. Validado contra dados sintéticos.
+**Ao final:** dado um array de registros, saem 3 números **conferidos à mão na
+calculadora**.
+
+### D9 — Motor ligado ao app ⚠️ dia pesado
+`usePadroes` lê 7 dias e calcula. Testar com o relógio do celular em outro fuso.
+**Ao final:** os padrões reais do bebê de teste aparecem corretos na tela.
+
+### D10 — Card de insight na Home ⚠️ dia pesado
+`copyInsight.ts`: número → frase acolhedora. Variações por métrica e faixa de
+confiança + estado "ainda aprendendo". Revisão de tom.
+**Ao final:** conta com 8 registros vê insight verdadeiro; conta com 2 vê a
+frase de aprendizado. **Este é o dia que define se o beta tem valor.**
+
+### D11–D13 — Interface conforme protótipo
+D11 Home · D12 modais de registro · D13 histórico, auth e onboarding.
+**Ao final do D13:** nenhuma tela parece de desenvolvedor.
+
+### D14 — Bordas e robustez
+Estados vazios, erro de rede com "tentar de novo" **preservando o formulário**,
+alvos de toque ≥44px, `accessibilityLabel`, tela de 360px.
+Incluir: `try/catch` no carregamento de fontes do `app/_layout.tsx` — hoje uma
+fonte que falha deixa a tela branca para sempre (§8/R7).
+
+### D15 — Bateria manual roteirizada ⚠️ dia pesado
+Roteiro de ~30 passos: conta nova → mãe → bebê → 7 dias de registros → insight →
+apagar → sair → entrar. Duas contas, dois bebês. Corrigir o que quebrar.
+**Ao final:** o roteiro passa inteiro sem intervenção.
+
+### D16 — PWA de verdade + deploy
+`public/manifest.json` (`display: standalone`, ícones 180/192/512, theme e
+background color, `start_url`), `app/+html.tsx` para injetar `<link
+rel="manifest">`, `apple-touch-icon`, `apple-mobile-web-app-capable` e
+`viewport-fit=cover`. Banner in-app no primeiro acesso via Safari orientando a
+instalação. `vercel.json` com rewrite para SPA. Deploy.
+**Ao final:** URL pública que instala como app no seu iPhone.
+
+### D17 — Dispositivo real
+iPhone/Safari e Android/Chrome, em aparelho que não é o de desenvolvimento.
+Testar o **fluxo de instalação**, não só o carregamento: instalar pela tela de
+início, abrir pelo ícone, confirmar que abre sem a barra do Safari.
+Safe area, teclado cobrindo campo, scroll, rotação.
+
+### D18 — Pacote da embaixadora (LGPD)
+Termo curto e honesto, contendo obrigatoriamente:
+- quais dados são coletados e onde ficam (Supabase, região do projeto);
+- como pedir exclusão total — canal e prazo de resposta — mesmo que a execução
+  seja manual no painel;
+- o que acontece ao fim do piloto: **dados apagados por padrão**, salvo opção
+  explícita dela por continuar.
+
+Mais: canal de feedback (grupo WhatsApp + link na aba Mais) e roteiro de 1
+página de instalação.
+
+### D19–D20 — Reserva
+Não são dias livres. São os dias que algo do D1–D18 vai consumir.
+
+### D21 — Piloto com 3 embaixadoras, não 20
+Três mães acompanhadas de perto no primeiro cadastro. Se as três chegarem ao
+insight, abre para o resto.
+
+---
+
+## 8. Critério de saída — checklist binária
+
+**O beta está pronto quando os 14 itens abaixo passam, na URL de produção, num
+celular que não é o de desenvolvimento.** Não é avaliação, é checklist.
+
+### Fluxo completo
+1. Crio conta com e-mail real, informo meu nome, e concluo o cadastro.
+2. Esqueço a senha, recupero por e-mail e entro de novo — **e o e-mail chegou na
+   caixa de entrada de um Gmail que não é o meu, não em spam.**
+3. Cadastro um bebê e chego na Home com nome e idade corretos.
+4. Registro amamentação, mamadeira, sono e fralda — os quatro aparecem na Home
+   em segundos.
+5. Inicio um sono, saio do app, volto, e "Dormindo há X min" está certo; encerro
+   e vira duração.
+6. Abro Rotina e vejo tudo agrupado por dia, com filtro por tipo funcionando.
+7. Apago um registro; ele some da lista e do banco.
+
+### O motor — o que justifica o beta existir
+8. Com **menos** de 5 mamadas registradas, a Home mostra a frase de aprendizado
+   e **nenhum número**.
+9. Com 7 dias de registros, o card mostra ao menos um insight cujo número eu
+   **conferi manualmente** contra os dados brutos.
+10. O horário médio de soneca é plausível — uma soneca às 23h e outra à 1h dão
+    ~0h, não ~12h — e o sono noturno **não** entra na média de soneca.
+
+### Distribuição e permanência
+11. Instalei pela tela de início do iPhone, o app abre pelo ícone **sem a barra
+    do Safari**, e ao voltar dias depois **continuo logada**.
+
+### Segurança e dados
+12. Entro com a conta B e **não** vejo nenhum dado da conta A — RLS testada com
+    duas contas reais, não com uma.
+13. Executei uma exclusão completa de uma conta de teste, ponta a ponta, e
+    **confirmei no banco que não sobrou nenhum registro**.
+14. Fecho o app, volto no dia seguinte, continuo logada, e tudo que registrei
+    está lá.
+
+> **Se o item 9, 11, 12 ou 13 falhar, o beta não sai** — mesmo que os outros 10
+> passem. O 9 erra o produto, o 11 mata o acesso em uma semana, e o 12 e o 13
+> erram a privacidade de dados de saúde de bebês.
+
+---
+
+## 9. Riscos
+
+| # | Risco | Mitigação | Dia |
+|---|---|---|---|
+| R1 | Mãe não instala a PWA e é deslogada pelo iOS em ~7 dias | Banner in-app conduzindo a instalação + item 11 da checklist | D16–D17 |
+| R2 | **E-mail transacional cai em spam** — derruba signup e reset inteiro | Decisão do remetente no D1 (§10). D3 não fecha sem isso | D1/D3 |
+| R3 | Insight sair errado — perde a embaixadora e a credibilidade | Média circular, soneca≠noite, limiar de 5 registros | D8–D10 |
+| R4 | Fuso horário desanda o horário médio | Hora local sempre, nunca UTC; testar com relógio em outro fuso | D9 |
+| R5 | LGPD sem via de saída para dado sensível de bebê | Termo com canal e prazo de exclusão + item 13 | D18 |
+| R6 | Bug de mãe real nunca chega até mim | Grupo WhatsApp + link "Relatar problema" | D18 |
+| R7 | Tela branca permanente se uma fonte falhar ao carregar | `try/catch` no `loadFonts` | D14 |
+| R8 | Sem modo offline: registro perdido no quarto com Wi-Fi fraco | Formulário preservado no erro + "tentar de novo". Limitação declarada | D14 |
+| R9 | Regressão no build web mata o canal único | `expo export --platform web` ao fim de **todo** dia | diário |
+| R10 | Supabase free pausa por inatividade e limita e-mail | Verificar no D1; com uso diário não pausa | D1 |
+| R11 | Escopo se expandindo (o mais provável de todos) | Este documento; toda ideia nova vai para §10 | diário |
+| R12 | Bundle de 1,86 MB pesado em 4G | Medir tempo de carga no D17; só otimizar se doer | D17 |
+
+## 10. Depois do beta
+
+Fila de tudo que foi cortado, para não voltar a ser discutido durante os 21 dias:
+
+Os 14 tipos de registro restantes · editar registro · gráficos e evolução · aba
+Ninna · relatórios · compartilhamento entre cuidadores · modo offline real ·
+push · assinatura via RevenueCat · app nativo em loja · tabela `profiles` ·
+motor em Edge Function gravando `baby_patterns` · `NunitoSans-Medium.ttf`
+faltando (`typography.caption` roda em Regular) · `src/theme/fonts.ts` citado em
+`tokens.ts` e inexistente.
+
+---
+
+## 11. Decisões pendentes do fundador
+
+**Uma só, e é bloqueante para o D3 — remetente de e-mail.**
+
+O remetente padrão do Supabase free é compartilhado, tem limite baixo de envio
+e cai em spam no Gmail com frequência alta. Isso derruba a confirmação de
+cadastro e o fluxo inteiro de recuperar senha.
+
+| Opção | Custo | Consequência |
+|---|---|---|
+| **A. SMTP próprio (Resend + domínio verificado)** — recomendada | ~2h de setup | Signup com confirmação e reset funcionam de verdade. Mesmo padrão já usado no Interdemo |
+| B. Desligar confirmação no signup | 5 min | Cadastro flui, mas **reset de senha continua dependendo de entrega** — só adia o problema |
+| C. B + reset manual no painel durante o piloto | 0 | Só sustenta 3 embaixadoras. Não escala para 20, e é trabalho manual seu em horário imprevisível |
+
+Recomendação: **A**. B e C não eliminam o risco, apenas o transferem para o dia
+em que uma mãe esquecer a senha.
