@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,21 +10,9 @@ import { useAgoraTick } from '../../src/hooks/useAgoraTick';
 import { encerrarSono, resumirSonoEmAndamento } from '../../src/lib/registros';
 import { formatarIdade, formatarIdadeCorrigida } from '../../src/lib/idade';
 import { formatarMomento } from '../../src/lib/horario';
-import { CATEGORIAS, CATEGORIA_POR_TIPO } from '../../src/theme/categorias';
+import { ItemRegistro } from '../../src/components/ItemRegistro';
+import { CATEGORIAS } from '../../src/theme/categorias';
 import { colors, spacing, radius, typography, elevation } from '../../src/theme/tokens';
-
-/**
- * No Safari do iPhone, segurar o dedo sobre um elemento dispara o callout do sistema
- * e a seleção de texto antes de qualquer handler do app. Sem isso, o long-press da
- * lista vira "copiar/compartilhar" do navegador em vez de atalho pra apagar.
- *
- * Só existe na web: no nativo essas propriedades não são estilo válido de RN, e o
- * gesto já se comporta como esperado.
- */
-const semCalloutNaWeb =
-  Platform.OS === 'web'
-    ? ({ userSelect: 'none', WebkitTouchCallout: 'none' } as any)
-    : null;
 
 export default function HojeScreen() {
   const { nomeMae } = useAuth();
@@ -150,34 +138,18 @@ export default function HojeScreen() {
           )
         ) : (
           <View style={styles.lista}>
-            {registros.map((r) => {
-              const visual = CATEGORIA_POR_TIPO[r.tipo];
-              const abrir = () => router.push(`/detalhe/${r.tipo}/${r.id}`);
-              return (
-                // Tocar abre o detalhe, que é onde mora o botão de apagar. O long-press
-                // leva ao mesmo lugar — é atalho, não o único caminho: no Safari do
-                // iPhone ele é abafado pelo callout do sistema e no desktop nem existe.
-                <Pressable
-                  key={`${r.tipo}-${r.id}`}
-                  onPress={abrir}
-                  onLongPress={abrir}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Abrir registro de ${visual.label}: ${r.resumo}`}
-                  style={[styles.registroItem, semCalloutNaWeb]}
-                >
-                  <View style={[styles.registroBadge, { backgroundColor: visual.bg }]}>
-                    <Ionicons name={visual.icon} size={15} color={colors.onDark} />
-                  </View>
-
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.registroResumo, r.emAndamento && styles.registroAtivo]}>
-                      {/* Sono aberto reconta no tick local; o resto vem pronto do fetch. */}
-                      {r.emAndamento ? resumirSonoEmAndamento(r.ocorridoEm, agora) : r.resumo}
-                    </Text>
-                    <Text style={styles.registroCategoria}>{visual.label}</Text>
-                  </View>
-
-                  {r.emAndamento ? (
+            {registros.map((r) => (
+              <ItemRegistro
+                key={`${r.tipo}-${r.id}`}
+                registro={r}
+                // Na Home o tempo é relativo ("ontem 23:50"); na Rotina o dia já
+                // vem no cabeçalho do grupo, então lá basta a hora.
+                horaLabel={formatarMomento(r.ocorridoEm)}
+                // Sono aberto reconta no tick local; o resto vem pronto do fetch.
+                resumo={r.emAndamento ? resumirSonoEmAndamento(r.ocorridoEm, agora) : undefined}
+                onPress={() => router.push(`/detalhe/${r.tipo}/${r.id}`)}
+                acao={
+                  r.emAndamento ? (
                     <Pressable
                       onPress={() => handleEncerrarSono(r.id)}
                       disabled={encerrandoId === r.id}
@@ -188,12 +160,10 @@ export default function HojeScreen() {
                         {encerrandoId === r.id ? 'Encerrando…' : 'Encerrar'}
                       </Text>
                     </Pressable>
-                  ) : (
-                    <Text style={styles.registroHora}>{formatarMomento(r.ocorridoEm)}</Text>
-                  )}
-                </Pressable>
-              );
-            })}
+                  ) : undefined
+                }
+              />
+            ))}
           </View>
         )}
       </ScrollView>
@@ -270,28 +240,8 @@ const styles = StyleSheet.create({
   vazioTexto: { ...typography.body, color: colors.neutro500 },
   avisoTexto: { ...typography.caption, color: colors.coral600, marginBottom: spacing.sm },
   lista: { gap: spacing.sm },
-  registroItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.neutro0,
-    borderRadius: radius.md,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    ...elevation.level1,
-  },
-  registroBadge: {
-    width: 30,
-    height: 30,
-    borderRadius: radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  registroResumo: { ...typography.body, color: colors.headline, fontFamily: 'NunitoSans_600SemiBold' },
-  // Sono em andamento é timer ativo — um dos usos que o design system libera pro coral.
-  registroAtivo: { color: colors.coral600 },
-  registroCategoria: { ...typography.caption, color: colors.neutro400 },
-  registroHora: { ...typography.caption, color: colors.neutro500 },
+  // O visual do item da lista mudou-se pra src/components/ItemRegistro.tsx, que a
+  // Home e a Rotina compartilham.
   encerrar: {
     paddingVertical: 6,
     paddingHorizontal: spacing.md,

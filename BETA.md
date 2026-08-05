@@ -325,10 +325,27 @@ para poder rodar fora do Expo — ver §12.
 
 **Pendente de execução sua:** preencher `SEMEAR_*` no `.env` e semear a massa.
 
-### D6 — Tela Rotina v1
-Lista agrupada por dia, cabeçalho "Hoje" / "Ontem" / "3 de agosto", item com
-ícone, rótulo, hora e duração.
-**Ao final:** a aba Rotina mostra os registros reais agrupados por dia.
+### D6 — Tela Rotina v1 ✅ FEITO
+Lista agrupada por dia com cabeçalho "Hoje" / "Ontem" / "3 de agosto", contagem
+do dia, e item com ícone, rótulo, resumo e hora. "Carregar mais" já ligado ao
+cursor do D5; os filtros por tipo ficam pro D7.
+
+**Vazio e erro são telas distintas**, com ação distinta, e o erro tem
+precedência sobre o vazio. Quem está sem rede não tem o que registrar de novo, e
+quem nunca registrou não tem o que tentar de novo — mostrar "nenhum registro
+ainda" pra quem tem 200 registros e caiu a conexão é dizer a ela que o app perdeu
+tudo. Com falha de rede, lista vazia não significa "não há nada", significa "não
+sei".
+
+**Agrupamento em hora local, nunca UTC** (`chaveDoDia` em `horario.ts`). Em UTC-3
+a mamada das 23h50 de terça é 02h50 de quarta em UTC: agrupando por UTC, a mãe
+procuraria em "Ontem" o registro que acabou de fazer. Coberto por
+`scripts/teste-horario.ts`, que se re-executa com `TZ=America/Sao_Paulo` — numa
+máquina em UTC o teste seria teatro, porque lá a implementação errada passa.
+
+O item da lista virou `src/components/ItemRegistro.tsx`, compartilhado com a
+Home: duas listas de registro com aparências diferentes seria a mãe achando que
+são duas coisas.
 
 ### D7 — Tela Rotina v2
 Filtros por tipo, "carregar mais", pull-to-refresh, estados vazio/erro/carregando.
@@ -467,7 +484,8 @@ Não são código do app: rodam no Node, fora do Expo, e não entram no bundle.
 |---|---|
 | `node scripts/teste-rls-delete.mjs` | RLS de DELETE entre duas contas (§11.4). Pré-requisito de qualquer mexida em policy |
 | `node scripts/teste-paginacao.ts` | Cursor, desempate e bordas da paginação. Puro, sem banco |
-| `node scripts/semear-registros.mjs` | 7 dias de rotina plausível na sua conta. `--limpar` desfaz |
+| `node scripts/teste-horario.ts` | Agrupamento por dia em hora local. Re-executa com `TZ=America/Sao_Paulo` |
+| `node scripts/semear-registros.mjs` | 7 dias de rotina plausível num bebê dedicado. `--limpar` desfaz |
 
 **Por que `paginacao.ts` mora separado de `registros.ts`:** para não importar
 Supabase nem React Native, e assim poder rodar no Node. Cursor com desempate é a
@@ -478,6 +496,15 @@ olhando a tela.
 O teste foi conferido por mutação: removendo o desempate por `id`, **7 dos 17
 registros do cenário empatado desaparecem** e três verificações quebram. Um teste
 que não falha quando o código quebra não é teste.
+
+**A massa é semeada num bebê dedicado**, criado pelo próprio script
+(`SEMEADO-Teste`), nunca no bebê real da mãe. A razão é o `--limpar`:
+`sleep_records` não tem coluna `notes`, então não há como marcar procedência
+linha a linha e a única âncora confiável é o `baby_id`. Semeando no bebê real,
+limpar exigiria apagar sono por janela de tempo — e no D21 há três mães com sono
+de verdade no mesmo banco. Testar em produção é a decisão certa, e é ela que
+obriga o script a ser seguro em produção. A limpeza ainda confere o escopo antes
+de apagar e aborta se fosse alcançar mais de um `baby_id`.
 
 **A massa semeada é gabarito, não enchimento.** Ela alimenta o motor do D8, e
 motor com ruído produz número sem sentido — aí não dá pra saber se o erro é da

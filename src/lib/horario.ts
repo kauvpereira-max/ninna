@@ -63,6 +63,54 @@ export function formatarMomento(iso: string, agora: Date = new Date()): string {
   return `${dia}/${mes} ${hora}`;
 }
 
+/**
+ * Chave do dia a que um instante pertence, em HORA LOCAL: 'AAAA-MM-DD'.
+ *
+ * Local, nunca UTC, e isso não é detalhe. No Brasil (UTC-3) a mamada das 23h50
+ * de terça é 02h50 de quarta em UTC — agrupando por UTC ela apareceria sob o dia
+ * seguinte, e a mãe procuraria em "Ontem" o registro que ela mesma acabou de
+ * fazer. É o mesmo erro de fuso que morde o motor no D8 (BETA.md §8/R4), e sai
+ * mais barato acertar aqui.
+ *
+ * Não usar `toISOString().slice(0, 10)` para isso: aquilo é UTC por definição.
+ */
+export function chaveDoDia(iso: string): string {
+  const data = new Date(iso);
+  const ano = data.getFullYear();
+  const mes = String(data.getMonth() + 1).padStart(2, '0');
+  const dia = String(data.getDate()).padStart(2, '0');
+  return `${ano}-${mes}-${dia}`;
+}
+
+const MESES = [
+  'janeiro',
+  'fevereiro',
+  'março',
+  'abril',
+  'maio',
+  'junho',
+  'julho',
+  'agosto',
+  'setembro',
+  'outubro',
+  'novembro',
+  'dezembro',
+];
+
+/** Cabeçalho de grupo: "Hoje", "Ontem", "3 de agosto", "3 de agosto de 2025". */
+export function rotularDia(iso: string, agora: Date = new Date()): string {
+  const data = new Date(iso);
+  if (mesmoDia(data, agora)) return 'Hoje';
+
+  const ontem = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() - 1);
+  if (mesmoDia(data, ontem)) return 'Ontem';
+
+  const base = `${data.getDate()} de ${MESES[data.getMonth()]}`;
+  // O ano só aparece quando não é o corrente — "3 de agosto de 2026" em agosto
+  // de 2026 é ruído.
+  return data.getFullYear() === agora.getFullYear() ? base : `${base} de ${data.getFullYear()}`;
+}
+
 /** "12 min", "1h", "1h 20min". Abaixo de 1 minuto vira "menos de 1 min". */
 export function formatarDuracaoMin(minutos: number): string {
   if (minutos < 1) return 'menos de 1 min';
