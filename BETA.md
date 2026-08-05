@@ -30,11 +30,11 @@ nativo, ter push, ter assinatura.
 | 10 | Motor de personalização (3 métricas) | a fazer — **P2/P3** |
 | 11 | Card de insight na Home | a fazer — **P4** |
 | 12 | Supabase configurado | pronto (5 tabelas + RLS); falta `002` e §11.1 — **P0** |
-| 13 | Interface próxima ao protótipo | parcial — **P7** |
+| 13 | Interface próxima ao protótipo | parcial — **P8** |
 | 14 | Recuperar senha | ❌ **pulado no D3** — **P1 + D3b** |
 | 15 | Apagar registro | ✅ código pronto (D4); humor/sintoma reais em **P0** |
 | 16 | PWA instalável de verdade | a fazer — **P5/P6**, fecha em **P11** |
-| 17 | Termo LGPD com via de saída | a fazer — **P9** |
+| 17 | Termo LGPD com via de saída | a fazer — **P7** (portão da E1) |
 
 Os itens 14 a 17 não estavam no pedido original e foram incluídos por decisão
 técnica. A justificativa de cada um está em §3.
@@ -75,6 +75,11 @@ ela (banner no primeiro acesso via Safari, **P5**), e o fluxo de instalação
 precisa ser testado em iPhone real, não só o carregamento da página (**P6**).
 A permanência em si só é verificável ≥7 dias depois da instalação — é o **P11**,
 e é por causa dessa espera que os dois primeiros foram antecipados (§7.2).
+
+**A limpeza exige inatividade, não tempo.** Mãe que abre o app todo dia nunca
+dispara o gatilho — então o piloto, por mais longo que fique, não testa isto. O
+cenário do risco é a mãe que instala, some uma semana com recém-nascido e volta.
+Só o P11 reproduz esse silêncio. Ver a nota do R1 em §9.
 
 ### 3.2 Motor no cliente, não em Edge Function
 `src/lib/padroes.ts` é função pura: recebe registros, devolve três números.
@@ -219,7 +224,7 @@ Home monta
 | `(onboarding)/cadastro-bebe` | pronta |
 | `(tabs)/index` — Home | + card de insight (**P4**) |
 | `(tabs)/rotina` — Histórico | ✅ reescrita (D6–D7) |
-| `(tabs)/mais` | nome ✅; + sobre, feedback, sair (**P9**) |
+| `(tabs)/mais` | nome ✅; + sobre, feedback, sair (**P7**) |
 | `registro/[tipo]` modal, 6 tipos | ✅ + apagar (D4) |
 | `bebes/index` modal | pronta |
 | `bebes/novo` modal | pronta |
@@ -297,13 +302,23 @@ comprime:
    como digitação, então não trate os 76 minutos como taxa de câmbio.
 2. **Execução sua, fora do código** (§11.1–§11.4, semear, aparelho real, as 3
    mães) — não comprime por eu trabalhar mais rápido. É o bloco P0 abaixo.
-3. **Relógio de parede** — não comprime de jeito nenhum. Propagação de DNS do
-   Resend, a janela de ~7 dias de inatividade do iOS (§3.1), o "volte no dia
-   seguinte" do item 14. Nenhuma dessas encurta com esforço.
+3. **Relógio de parede** — não comprime de jeito nenhum. Em ordem de duração:
+
+   | Relógio | Duração | Começa em |
+   |---|---|---|
+   | **Uma mãe registrando até cruzar o limiar de confiança** | **~7 dias** | E1, 11/08 |
+   | Janela de ~7 dias de inatividade do iOS (§3.1) | ≥7 dias | P6, 11/08 |
+   | Propagação de DNS do Resend | horas a dias | P0-bis, hoje |
+   | "Volte no dia seguinte" do item 14 | 1 dia | dentro do P11 |
 
 **A regra que sai daí e organiza a fila:** todo relógio de parede começa o mais
 cedo possível, mesmo que o trabalho que depende dele venha muito depois. Latência
 se paga em paralelo; esforço, não.
+
+**O relógio mais longo do projeto é o primeiro da tabela, e ele estava agendado
+por último.** É o mesmo erro do D3, com outra roupa: tratar espera como bloco de
+trabalho. Um bebê não mama mais rápido porque o cronograma apertou. Por isso o
+piloto deixou de ser bloco final e virou **trilha paralela** — §7.3-bis e R14.
 
 ### 7.2 A descoberta que reordena tudo: o item 11 era inverificável
 
@@ -490,13 +505,13 @@ antes — só a posição mudou.
 | **P5** | D16 — PWA + deploy ⬆️ *antecipado de 20/08* | 10/08 | P4 |
 | **P6** | D17a — instalar no iPhone real ⏱️ *começa a janela de 7 dias* | 11/08 | aparelho ≠ o de dev |
 | **·** | **D3b** — aceite do reset em Gmail de terceiro | *quando o DNS verificar* | P0-bis |
-| **P7** | D11–D13 — interface conforme protótipo | 12–14/08 | — |
-| **P8** | D14 — bordas e robustez | 15/08 | — |
-| **P9** | D18 — pacote da embaixadora (LGPD) | 16/08 | — |
-| **P10** | D15 — bateria manual roteirizada ⚠️ | 17/08 | P7 |
+| **P7** | D18 — pacote da embaixadora (LGPD) ⬆️ *era 16/08* | **11/08** | **portão da E1** |
+| **P8** | D11–D13 — interface conforme protótipo | 12–14/08 | — |
+| **P9** | D14 — bordas e robustez | 15/08 | — |
+| **P10** | D15 — bateria manual roteirizada ⚠️ | 16–17/08 | P8 · **portão de E2/E3** |
 | **P11** | D17b — reabrir o iPhone ⏱️ *fecha os itens 11 e 14* | **≥18/08** | P6 + 7 dias |
 | **P12** | D19–D20 — reserva | 19–22/08 | — |
-| **P13** | D21 — piloto com 3 embaixadoras | 23–25/08 | tudo acima |
+| **P13** | D21 — **leitura** do piloto, não a execução dele | 23–25/08 | trilha E (§7.3-bis) |
 
 P0 a P13 são 14 posições em 20 dias de calendário (06/08 a 25/08), com 4 dias de
 reserva dentro. **Cabe.** P0-bis e D3b não têm posição própria porque não
@@ -506,7 +521,72 @@ A folga toda mora em P12, de propósito — reserva espalhada é reserva que som
 sem ninguém notar.
 
 Os dois ⏱️ são os únicos itens que trabalhar mais rápido não adianta. O ⬆️ e o
-**P0-bis** existem só para pagá-los em paralelo.
+**P0-bis** existem só para pagá-los em paralelo. **O relógio mais longo de todos
+não está nesta tabela** — é o da trilha E, abaixo.
+
+⚠️ **O D18 subiu de 16/08 para 11/08 e virou P7 — isto é obrigatório, não
+otimização.** Antecipar a E1 põe uma mãe real registrando dado de saúde de bebê a
+partir de 11/08; o termo LGPD, o canal de feedback e o roteiro de instalação
+estavam agendados para 16/08. Seriam cinco dias coletando dado sensível de uma
+criança sem o termo existir, sem canal para ela relatar problema, e sem o papel
+que ensina a instalar o app que ela precisa instalar. **O pacote da embaixadora é
+literalmente o que se entrega a uma embaixadora** — não há como ela entrar antes
+dele. Por isso P7 é o portão da E1, e não uma posição qualquer da fila.
+
+### 7.3-bis A trilha paralela: o piloto
+
+O piloto **não é o último bloco**. É uma trilha que corre por baixo da fila
+inteira, porque o que ela contém não é trabalho, é espera: uma mãe precisa de
+~7 dias registrando para cruzar o limiar de confiança do §3.3, e nenhum esforço
+encurta isso (§7.1, R14).
+
+| Trilha | Quem | Entra | Tem, na leitura |
+|---|---|---|---|
+| **E1** | 1ª embaixadora, acompanhada de perto no 1º cadastro | **11/08** — depois do PWA no ar (P5) **e do pacote (P7)** | ~14 dias de registro |
+| **E2 + E3** | as outras duas, com o app já polido | **18/08** — depois do P10 | ~7 dias de registro |
+| **P13** | leitura: as 3 chegaram ao insight? o insight estava certo? | 23–25/08 | — |
+
+```
+         FILA PRINCIPAL                       TRILHA DO PILOTO
+06/08    P1  D3a
+07/08    P2  D8   ┐
+08/08    P3  D9   │ motor
+09/08    P4  D10  ┘
+10/08    P5  D16   PWA no ar
+11/08    P6  D17a  instalar ⏱️
+         P7  D18   pacote da embaixadora ──▶  E1 entra ▶──┐
+12/08   ┐                                                 │
+13/08   ├ P8  D11–D13  interface                          │ E1
+14/08   ┘        (E1 já está usando o app cru)            │ registra
+15/08    P9  D14   bordas                                 │
+16/08   ┐ P10 D15  bateria manual                         │
+17/08   ┘        (portão de E2/E3) ───────────────────┐   │
+18/08    P11 D17b  reabrir ⏱️           E2+E3 entram ▶┤   │
+19/08   ┐                                             │   │
+  …     ├ P12 reserva                                 │   │
+22/08   ┘                                        ~7d  │   │ ~14d
+23/08   ┐                                             ▼   ▼
+24/08   ├ P13  LEITURA do piloto ◀────────────────────┴───┘
+25/08   ┘        as 3 chegaram ao insight? ele estava certo?
+```
+
+**Por que E1 entra antes da interface pronta.** Interface crua não impede uma mãe
+acompanhada de perto de registrar — impede **escala**, não impede o teste da
+hipótese. E1 não é usuária de produto acabado, é a primeira leitura do único
+objetivo do beta. As outras duas entram depois do P10 justamente porque elas *não*
+serão acompanhadas passo a passo, e aí o app precisa se defender sozinho.
+
+**O que essa antecipação compra, além de caber:** com E1 desde 11/08, o R3 (insight
+sair errado) passa a ter ~14 dias de dado real de bebê para ser detectado e
+corrigido, em vez de 3. Massa semeada é gabarito de matemática (§9-bis); rotina de
+bebê real é a única coisa que testa se a matemática **descreve um bebê**.
+
+⚠️ **Margem desigual, de propósito.** E1 tem folga larga; E2 e E3 entram em 18/08 e
+chegam à leitura com exatamente os ~7 dias da janela — **sem margem**. Se elas
+atrasarem a entrada, chegam ao P13 abaixo do limiar e o card mostra a frase de
+aprendizado, o que não é falha do motor mas parece uma. O aceite do P13 tem que
+ler as três separadamente: **E1 responde se a hipótese vale; E2 e E3 respondem se
+o onboarding funciona sem a mão do fundador.** São perguntas diferentes.
 
 ### 7.4 Os blocos, em ordem
 
@@ -576,8 +656,8 @@ instalação. `vercel.json` com rewrite para SPA. Deploy.
 **Ao final:** URL pública que instala como app no seu iPhone.
 
 Subiu de 20/08 para cá por causa de §7.2. A URL vai ao ar com a interface ainda
-crua, e tudo bem: o canal é fechado, as 3 embaixadoras só recebem o link no P13,
-e o manifest não depende de o histórico estar bonito.
+crua, e tudo bem: o canal é fechado e o manifest não depende de o histórico estar
+bonito. **A E1 recebe o link já em 11/08** — E2 e E3 só depois do P10.
 
 ### P6 — D17a: dispositivo real, instalação ⏱️ começa a janela
 iPhone/Safari e Android/Chrome, em aparelho que **não** é o de desenvolvimento.
@@ -589,19 +669,7 @@ Safe area, teclado cobrindo campo, scroll, rotação. Também é aqui que o R12
 **Depois disto, não abrir o app nesse iPhone até o P11.** A espera *é* o teste —
 abrir no meio zera o relógio e o item 11 volta a ser inverificável.
 
-### P7 — D11–D13: Interface conforme protótipo
-D11 Home · D12 modais de registro · D13 histórico, auth e onboarding.
-**Ao final:** nenhuma tela parece de desenvolvedor.
-*Primeiro degrau do corte, se algo estourar — §7.5.*
-
-### P8 — D14: Bordas e robustez
-Estados vazios, erro de rede com "tentar de novo" **preservando o formulário**,
-alvos de toque ≥44px, `accessibilityLabel`, tela de 360px.
-(O `try/catch` das fontes saiu daqui — foi antecipado para o D2, ver §3.9.)
-O gesto de puxar-para-atualizar da Rotina, pendência do D7, é confirmado no
-**P6** — precisa de Safari real, não adianta olhar aqui.
-
-### P9 — D18: Pacote da embaixadora (LGPD)
+### P7 — D18: Pacote da embaixadora (LGPD) ⬆️ antecipado — PORTÃO DA E1
 Termo curto e honesto, contendo obrigatoriamente:
 - quais dados são coletados e onde ficam (Supabase, região do projeto);
 - como pedir exclusão total — canal e prazo de resposta — mesmo que a execução
@@ -612,10 +680,60 @@ Termo curto e honesto, contendo obrigatoriamente:
 Mais: canal de feedback (grupo WhatsApp + link na aba Mais) e roteiro de 1
 página de instalação. Reexecutar §11.4 como parte do aceite.
 
+**Subiu de 16/08 para 11/08 porque a E1 subiu.** Os três itens deste bloco são
+exatamente o que uma embaixadora precisa ter em mãos para *ser* embaixadora: o
+termo que a informa, o canal por onde ela relata, e o papel que ensina a
+instalar. Com a E1 entrando em 11/08, deixar isto em 16/08 significaria cinco
+dias coletando dado de saúde de um bebê real sem termo e sem canal de retorno.
+Não é atraso de cronograma, é coleta sem base — e o §7.5 já dizia que este
+bloco não se negocia por prazo.
+
+### E1 — Primeira embaixadora entra 🕐 TRILHA PARALELA, a partir de 11/08
+Uma mãe só, acompanhada de perto por você no primeiro cadastro: conta, bebê,
+primeiros registros. Depois disso ela usa sozinha e você acompanha pelo canal
+humano (§3.7).
+
+Não é bloco de trabalho — é o **início do relógio mais longo do projeto**. A
+partir daqui o dado dela se acumula sozinho enquanto P8, P9 e P10 acontecem.
+
+Ela entra com a interface ainda crua, e isso é decisão, não concessão: o que se
+está testando é se o motor diz algo verdadeiro sobre o bebê dela, e isso não
+depende de a tela estar bonita. Ver §7.3-bis.
+
+**Não entra sem o P7 fechado.** É a única precedência rígida da trilha.
+
+### P8 — D11–D13: Interface conforme protótipo
+D11 Home · D12 modais de registro · D13 histórico, auth e onboarding.
+**Ao final:** nenhuma tela parece de desenvolvedor.
+*Serve E2 e E3, não a E1 — que já está usando o app cru. Terceiro degrau do
+corte, §7.5.*
+
+### P9 — D14: Bordas e robustez
+Estados vazios, erro de rede com "tentar de novo" **preservando o formulário**,
+alvos de toque ≥44px, `accessibilityLabel`, tela de 360px.
+(O `try/catch` das fontes saiu daqui — foi antecipado para o D2, ver §3.9.)
+O gesto de puxar-para-atualizar da Rotina, pendência do D7, é confirmado no
+**P6** — precisa de Safari real, não adianta olhar aqui.
+
 ### P10 — D15: Bateria manual roteirizada ⚠️ dia pesado
 Roteiro de ~30 passos: conta nova → mãe → bebê → 7 dias de registros → insight →
 apagar → sair → entrar. Duas contas, dois bebês. Corrigir o que quebrar.
 **Ao final:** o roteiro passa inteiro sem intervenção.
+
+**Este é o portão de E2 e E3.** Elas não serão acompanhadas passo a passo como a
+E1 — então o app precisa passar no roteiro sozinho antes de as duas receberem o
+link.
+
+### E2 + E3 — As outras duas entram 🕐 TRILHA PARALELA, a partir de 18/08
+App já polido (P8) e já testado ponta a ponta (P10). Convite pelo canal humano,
+sem acompanhamento passo a passo — é isso que as torna teste de outra coisa: a
+E1 responde se a hipótese vale, elas respondem se o onboarding se sustenta sem a
+mão do fundador.
+
+⚠️ **Elas têm exatamente a janela, sem margem.** 18/08 até a leitura em 23–25/08
+são ~7 dias — o mínimo do §3.3. Cada dia de atraso na entrada delas é um dia a
+menos de dado, e abaixo do limiar o card mostra a frase de aprendizado: não é
+falha do motor, mas **se parece com uma** na hora de ler o resultado.
 
 ### P11 — D17b: reabrir o iPhone ⏱️ ≥7 dias depois do P6
 Abrir pelo ícone o app instalado no P6, sem ter tocado nele desde então.
@@ -629,9 +747,20 @@ essa margem que o cronograma original não tinha.
 ### P12 — D19–D20: Reserva
 Não são dias livres. São os dias que algo do P0–P11 vai consumir.
 
-### P13 — D21: Piloto com 3 embaixadoras, não 20
-Três mães acompanhadas de perto no primeiro cadastro. Se as três chegarem ao
-insight, abre para o resto.
+### P13 — D21: Leitura do piloto (o piloto já está correndo há 12 dias)
+**Deixou de ser "rodar o piloto" e virou "ler o piloto".** Quando este bloco
+chega, E1 tem ~14 dias de rotina registrada e E2/E3 têm ~7. Não há nada a
+iniciar aqui — há duas perguntas a responder:
+
+1. **As três chegaram ao insight?** Ou alguma ficou na frase de aprendizado, e
+   por quê — limiar não cruzado, registro esparso, ou bug.
+2. **O insight estava certo?** Conferido contra os registros brutos dela, do
+   mesmo jeito que o item 9 da §8 exige. Insight que sai e está errado é pior
+   que insight que não sai (R3, e o mesmo princípio da copy de saúde).
+
+Se as três chegarem e os números baterem, abre para o resto. Se só a E1 chegar,
+a hipótese vale e o onboarding não — são conclusões diferentes, com correções
+diferentes, e é por isso que §7.3-bis manda ler as três separadamente.
 
 ### 7.5 O que sai se não couber
 
@@ -639,29 +768,43 @@ Em ordem de sacrifício. Cortar de cima para baixo, e **nunca** fora de ordem �
 a ordem é por distância do objetivo único do beta (§ topo: uma mãe recebe um
 insight verdadeiro sobre o próprio bebê).
 
-**Degrau 1 — P7 vira um bloco só, não três. Recupera 2 dias.**
-Só a Home e o card de insight recebem o tratamento do protótipo. Modais de
-registro, auth, onboarding e histórico ficam como estão.
-*Por quê primeiro:* "nenhuma tela parece de desenvolvedor" **não é nenhum dos 14
-itens da §8**. É a única promessa grande do documento que a própria checklist não
-cobra — e as 3 embaixadoras são acompanhadas pessoalmente pelo fundador, então
-app cru que entrega insight verdadeiro ainda responde à pergunta do beta.
+**Dois degraus desta escada foram absorvidos pelo cronograma e não existem mais.**
+Eram "cortar o polimento da interface" e "começar com 1 embaixadora em vez de 3".
+Os dois viraram **o plano**, não a emergência: E1 entra em 11/08 com o app cru, de
+propósito (§7.3-bis). Um corte que já é o desenho não é mais alavanca — o que
+resta abaixo é o que ainda dá para sacrificar de verdade.
 
-**Degrau 2 — humor, sintoma e múltiplos bebês saem do polimento e do roteiro do
+**Degrau 1 — humor, sintoma e múltiplos bebês saem do polimento e do roteiro do
 P10. Recupera ~meio dia.**
 O **código fica** — removê-lo custaria mais que mantê-lo (§1, "bônus mantido sem
 custo"). O que sai é o custo deles: passo no roteiro de 30 passos e rodada de
 design. Nenhum dos três aparece em qualquer item da §8.
 
-**Degrau 3 — P8 encolhe ao que a checklist toca. Recupera ~meio dia.**
+**Degrau 2 — P9 (D14) encolhe ao que a checklist toca. Recupera ~meio dia.**
 Fica: erro de rede preservando o formulário (é o R8) e alvos de 44px. Sai:
 varredura de `accessibilityLabel` e a tela de 360px, que viram acabamento
 pós-beta e vão para a §10.
 
-**Degrau 4 — o piloto começa com 1 embaixadora, não 3.**
-Última linha antes de tocar em qualquer coisa acima. Uma mãe acompanhada de
-perto ainda responde à hipótese do beta; três respondem com mais confiança, mas
-o número 3 é amostra, não requisito. As outras duas entram na semana seguinte.
+**Degrau 3 — P8 (D11–D13) comprime de três blocos para um. Recupera 2 dias.**
+Só a Home e o card de insight recebem o tratamento do protótipo.
+*Mudou de natureza, e ficou mais caro do que era.* Antes o polimento não servia a
+ninguém em particular e cortá-lo era aposta. Agora ele tem destinatário: **E2 e
+E3, que entram sem acompanhamento**. Cortar aqui não arrisca a hipótese — a E1 já
+respondeu isso com o app cru — mas degrada exatamente aquilo que E2 e E3 existem
+para testar, que é o app se defender sozinho. Por isso desceu para o terceiro
+degrau em vez do primeiro.
+
+**Degrau 4 — E2 e E3 não entram; a leitura do P13 é só da E1.**
+Última linha. A hipótese do beta continua respondida: E1 chega ao P13 com ~14
+dias de rotina real, que é mais dado do que as três teriam no plano antigo
+inteiro. O que se perde é a resposta sobre onboarding sem acompanhamento — que é
+pergunta de escala, não de hipótese, e pode esperar a semana seguinte com um app
+honestamente pronto.
+
+*Degraus 3 e 4 são acoplados:* se o aperto chegou a esse ponto, fazer o 4 sozinho
+é melhor que fazer o 3 sozinho. Convidar E2 e E3 para um app que você acabou de
+decidir não polir gasta duas embaixadoras para medir um app que você já sabe que
+não está pronto.
 
 **O que não sai em degrau nenhum:**
 
@@ -671,7 +814,8 @@ o número 3 é amostra, não requisito. As outras duas entram na semana seguinte
 | P5, P6, P11 (PWA + janela de 7 dias) | Item 11. Sem isso a mãe é deslogada no dia 7 (R1) |
 | D3b (aceite do reset) | Item 2. Embaixadora sem senha está fora do piloto para sempre (§3.6) |
 | P0 §11.3 e §11.4 | Itens 12 e 13. Privacidade de dado de saúde de bebê |
-| P9 (termo LGPD) | Não é escopo, é obrigação legal. Não se negocia por prazo |
+| **P7 (pacote da embaixadora)** | Não é escopo, é obrigação legal. Não se negocia por prazo — e agora é **portão da E1**: sem ele nenhuma mãe real entra |
+| **E1 em 11/08** | É o relógio mais longo do projeto (R14). Atrasar a E1 atrasa o beta inteiro, e não há como recuperar depois |
 
 Cortar qualquer linha dessa tabela não atrasa o beta — **cancela** ele. Se a
 conta não fechar nem depois do degrau 4, o certo é mover a data de 25/08, não
@@ -727,22 +871,58 @@ celular que não é o de desenvolvimento.** Não é avaliação, é checklist.
 
 | # | Risco | Mitigação | Dia |
 |---|---|---|---|
-| R1 | Mãe não instala a PWA e é deslogada pelo iOS em ~7 dias | Banner in-app conduzindo a instalação + item 11 da checklist. **Antecipado**: no cronograma original a janela de 7 dias não cabia antes do piloto (§7.2) | P5–P6, fecha em P11 |
+| R1 | Mãe não instala a PWA e é deslogada pelo iOS em ~7 dias | Banner in-app conduzindo a instalação + item 11. **Antecipado**: no cronograma original a janela de 7 dias não cabia antes do piloto (§7.2). **O piloto NÃO testa este risco** — ver nota abaixo | P5–P6, fecha em **P11** |
 | R2 | **E-mail transacional cai em spam** — derruba o reset de senha | Resend com domínio próprio da Ninna, decidido no D1. Confirmação de signup desligada (§3.8), então só o reset depende de entrega. D3 não fecha sem o SMTP configurado | P0-bis / P1 / D3b |
 | R3 | Insight sair errado — perde a embaixadora e a credibilidade | Média circular, soneca≠noite, limiar de 5 registros | P2–P4 |
 | R4 | Fuso horário desanda o horário médio | Hora local sempre, nunca UTC; testar com relógio em outro fuso | P3 |
-| R5 | LGPD sem via de saída para dado sensível de bebê | Termo com canal e prazo de exclusão + item 13 | P9 |
-| R6 | Bug de mãe real nunca chega até mim | Grupo WhatsApp + link "Relatar problema" | P9 |
+| R5 | LGPD sem via de saída para dado sensível de bebê | Termo com canal e prazo de exclusão + item 13 | **P7** |
+| R6 | Bug de mãe real nunca chega até mim | Grupo WhatsApp + link "Relatar problema" | **P7** |
 | R7 | ~~Tela branca permanente se uma fonte falhar ao carregar~~ | **Resolvido no D2** — `try/catch/finally` no `loadFonts` (§3.9) | ✅ D2 |
-| R8 | Sem modo offline: registro perdido no quarto com Wi-Fi fraco | Formulário preservado no erro + "tentar de novo". Limitação declarada | P8 |
+| R8 | Sem modo offline: registro perdido no quarto com Wi-Fi fraco | Formulário preservado no erro + "tentar de novo". Limitação declarada | P9 |
 | R9 | Regressão no build web mata o canal único | `expo export --platform web` ao fim de **todo** dia | diário |
 | R10 | Supabase free pausa por inatividade e limita e-mail | Verificar no D1; com uso diário não pausa | D1 |
 | R11 | Escopo se expandindo (o mais provável de todos) | Este documento; toda ideia nova vai para §10 | diário |
 | R12 | Bundle de 1,88 MB pesado em 4G | Medir tempo de carga no dispositivo real; só otimizar se doer | P6 |
 | R13 | **Bloco pulado sem ninguém notar** — aconteceu com o D3, descoberto 6 blocos depois | Âncora de calendário e data alvo por bloco (§7.0/§7.3). Cronograma sem data não atrasa: encolhe em silêncio | diário |
+| R14 | **O piloto não cabia nos 21 dias** — o relógio mais longo do projeto estava agendado por último | Piloto vira trilha paralela: E1 em 11/08, E2/E3 em 18/08, e o P13 lê em vez de rodar (§7.3-bis) | P7 → P13 |
 
 A coluna "Dia" usa as posições de §7.3, não os nomes de bloco — foi justamente a
 confusão entre as duas coisas que deixou o D3 escapar (§7.0).
+
+### Nota do R1 — o piloto não substitui o P11
+
+A limpeza de storage do iOS (§3.1) exige **inatividade**. Uma embaixadora usando
+o app todo dia — que é exatamente o comportamento que o piloto quer produzir —
+**nunca dispara o gatilho**. Ela poderia registrar por 14 dias seguidos e isso não
+diria nada sobre o R1.
+
+O cenário real do risco é outro: a mãe instala, **some uma semana** com um
+recém-nascido em casa, e volta. É esse silêncio que apaga o storage e a desloga.
+Só se prova reproduzindo o silêncio, e é isso que o P11 faz no seu iPhone — sete
+dias sem abrir, de propósito.
+
+Portanto: **o piloto e o P11 testam coisas diferentes e nenhum cobre o outro.**
+O piloto responde "o insight é verdadeiro?"; o P11 responde "ela ainda vai estar
+logada quando voltar?". Antecipar a trilha do piloto não dispensa o P11, e um
+piloto correndo bem não é evidência sobre o R1.
+
+### Nota do R14 — por que o piloto por último era o mesmo erro do D3
+
+O objetivo único do beta exige uma mãe registrando **por dias** até cruzar o
+limiar de 5 registros da métrica (§3.3): ~1 dia para o intervalo entre mamadas,
+~2 dias para as duas métricas de soneca, e mais que isso para o padrão ser
+estável em vez de acidental.
+
+No cronograma original o piloto começava em 23/08 e o beta acabava em 25/08. O
+insight sairia no último dia, com zero margem para reagir se saísse errado — que
+é literalmente o R3. Pior: com registro esparso, que é o comportamento realista
+de uma mãe de primeira viagem, o limiar não seria cruzado e as três veriam a
+frase de aprendizado durante o piloto inteiro.
+
+A causa é a mesma do D3: **espera tratada como bloco de trabalho.** Um bebê não
+mama mais rápido porque o cronograma apertou. A correção é a mesma regra do
+§7.1 — relógio longo começa primeiro — e o resultado é que a E1 chega ao P13 com
+~14 dias de rotina real, mais dado do que as três teriam no plano antigo inteiro.
 
 ## 9-bis. Scripts (`scripts/`)
 
