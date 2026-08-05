@@ -454,11 +454,28 @@ faltando (`typography.caption` roda em Regular) · `src/theme/fonts.ts` citado e
 
 Estas duas não têm como ser feitas por commit. Sem elas o D3 não fecha.
 
-### 11.1 Desligar confirmação de e-mail — pode ser feita agora
-`Authentication > Providers > Email` → desmarcar **Confirm email**.
+### 11.1 Desligar confirmação de e-mail — ⚠️ AINDA NÃO ESTÁ APLICADA
+`Authentication > Sign In / Providers > Email` → desmarcar **Confirm email** →
+**Salvar**.
 
-Decisão em §3.8. O código já lida com os dois estados da chave, então ligar ou
-desligar não exige alterar nada.
+Verificado em 05/08/2026 contra o projeto: `mailer_autoconfirm` continua `false`,
+ou seja, a confirmação segue ligada. Conferir sem abrir o painel:
+
+```
+curl -s "$EXPO_PUBLIC_SUPABASE_URL/auth/v1/settings" -H "apikey: <anon key>"
+```
+Esperado: `"mailer_autoconfirm": true`.
+
+Decisão em §3.8. O código já lida com os dois estados, então ligar ou desligar
+não exige alterar nada — mas com a confirmação ligada o signup mostra a tela
+"Quase lá" em vez de levar direto ao cadastro do bebê, e o script de RLS (§11.4)
+não roda.
+
+**Efeito colateral que importa:** com a confirmação ligada, cada cadastro tenta
+enviar e-mail pelo mailer embutido do Supabase, que tem limite de poucos envios
+por hora. Estourado o limite, o erro que aparece é `email rate limit exceeded` —
+que não se parece em nada com a causa real. É o risco R2 se manifestando antes
+mesmo do piloto.
 
 ### 11.2 SMTP próprio via Resend — aguardando propagação de DNS
 Domínio próprio da Ninna, **não** `@interdemo.com.br`: e-mail de reset chegando
@@ -486,11 +503,25 @@ algo que o banco recusa (§6).
 ```
 node scripts/teste-rls-delete.mjs
 ```
-Cria duas contas descartáveis e prova, nos 6 tipos, que A não apaga registro de
-B, que a linha de B sobrevive à tentativa, e que B apaga o próprio (controle
-positivo — sem ele, uma policy que negasse tudo passaria no teste).
+Prova, nos 6 tipos, que A não apaga registro de B, que a linha de B sobrevive à
+tentativa, e que B apaga o próprio (controle positivo — sem ele, uma policy que
+negasse tudo passaria no teste). Precisa do "Confirm email" desligado (§11.1); se
+não estiver, o script para no preflight e diz exatamente isso.
 
 Usa só a anon key, a mesma do app: o que está sendo testado é exatamente o que o
-navegador da mãe consegue fazer. Precisa do "Confirm email" já desligado (§11.1).
+navegador da mãe consegue fazer. O script **se recusa a rodar** com service_role
+— com ela a RLS é ignorada por definição e o verde não significaria nada.
 
-Repetir depois de **qualquer** mexida em policy.
+Roda contra o mesmo projeto das embaixadoras, de propósito: um projeto separado
+só provaria que as policies **daquele** projeto estão certas, e policy é
+exatamente o que diverge entre ambientes sem ninguém perceber. Em troca, cria
+tudo prefixado com `TESTE-RLS-` e apaga os dados num `finally`. As duas contas de
+auth ficam (removê-las exigiria service_role).
+
+**É pré-requisito, não teste avulso.** Rodar e ver verde é obrigatório:
+
+1. **Antes de aceitar qualquer alteração em policy**, sem exceção.
+2. **Como parte do aceite do D18.** A exclusão de conta prometida no termo LGPD é
+   implementada sobre cascata de deleção (`002`), e mexer em cascata é
+   precisamente a mudança capaz de afrouxar uma policy sem dar nenhum aviso —
+   nada quebra, nada avisa, e o dado de uma mãe passa a ser alcançável por outra.

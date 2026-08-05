@@ -19,6 +19,18 @@ import { colors, spacing, radius, typography } from '../../../src/theme/tokens';
  * long-press ali é traiçoeiro: no Safari do iPhone o toque longo dispara o callout
  * do sistema e a seleção de texto antes de qualquer handler, e no desktop o gesto
  * simplesmente não existe. Um botão que se vê e se lê funciona nos três lugares.
+ *
+ * ESCOPO TRAVADO: VER E APAGAR. Não editar.
+ *
+ * Os campos são leitura pura — nenhum é `TextInput`, e a única ação da tela é o
+ * botão de apagar. Editar valor de registro abriria um caminho de dados novo que
+ * o motor de personalização teria que reconciliar (um `started_at` alterado move
+ * o registro na linha do tempo e muda o intervalo médio entre mamadas já
+ * calculado), e reconciliação é justamente o tipo de trabalho que não cabe em 21
+ * dias. Registro errado se apaga e se refaz.
+ *
+ * A rota é a base que a Rotina do D5–D7 vai reaproveitar. Se alguém for
+ * acrescentar edição aqui, o lugar da decisão é o BETA.md, não este arquivo.
  */
 export default function DetalheRegistroScreen() {
   const { tipo, id } = useLocalSearchParams<{ tipo: string; id: string }>();
