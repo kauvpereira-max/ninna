@@ -134,6 +134,42 @@ de gráfico (o beta não tem gráfico — insight é frase), nada de Sentry
 Com 3 embaixadoras, um grupo de WhatsApp + link "Relatar problema" na aba Mais
 detecta mais bugs que Sentry, e custa 1h em vez de 1 dia.
 
+### 3.8 Confirmação de e-mail DESLIGADA no beta
+Chave no painel do Supabase Auth, não no código.
+
+As três embaixadoras são conhecidas pessoalmente do fundador — não há identidade
+a verificar. O que existe é um passo extra entre "quero conhecer" e "estou
+usando", e esse passo é ponto de abandono no primeiro contato, justamente com
+quem já topou ajudar.
+
+**Isto não dispensa o Resend.** O reset de senha continua dependendo de entrega
+de e-mail, então o SMTP próprio segue como pré-requisito do D3 — só deixou de
+ser pré-requisito do D2, que é o que permite os dois correrem em paralelo
+enquanto o DNS propaga.
+
+**Rever antes de qualquer abertura pública.** Cadastro aberto sem confirmação
+aceita e-mail de terceiro e e-mail inexistente — a segunda mãe não é conhecida
+pessoalmente. O código não assume a chave desligada: `signUp` devolve
+`precisaConfirmarEmail` a partir de ter vindo sessão ou não, e a tela se adapta.
+Religar a confirmação no painel não exige mudar código.
+
+### 3.9 Exceção consciente ao escopo do D1: `loadFonts`
+Corrigido no D2, fora da fila, com justificativa registrada.
+
+O `loadFonts` do `app/_layout.tsx` não tinha `try/catch`: uma fonte que falhasse
+no download deixava `setFontsLoaded(true)` sem rodar, a splash sem sair, e a mãe
+numa **tela branca permanente**. Estava agendado para o D14 como acabamento.
+
+A reclassificação está certa e a regra que ela cria vale para o resto do beta:
+**falha silenciosa que a usuária não consegue relatar não é acabamento, é
+prioridade.** Ela não abre chamado dizendo "a splash não saiu" — ela desinstala,
+e o beta perde uma das três embaixadoras sem nunca saber por quê.
+
+Agora o carregamento tem `try/catch/finally`, e o `finally` garante que a splash
+sai sempre. Fonte que falha degrada para a fonte de sistema: o app fica menos
+bonito e continua inteiro, porque tamanho, peso e espaçamento vêm dos tokens,
+não da família da fonte.
+
 ---
 
 ## 4. Arquitetura
@@ -212,10 +248,17 @@ antes de apagar arquivos). Tab bar 6→3. Telas placeholder removidas. Quatro
 dependências mortas removidas. `.env` fora do versionamento. Este documento.
 **Ao final:** nenhuma tela diz "não implementada"; `tsc` e export web passam.
 
-### D2 — Cadastro da mãe
-Campo nome no signup → `user_metadata`. Home cumprimenta pelo nome. Aba Mais
-mostra nome e e-mail.
-**Ao final:** conta nova nasce com nome e a Home diz "Oi, Marina".
+### D2 — Cadastro da mãe ✅ FEITO
+Campo "Como você quer ser chamada?" no signup → `user_metadata.nome`, exposto
+pelo contexto como `nomeMae`. Home cumprimenta pelo nome; aba Mais virou cartão
+de conta com nome e e-mail. Signup não mostra mais a tela intermediária quando
+a confirmação está desligada (§3.8) — a mãe vai direto para o cadastro do bebê.
+Fora da fila: `loadFonts` corrigido (§3.9).
+**Ao final:** conta nova nasce com nome e a Home diz "Oi, Marina". ✅
+
+Conta criada antes do D2 não tem a chave em `user_metadata`. O código trata isso
+em vez de assumir: `nomeMae` é nullable, a saudação **some** em vez de virar
+"Oi," pendurado, e o cartão da aba Mais cai para o e-mail como identidade.
 
 ### D3 — Recuperar senha + erros em português
 Fluxo de reset com redirect. Traduzir mensagens do Supabase (hoje voltam em
@@ -266,8 +309,7 @@ D11 Home · D12 modais de registro · D13 histórico, auth e onboarding.
 ### D14 — Bordas e robustez
 Estados vazios, erro de rede com "tentar de novo" **preservando o formulário**,
 alvos de toque ≥44px, `accessibilityLabel`, tela de 360px.
-Incluir: `try/catch` no carregamento de fontes do `app/_layout.tsx` — hoje uma
-fonte que falha deixa a tela branca para sempre (§8/R7).
+(O `try/catch` das fontes saiu daqui — foi antecipado para o D2, ver §3.9.)
 
 ### D15 — Bateria manual roteirizada ⚠️ dia pesado
 Roteiro de ~30 passos: conta nova → mãe → bebê → 7 dias de registros → insight →
@@ -314,7 +356,8 @@ insight, abre para o resto.
 celular que não é o de desenvolvimento.** Não é avaliação, é checklist.
 
 ### Fluxo completo
-1. Crio conta com e-mail real, informo meu nome, e concluo o cadastro.
+1. Crio conta com e-mail real, informo meu nome, e caio **direto** no cadastro do
+   bebê — sem passo intermediário de confirmação (§3.8).
 2. Esqueço a senha, recupero por e-mail e entro de novo — **e o e-mail chegou na
    caixa de entrada de um Gmail que não é o meu, não em spam.**
 3. Cadastro um bebê e chego na Home com nome e idade corretos.
@@ -356,12 +399,12 @@ celular que não é o de desenvolvimento.** Não é avaliação, é checklist.
 | # | Risco | Mitigação | Dia |
 |---|---|---|---|
 | R1 | Mãe não instala a PWA e é deslogada pelo iOS em ~7 dias | Banner in-app conduzindo a instalação + item 11 da checklist | D16–D17 |
-| R2 | **E-mail transacional cai em spam** — derruba signup e reset inteiro | Decisão do remetente no D1 (§10). D3 não fecha sem isso | D1/D3 |
+| R2 | **E-mail transacional cai em spam** — derruba o reset de senha | Resend com domínio próprio da Ninna, decidido no D1. Confirmação de signup desligada (§3.8), então só o reset depende de entrega. D3 não fecha sem o SMTP configurado | D1/D3 |
 | R3 | Insight sair errado — perde a embaixadora e a credibilidade | Média circular, soneca≠noite, limiar de 5 registros | D8–D10 |
 | R4 | Fuso horário desanda o horário médio | Hora local sempre, nunca UTC; testar com relógio em outro fuso | D9 |
 | R5 | LGPD sem via de saída para dado sensível de bebê | Termo com canal e prazo de exclusão + item 13 | D18 |
 | R6 | Bug de mãe real nunca chega até mim | Grupo WhatsApp + link "Relatar problema" | D18 |
-| R7 | Tela branca permanente se uma fonte falhar ao carregar | `try/catch` no `loadFonts` | D14 |
+| R7 | ~~Tela branca permanente se uma fonte falhar ao carregar~~ | **Resolvido no D2** — `try/catch/finally` no `loadFonts` (§3.9) | ✅ D2 |
 | R8 | Sem modo offline: registro perdido no quarto com Wi-Fi fraco | Formulário preservado no erro + "tentar de novo". Limitação declarada | D14 |
 | R9 | Regressão no build web mata o canal único | `expo export --platform web` ao fim de **todo** dia | diário |
 | R10 | Supabase free pausa por inatividade e limita e-mail | Verificar no D1; com uso diário não pausa | D1 |
@@ -381,19 +424,26 @@ faltando (`typography.caption` roda em Regular) · `src/theme/fonts.ts` citado e
 
 ---
 
-## 11. Decisões pendentes do fundador
+## 11. Ações no painel do Supabase (fora do código)
 
-**Uma só, e é bloqueante para o D3 — remetente de e-mail.**
+Estas duas não têm como ser feitas por commit. Sem elas o D3 não fecha.
 
-O remetente padrão do Supabase free é compartilhado, tem limite baixo de envio
-e cai em spam no Gmail com frequência alta. Isso derruba a confirmação de
-cadastro e o fluxo inteiro de recuperar senha.
+### 11.1 Desligar confirmação de e-mail — pode ser feita agora
+`Authentication > Providers > Email` → desmarcar **Confirm email**.
 
-| Opção | Custo | Consequência |
-|---|---|---|
-| **A. SMTP próprio (Resend + domínio verificado)** — recomendada | ~2h de setup | Signup com confirmação e reset funcionam de verdade. Mesmo padrão já usado no Interdemo |
-| B. Desligar confirmação no signup | 5 min | Cadastro flui, mas **reset de senha continua dependendo de entrega** — só adia o problema |
-| C. B + reset manual no painel durante o piloto | 0 | Só sustenta 3 embaixadoras. Não escala para 20, e é trabalho manual seu em horário imprevisível |
+Decisão em §3.8. O código já lida com os dois estados da chave, então ligar ou
+desligar não exige alterar nada.
 
-Recomendação: **A**. B e C não eliminam o risco, apenas o transferem para o dia
-em que uma mãe esquecer a senha.
+### 11.2 SMTP próprio via Resend — aguardando propagação de DNS
+Domínio próprio da Ninna, **não** `@interdemo.com.br`: e-mail de reset chegando
+com o domínio de outro produto é exatamente o que o Gmail e a mãe leem como
+suspeito.
+
+Ordem: verificar o domínio no Resend (SPF + DKIM) → gerar API key → `Project
+Settings > Authentication > SMTP Settings` no Supabase → remetente
+`ninna@<domínio>` com nome de exibição "Ninna".
+
+**Critério de aceite (item 2 da checklist §8):** disparar um reset para um Gmail
+que não é o do fundador e confirmar que chegou **na caixa de entrada, não em
+spam**. Testar só no próprio e-mail não vale — o remetente conhecido do próprio
+domínio é justamente o caso que não reproduz o problema.

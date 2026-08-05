@@ -9,29 +9,43 @@ import { colors, spacing, typography } from '../../src/theme/tokens';
 
 export default function SignupScreen() {
   const { signUp } = useAuth();
+  const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
+  const [aguardandoConfirmacao, setAguardandoConfirmacao] = useState(false);
 
   async function handleSignup() {
     setError(null);
+
+    // Ordem das validações = ordem dos campos na tela. Mandar a mãe olhar pra cima
+    // pro erro que ela nem chegou a cometer ainda é ruído.
+    if (nome.trim().length < 2) {
+      setError('Conta pra gente como você quer ser chamada.');
+      return;
+    }
     if (password.length < 6) {
       setError('A senha precisa ter pelo menos 6 caracteres.');
       return;
     }
+
     setLoading(true);
-    const { error } = await signUp(email.trim(), password);
+    const { error, precisaConfirmarEmail } = await signUp(email.trim(), password, nome);
     setLoading(false);
+
     if (error) {
       setError(error);
       return;
     }
-    setDone(true);
+
+    // Com confirmação desligada (config do beta) veio sessão junto, e o RootNavigator
+    // já está levando a mãe pro cadastro do bebê — não há nada a fazer aqui, e forçar
+    // uma tela de "pronto!" no meio só atrasaria ela.
+    if (precisaConfirmarEmail) setAguardandoConfirmacao(true);
   }
 
-  if (done) {
+  if (aguardandoConfirmacao) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.content}>
@@ -55,6 +69,15 @@ export default function SignupScreen() {
         <Text style={styles.subtitle}>Cria sua conta pra cadastrar seu bebê em seguida</Text>
 
         <View style={{ marginTop: spacing.xl }}>
+          {/* Primeiro campo da conta é o nome, não o e-mail: a primeira coisa que a
+              Ninna pergunta é como chamar a mãe, não como identificá-la. */}
+          <TextField
+            label="Como você quer ser chamada?"
+            value={nome}
+            onChangeText={setNome}
+            autoCapitalize="words"
+            placeholder="seu nome ou apelido"
+          />
           <TextField
             label="E-mail"
             value={email}

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../src/contexts/AuthContext';
 import { useBaby } from '../../src/contexts/BabyContext';
 import { useRegistrosRecentes } from '../../src/hooks/useRegistrosRecentes';
 import { useAgoraTick } from '../../src/hooks/useAgoraTick';
@@ -39,6 +40,7 @@ const porTipo = Object.fromEntries(categorias.map((c) => [c.key, c])) as Record<
 >;
 
 export default function HojeScreen() {
+  const { nomeMae } = useAuth();
   const { bebeAtivo, bebes } = useBaby();
   const router = useRouter();
   const { registros, carregando, erro, recarregar } = useRegistrosRecentes(bebeAtivo?.id ?? null);
@@ -101,6 +103,11 @@ export default function HojeScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView contentContainerStyle={styles.scroll}>
+        {/* A saudação some quando não há nome, em vez de virar "Oi," pendurado: conta
+            criada antes do D2 não tem a chave em user_metadata. O nome é da mãe; o
+            resto da Home é do bebê, e é por isso que a saudação é discreta e ele não. */}
+        {nomeMae ? <Text style={styles.saudacao}>Oi, {nomeMae}</Text> : null}
+
         {podeTrocar ? (
           <Pressable
             onPress={() => router.push('/bebes')}
@@ -202,6 +209,7 @@ const styles = StyleSheet.create({
   // janela toda e esticava header, card e lista de ponta a ponta. 480 é largura de
   // celular grande — a Home continua sendo uma coluna, mesmo num monitor.
   scroll: { padding: spacing.lg, width: '100%', maxWidth: 480, alignSelf: 'center' },
+  saudacao: { ...typography.body, color: colors.neutro500, marginBottom: spacing.xs },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

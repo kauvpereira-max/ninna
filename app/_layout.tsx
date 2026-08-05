@@ -57,15 +57,28 @@ export default function RootLayout() {
 
   useEffect(() => {
     async function loadFonts() {
-      await Font.loadAsync({
-        Fredoka_500Medium: require('../assets/fonts/Fredoka-Medium.ttf'),
-        Fredoka_600SemiBold: require('../assets/fonts/Fredoka-SemiBold.ttf'),
-        NunitoSans_400Regular: require('../assets/fonts/NunitoSans-Regular.ttf'),
-        NunitoSans_600SemiBold: require('../assets/fonts/NunitoSans-SemiBold.ttf'),
-        NunitoSans_700Bold: require('../assets/fonts/NunitoSans-Bold.ttf'),
-      });
-      setFontsLoaded(true);
-      await SplashScreen.hideAsync();
+      try {
+        await Font.loadAsync({
+          Fredoka_500Medium: require('../assets/fonts/Fredoka-Medium.ttf'),
+          Fredoka_600SemiBold: require('../assets/fonts/Fredoka-SemiBold.ttf'),
+          NunitoSans_400Regular: require('../assets/fonts/NunitoSans-Regular.ttf'),
+          NunitoSans_600SemiBold: require('../assets/fonts/NunitoSans-SemiBold.ttf'),
+          NunitoSans_700Bold: require('../assets/fonts/NunitoSans-Bold.ttf'),
+        });
+      } catch {
+        // O app é distribuído como PWA: a fonte vem por download, e download falha —
+        // 4G ruim no quarto do bebê às 3h da manhã é o caso normal, não o excepcional.
+        // Sem este catch, `setFontsLoaded(true)` nunca roda, a splash nunca sai e a mãe
+        // fica numa tela branca permanente. Ela não relata isso: ela desinstala.
+        //
+        // Com o catch, o React Native cai na fonte de sistema. O app fica menos bonito
+        // e continua inteiro — todo o resto (tamanho, peso, espaçamento) vem dos tokens,
+        // não da família da fonte.
+      } finally {
+        // No `finally` de propósito: seja qual for o desfecho, a splash TEM que sair.
+        setFontsLoaded(true);
+        await SplashScreen.hideAsync().catch(() => {});
+      }
     }
     loadFonts();
   }, []);

@@ -6,11 +6,35 @@ import { limparBebeAtivo } from '../lib/preferencias';
 type AuthContextValue = {
   session: Session | null;
   user: User | null;
+  /** Nome da mãe, como ela pediu pra ser chamada. Null em conta criada antes do D2. */
+  nomeMae: string | null;
   loading: boolean;
-  signUp: (email: string, password: string) => Promise<{ error: string | null }>;
+  signUp: (
+    email: string,
+    password: string,
+    nome: string,
+  ) => Promise<{ error: string | null; precisaConfirmarEmail: boolean }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 };
+
+/**
+ * O nome da mãe mora em `user_metadata`, não numa tabela `profiles`.
+ *
+ * Uma tabela exigiria trigger de criação, RLS própria e uma quarta via no
+ * RootNavigator (sem sessão → sem perfil → sem bebê → tabs) pra guardar um campo
+ * de texto. Decisão registrada em BETA.md §3.4; migra quando o perfil da mãe
+ * tiver mais de três campos.
+ *
+ * Conta criada antes do D2 não tem a chave — daí o retorno nullable, e daí toda
+ * a copy que usa o nome precisar de uma versão sem ele.
+ */
+function extrairNome(user: User | null): string | null {
+  const bruto = user?.user_metadata?.nome;
+  if (typeof bruto !== 'string') return null;
+  const limpo = bruto.trim();
+  return limpo.length > 0 ? limpo : null;
+}
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
@@ -31,9 +55,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  async function signUp(email: string, password: string) {
-    const { error } = await supabase.auth.signUp({ email, password });
-    return { error: error?.message ?? null };
+  async function signUp(email: string, password: string, nome: string) {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { nome: nome.trim() } },
+    });
+    if (error) return { error: error.message, precisaConfirmarEmail: false };
+
+    // No beta a confirmação de e-mail está DESLIGADA no painel do Supabase, então o
+    // signUp já devolve sessão e o RootNavigator leva a mãe direto pro cadastro do
+    // bebê — sem passo intermediário, que é onde se perde gente no primeiro contato.
+    //
+    // Mesmo assim não assumimos isso: quem liga a confirmação é uma chave no painel,
+    // fora deste código, e ela vai ser religada antes de qualquer abertura pública.
+    // Sem sessão de volta = confirmação ligada, e aí a tela precisa dizer isso.
+    return { error: null, precisaConfirmarEmail: data.session === null };
   }
 
   async function signIn(email: string, password: string) {
@@ -48,9 +85,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await limparBebeAtivo();
   }
 
+  const user = session?.user ?? null;
+
   return (
     <AuthContext.Provider
-      value={{ session, user: session?.user ?? null, loading, signUp, signIn, signOut }}
+      value={{ session, user, nomeMae: extrairNome(user), loading, signUp, signIn, signOut }}
     >
       {children}
     </AuthContext.Provider>
