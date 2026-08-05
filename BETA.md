@@ -14,25 +14,27 @@ nativo, ter push, ter assinatura.
 
 ## 1. Escopo — o que ENTRA
 
-| # | Item | Estado no D1 |
+*Coluna atualizada em 05/08/2026, depois do D7. Posições `P*` em §7.3.*
+
+| # | Item | Estado |
 |---|---|---|
-| 1 | Autenticação e-mail/senha | pronto |
-| 2 | Cadastro da mãe (nome) | a fazer — D2 |
-| 3 | Cadastro do bebê | pronto |
-| 4 | Home | pronta, falta o card de insight real |
-| 5 | Registro de amamentação | pronto |
-| 6 | Registro de mamadeira | pronto |
-| 7 | Registro de sono (+ em andamento) | pronto |
-| 8 | Registro de fralda | pronto |
-| 9 | Histórico dos registros | a fazer — D5–D7 |
-| 10 | Motor de personalização (3 métricas) | a fazer — D8–D9 |
-| 11 | Card de insight na Home | a fazer — D10 |
-| 12 | Supabase configurado | pronto (5 tabelas + RLS) |
-| 13 | Interface próxima ao protótipo | parcial — D11–D13 |
-| 14 | Recuperar senha | a fazer — D3 |
-| 15 | Apagar registro | a fazer — D4 |
-| 16 | PWA instalável de verdade | a fazer — D16–D17 |
-| 17 | Termo LGPD com via de saída | a fazer — D18 |
+| 1 | Autenticação e-mail/senha | ✅ pronto |
+| 2 | Cadastro da mãe (nome) | ✅ pronto (D2) |
+| 3 | Cadastro do bebê | ✅ pronto |
+| 4 | Home | pronta; falta o card de insight real — **P4** |
+| 5 | Registro de amamentação | ✅ pronto |
+| 6 | Registro de mamadeira | ✅ pronto |
+| 7 | Registro de sono (+ em andamento) | ✅ pronto |
+| 8 | Registro de fralda | ✅ pronto |
+| 9 | Histórico dos registros | ✅ pronto (D5–D7) |
+| 10 | Motor de personalização (3 métricas) | a fazer — **P2/P3** |
+| 11 | Card de insight na Home | a fazer — **P4** |
+| 12 | Supabase configurado | pronto (5 tabelas + RLS); falta `002` e §11.1 — **P0** |
+| 13 | Interface próxima ao protótipo | parcial — **P7** |
+| 14 | Recuperar senha | ❌ **pulado no D3** — **P1 + D3b** |
+| 15 | Apagar registro | ✅ código pronto (D4); humor/sintoma reais em **P0** |
+| 16 | PWA instalável de verdade | a fazer — **P5/P6**, fecha em **P11** |
+| 17 | Termo LGPD com via de saída | a fazer — **P9** |
 
 Os itens 14 a 17 não estavam no pedido original e foram incluídos por decisão
 técnica. A justificativa de cada um está em §3.
@@ -69,8 +71,10 @@ o app quebrou — no exato momento em que o motor finalmente teria dados para da
 um insight. PWA instalada não sofre essa limpeza.
 
 Consequência prática: o app precisa **conduzir** a instalação, não torcer por
-ela (banner no primeiro acesso via Safari, D16), e o fluxo de instalação
-precisa ser testado em iPhone real, não só o carregamento da página (D17).
+ela (banner no primeiro acesso via Safari, **P5**), e o fluxo de instalação
+precisa ser testado em iPhone real, não só o carregamento da página (**P6**).
+A permanência em si só é verificável ≥7 dias depois da instalação — é o **P11**,
+e é por causa dessa espera que os dois primeiros foram antecipados (§7.2).
 
 ### 3.2 Motor no cliente, não em Edge Function
 `src/lib/padroes.ts` é função pura: recebe registros, devolve três números.
@@ -143,9 +147,12 @@ usando", e esse passo é ponto de abandono no primeiro contato, justamente com
 quem já topou ajudar.
 
 **Isto não dispensa o Resend.** O reset de senha continua dependendo de entrega
-de e-mail, então o SMTP próprio segue como pré-requisito do D3 — só deixou de
-ser pré-requisito do D2, que é o que permite os dois correrem em paralelo
-enquanto o DNS propaga.
+de e-mail, então o SMTP próprio segue como pré-requisito do D3.
+
+*Atualizado no replanejamento:* o par "corre em paralelo enquanto o DNS propaga"
+era com o D2, que já acabou. O par agora é o **P0-bis** (§7.4) — iniciar o
+domínio no Resend imediatamente, enquanto o P1 escreve o código do reset. O
+aceite (D3b) fecha quando a propagação deixar.
 
 **Rever antes de qualquer abertura pública.** Cadastro aberto sem confirmação
 aceita e-mail de terceiro e e-mail inexistente — a segunda mãe não é conhecida
@@ -208,12 +215,12 @@ Home monta
 |---|---|
 | `(auth)/login` | pronta |
 | `(auth)/signup` | + campo nome (D2) |
-| `(auth)/recuperar-senha` | **nova** (D3) |
+| `(auth)/recuperar-senha` | ❌ **não existe** — pulada no D3, refeita em **P1** |
 | `(onboarding)/cadastro-bebe` | pronta |
-| `(tabs)/index` — Home | + card de insight (D10) |
-| `(tabs)/rotina` — Histórico | **reescrever** (D6–D7) |
-| `(tabs)/mais` | + nome, sobre, feedback, sair (D2/D18) |
-| `registro/[tipo]` modal, 6 tipos | + apagar (D4) |
+| `(tabs)/index` — Home | + card de insight (**P4**) |
+| `(tabs)/rotina` — Histórico | ✅ reescrita (D6–D7) |
+| `(tabs)/mais` | nome ✅; + sobre, feedback, sair (**P9**) |
+| `registro/[tipo]` modal, 6 tipos | ✅ + apagar (D4) |
 | `bebes/index` modal | pronta |
 | `bebes/novo` modal | pronta |
 
@@ -256,6 +263,87 @@ projeto, e a hora de fazer a do `002` é agora, antes do piloto.
 
 ## 7. Cronograma
 
+*Reordenado em 05/08/2026, depois do D7 e da descoberta de que o D3 tinha sido
+pulado. **A fila que vale é a §7.3** — a ordem original D8→D21 não existe mais.*
+
+### 7.0 Âncora de calendário — o que estava faltando
+
+**D1 foi em 05/08/2026 (quarta). Os 21 dias terminam em 25/08/2026 (terça).**
+
+Isso não estava escrito em lugar nenhum deste documento, e é exatamente por isso
+que o D3 pôde ser pulado sem que nada acusasse: **não havia dia ao qual ele
+deixasse de acontecer.** Um cronograma sem âncora não atrasa — ele só descobre,
+lá na frente, que encolheu. A âncora acima é a correção, e a fila de §7.3 tem
+data alvo por bloco pela mesma razão.
+
+**Bloco ≠ dia.** Os blocos D1 a D7 foram commitados entre 18h29 e 19h45 de
+05/08/2026 — **76 minutos**, não sete dias. Então os rótulos `D1`..`D21` são
+**nomes de bloco de trabalho, não datas**, e continuam sendo usados como nomes
+(§9 e §11 referenciam por eles). A ordem de execução e o calendário estão em
+§7.3, separados de propósito.
+
+Consequência direta: o saldo real do beta **não** é "restam D8–D21 em menos dias
+de calendário". Restam 20 dias de calendário (06/08 a 25/08) para 14 blocos.
+Sobra dia. O que falta é outra coisa — §7.1.
+
+### 7.1 O que é escasso de verdade
+
+Não é dia de trabalho. O que resta se divide em três classes, e só uma delas
+comprime:
+
+1. **Código puro** (D8, D10, D11–D14, D3a) — comprime, e há evidência: 6 blocos
+   em 76 minutos. **Ressalva honesta:** D8, D9 e D10 estão marcados "dia pesado"
+   e pedem número conferido à mão na calculadora. Verificação manual não comprime
+   como digitação, então não trate os 76 minutos como taxa de câmbio.
+2. **Execução sua, fora do código** (§11.1–§11.4, semear, aparelho real, as 3
+   mães) — não comprime por eu trabalhar mais rápido. É o bloco P0 abaixo.
+3. **Relógio de parede** — não comprime de jeito nenhum. Propagação de DNS do
+   Resend, a janela de ~7 dias de inatividade do iOS (§3.1), o "volte no dia
+   seguinte" do item 14. Nenhuma dessas encurta com esforço.
+
+**A regra que sai daí e organiza a fila:** todo relógio de parede começa o mais
+cedo possível, mesmo que o trabalho que depende dele venha muito depois. Latência
+se paga em paralelo; esforço, não.
+
+### 7.2 A descoberta que reordena tudo: o item 11 era inverificável
+
+O item 11 da checklist (§8) é um dos quatro que, falhando, o beta não sai:
+
+> Instalei pela tela de início do iPhone, o app abre pelo ícone sem a barra do
+> Safari, e **ao voltar dias depois continuo logada**.
+
+Provar a segunda metade exige deixar o iPhone sem abrir o app por **≥7 dias** —
+é a janela de limpeza de storage do §3.1. Não é teste, é espera.
+
+Com a âncora de §7.0, o cronograma original faz esta conta:
+
+```
+D16 (PWA + deploy)     = 20/08
+D17 (instalar no real) = 21/08
+        + 7 dias de espera
+                       = 28/08
+D21 (piloto)           = 25/08     ← três dias ANTES
+```
+
+**O item 11 não fechava.** No dia do piloto, o que existiria é "instalei e
+abriu" — que é a primeira metade, e não é a que importa: a que mata o beta é a
+mãe deslogada no dia 7, no exato momento em que o motor teria o primeiro
+insight (R1). O cronograma original passaria por esse item sem nunca poder
+respondê-lo.
+
+Correção: **o PWA e a instalação sobem para P5/P6** (alvo 10–11/08), e a
+reabertura vira um bloco próprio (P11, ≥18/08). O relógio corre sozinho enquanto
+a interface e o D15 acontecem. O PWA não depende de UI pronta — manifest,
+ícones, `vercel.json` e banner de instalação são independentes de o histórico
+estar bonito.
+
+---
+
+### O que já aconteceu — D1 a D7
+
+Histórico, na ordem em que ocorreu. Fica aqui como registro: o D3 no meio, com o
+❌, é o que impede a mesma omissão de passar batida outra vez.
+
 ### D1 — Poda e escopo travado ✅ FEITO
 Repositório git criado (não havia — 21 dias sem undo era risco inaceitável
 antes de apagar arquivos). Tab bar 6→3. Telas placeholder removidas. Quatro
@@ -274,12 +362,16 @@ Conta criada antes do D2 não tem a chave em `user_metadata`. O código trata is
 em vez de assumir: `nomeMae` é nullable, a saudação **some** em vez de virar
 "Oi," pendurado, e o cartão da aba Mais cai para o e-mail como identidade.
 
-### D3 — Recuperar senha + erros em português
-Fluxo de reset com redirect. Traduzir mensagens do Supabase (hoje voltam em
-inglês: *"Invalid login credentials"*).
-**Ao final:** reset testado ponta a ponta **num Gmail que não é o meu**, com
-confirmação de que chegou na caixa de entrada e não em spam.
-**Este dia não fecha sem o remetente resolvido (§8/R2).**
+### D3 — ❌ NÃO FEITO, pulado sem data
+
+Não existe commit de D3, e `app/(auth)/` tem só `_layout.tsx`, `login.tsx` e
+`signup.tsx` — a rota `recuperar-senha` do §5 nunca foi criada. A fila saltou de
+D2 para D4.
+
+Isto é o item 2 da checklist (§8) e o risco R2. **Reagendado com prioridade,
+partido em dois** — P1 e D3b em §7.4, pela razão explicada lá: o código não
+depende de nada, mas o aceite depende de DNS, e amarrar os dois num bloco só
+travaria a fila inteira esperando propagação.
 
 ### D4 — Apagar registro + fechar dívida de humor/sintoma ✅ CÓDIGO FEITO
 Caminho principal é **tocar no registro → tela de detalhe → botão "Apagar"
@@ -380,37 +472,102 @@ mecanismo principal — não a alternativa. Confirmar o gesto no D17.
 O spinner de tela cheia só aparece na primeira carga: sumir com a lista durante
 um "atualizar" faz parecer que os registros se perderam.
 
-### D8 — Motor: matemática pura, sem UI ⚠️ dia pesado
+---
+
+### 7.3 A fila real
+
+Ordem de execução, não de numeração. Os nomes `D8`, `D16`… são os mesmos de
+antes — só a posição mudou.
+
+| Pos | Bloco | Alvo | Trava |
+|---|---|---|---|
+| **P0** | **Destrave** — §11.1, §11.3, §11.4, semear, humor/sintoma reais | 05–06/08 | você |
+| **P0-bis** | **Domínio no Resend** (SPF + DKIM) — só *iniciar* | **05–06/08** | latência de DNS |
+| **P1** | **D3a** — código do reset + erros em PT-BR | 06/08 | nada |
+| **P2** | D8 — motor, matemática pura ⚠️ | 07/08 | massa semeada (P0) |
+| **P3** | D9 — motor ligado ao app ⚠️ | 08/08 | P2 |
+| **P4** | D10 — card de insight ⚠️ | 09/08 | P3 |
+| **P5** | D16 — PWA + deploy ⬆️ *antecipado de 20/08* | 10/08 | P4 |
+| **P6** | D17a — instalar no iPhone real ⏱️ *começa a janela de 7 dias* | 11/08 | aparelho ≠ o de dev |
+| **·** | **D3b** — aceite do reset em Gmail de terceiro | *quando o DNS verificar* | P0-bis |
+| **P7** | D11–D13 — interface conforme protótipo | 12–14/08 | — |
+| **P8** | D14 — bordas e robustez | 15/08 | — |
+| **P9** | D18 — pacote da embaixadora (LGPD) | 16/08 | — |
+| **P10** | D15 — bateria manual roteirizada ⚠️ | 17/08 | P7 |
+| **P11** | D17b — reabrir o iPhone ⏱️ *fecha os itens 11 e 14* | **≥18/08** | P6 + 7 dias |
+| **P12** | D19–D20 — reserva | 19–22/08 | — |
+| **P13** | D21 — piloto com 3 embaixadoras | 23–25/08 | tudo acima |
+
+P0 a P13 são 14 posições em 20 dias de calendário (06/08 a 25/08), com 4 dias de
+reserva dentro. **Cabe.** P0-bis e D3b não têm posição própria porque não
+consomem dia: são espera correndo por baixo dos outros blocos.
+
+A folga toda mora em P12, de propósito — reserva espalhada é reserva que some
+sem ninguém notar.
+
+Os dois ⏱️ são os únicos itens que trabalhar mais rápido não adianta. O ⬆️ e o
+**P0-bis** existem só para pagá-los em paralelo.
+
+### 7.4 Os blocos, em ordem
+
+### P0 — Destrave ⏳ EM EXECUÇÃO (seu lado)
+§11.1 (Confirm email), §11.3 (`002_cascade_exclusao.sql`), §11.4 (`teste-rls-delete`),
+`SEMEAR_*` + semeadura, e salvar humor/sintoma pelo app contra o banco real.
+**Fecha os itens 12 e 13 da checklist — dois dos quatro que barram o beta** — e
+libera o P2, que sem a massa não tem gabarito para conferir na calculadora.
+
+### P0-bis — Iniciar o relógio do DNS 🕐 EM PARALELO, HOJE
+**Não é o D3. É só a parte do D3 que espera.** Verificar o domínio próprio da
+Ninna no Resend (SPF + DKIM) e gerar a API key — §11.2.
+
+Sobe para cá sozinho porque é latência pura e nada mais depende dela para
+avançar. Se o domínio ainda não estiver comprado, a corrente é *registrar →
+nameserver → SPF/DKIM → propagar*, e aí são horas ou dias que não encurtam:
+começar hoje custa 20 minutos, começar no P1 custa a data do P1.
+
+**Primeira coisa a fazer é descobrir em que pé está.** O §11.2 diz "aguardando
+propagação", mas isso foi escrito no D1 e ninguém confirmou desde então — pode
+já estar verificado, pode nem ter domínio comprado. Se estiver verificado, este
+bloco custa zero e o D3b pode disparar junto do P1.
+
+⚠️ O §3.8 pareava isto com o D2 ("permite os dois correrem em paralelo enquanto
+o DNS propaga"). O D2 acabou; o par agora é este bloco.
+
+### P1 — D3a: código do reset + erros em português
+Fluxo de reset com redirect e tradução das mensagens do Supabase (hoje voltam em
+inglês: *"Invalid login credentials"*). Rota `(auth)/recuperar-senha` do §5.
+**Ao final:** o fluxo existe e funciona ponta a ponta contra o mailer que
+estiver configurado.
+
+**Por que partido em dois:** o D3 original só fechava com o e-mail chegando na
+caixa de entrada de um Gmail de terceiro — critério certo, mas que depende de
+DNS, não de código. Um bloco só significaria a fila inteira parada esperando
+propagação. Partido, o código anda hoje e o aceite fecha quando o DNS deixar.
+
+### D3b — Aceite do reset (dispara quando o P0-bis verificar)
+Disparar um reset para **um Gmail que não é o do fundador** e confirmar que
+chegou **na caixa de entrada, não em spam**. Testar no próprio e-mail não vale
+(§11.2).
+**É o item 2 da checklist e o risco R2. O D3 não está fechado sem isto** — P1
+sozinho não conta.
+
+### P2 — D8: Motor, matemática pura, sem UI ⚠️ dia pesado
 `padroes.ts` com as 3 métricas, separação soneca/noite, média circular e
 limiares. Validado contra dados sintéticos.
 **Ao final:** dado um array de registros, saem 3 números **conferidos à mão na
 calculadora**.
 
-### D9 — Motor ligado ao app ⚠️ dia pesado
+### P3 — D9: Motor ligado ao app ⚠️ dia pesado
 `usePadroes` lê 7 dias e calcula. Testar com o relógio do celular em outro fuso.
 **Ao final:** os padrões reais do bebê de teste aparecem corretos na tela.
 
-### D10 — Card de insight na Home ⚠️ dia pesado
+### P4 — D10: Card de insight na Home ⚠️ dia pesado
 `copyInsight.ts`: número → frase acolhedora. Variações por métrica e faixa de
 confiança + estado "ainda aprendendo". Revisão de tom.
 **Ao final:** conta com 8 registros vê insight verdadeiro; conta com 2 vê a
 frase de aprendizado. **Este é o dia que define se o beta tem valor.**
 
-### D11–D13 — Interface conforme protótipo
-D11 Home · D12 modais de registro · D13 histórico, auth e onboarding.
-**Ao final do D13:** nenhuma tela parece de desenvolvedor.
-
-### D14 — Bordas e robustez
-Estados vazios, erro de rede com "tentar de novo" **preservando o formulário**,
-alvos de toque ≥44px, `accessibilityLabel`, tela de 360px.
-(O `try/catch` das fontes saiu daqui — foi antecipado para o D2, ver §3.9.)
-
-### D15 — Bateria manual roteirizada ⚠️ dia pesado
-Roteiro de ~30 passos: conta nova → mãe → bebê → 7 dias de registros → insight →
-apagar → sair → entrar. Duas contas, dois bebês. Corrigir o que quebrar.
-**Ao final:** o roteiro passa inteiro sem intervenção.
-
-### D16 — PWA de verdade + deploy
+### P5 — D16: PWA de verdade + deploy ⬆️ antecipado
 `public/manifest.json` (`display: standalone`, ícones 180/192/512, theme e
 background color, `start_url`), `app/+html.tsx` para injetar `<link
 rel="manifest">`, `apple-touch-icon`, `apple-mobile-web-app-capable` e
@@ -418,13 +575,33 @@ rel="manifest">`, `apple-touch-icon`, `apple-mobile-web-app-capable` e
 instalação. `vercel.json` com rewrite para SPA. Deploy.
 **Ao final:** URL pública que instala como app no seu iPhone.
 
-### D17 — Dispositivo real
-iPhone/Safari e Android/Chrome, em aparelho que não é o de desenvolvimento.
+Subiu de 20/08 para cá por causa de §7.2. A URL vai ao ar com a interface ainda
+crua, e tudo bem: o canal é fechado, as 3 embaixadoras só recebem o link no P13,
+e o manifest não depende de o histórico estar bonito.
+
+### P6 — D17a: dispositivo real, instalação ⏱️ começa a janela
+iPhone/Safari e Android/Chrome, em aparelho que **não** é o de desenvolvimento.
 Testar o **fluxo de instalação**, não só o carregamento: instalar pela tela de
 início, abrir pelo ícone, confirmar que abre sem a barra do Safari.
-Safe area, teclado cobrindo campo, scroll, rotação.
+Safe area, teclado cobrindo campo, scroll, rotação. Também é aqui que o R12
+(bundle de 1,88 MB em 4G) é medido.
 
-### D18 — Pacote da embaixadora (LGPD)
+**Depois disto, não abrir o app nesse iPhone até o P11.** A espera *é* o teste —
+abrir no meio zera o relógio e o item 11 volta a ser inverificável.
+
+### P7 — D11–D13: Interface conforme protótipo
+D11 Home · D12 modais de registro · D13 histórico, auth e onboarding.
+**Ao final:** nenhuma tela parece de desenvolvedor.
+*Primeiro degrau do corte, se algo estourar — §7.5.*
+
+### P8 — D14: Bordas e robustez
+Estados vazios, erro de rede com "tentar de novo" **preservando o formulário**,
+alvos de toque ≥44px, `accessibilityLabel`, tela de 360px.
+(O `try/catch` das fontes saiu daqui — foi antecipado para o D2, ver §3.9.)
+O gesto de puxar-para-atualizar da Rotina, pendência do D7, é confirmado no
+**P6** — precisa de Safari real, não adianta olhar aqui.
+
+### P9 — D18: Pacote da embaixadora (LGPD)
 Termo curto e honesto, contendo obrigatoriamente:
 - quais dados são coletados e onde ficam (Supabase, região do projeto);
 - como pedir exclusão total — canal e prazo de resposta — mesmo que a execução
@@ -433,14 +610,72 @@ Termo curto e honesto, contendo obrigatoriamente:
   explícita dela por continuar.
 
 Mais: canal de feedback (grupo WhatsApp + link na aba Mais) e roteiro de 1
-página de instalação.
+página de instalação. Reexecutar §11.4 como parte do aceite.
 
-### D19–D20 — Reserva
-Não são dias livres. São os dias que algo do D1–D18 vai consumir.
+### P10 — D15: Bateria manual roteirizada ⚠️ dia pesado
+Roteiro de ~30 passos: conta nova → mãe → bebê → 7 dias de registros → insight →
+apagar → sair → entrar. Duas contas, dois bebês. Corrigir o que quebrar.
+**Ao final:** o roteiro passa inteiro sem intervenção.
 
-### D21 — Piloto com 3 embaixadoras, não 20
+### P11 — D17b: reabrir o iPhone ⏱️ ≥7 dias depois do P6
+Abrir pelo ícone o app instalado no P6, sem ter tocado nele desde então.
+**Fecha o item 11** (continuo logada) **e o item 14** (tudo que registrei está
+lá). §3.1 diz "em torno de 7 dias", então quanto mais folga além dos 7, mais o
+teste vale — o alvo de 11/08 no P6 dá margem até 18/08 com reserva pela frente.
+
+Se falhar, o P12 inteiro existe para consertar antes do piloto. Era exatamente
+essa margem que o cronograma original não tinha.
+
+### P12 — D19–D20: Reserva
+Não são dias livres. São os dias que algo do P0–P11 vai consumir.
+
+### P13 — D21: Piloto com 3 embaixadoras, não 20
 Três mães acompanhadas de perto no primeiro cadastro. Se as três chegarem ao
 insight, abre para o resto.
+
+### 7.5 O que sai se não couber
+
+Em ordem de sacrifício. Cortar de cima para baixo, e **nunca** fora de ordem —
+a ordem é por distância do objetivo único do beta (§ topo: uma mãe recebe um
+insight verdadeiro sobre o próprio bebê).
+
+**Degrau 1 — P7 vira um bloco só, não três. Recupera 2 dias.**
+Só a Home e o card de insight recebem o tratamento do protótipo. Modais de
+registro, auth, onboarding e histórico ficam como estão.
+*Por quê primeiro:* "nenhuma tela parece de desenvolvedor" **não é nenhum dos 14
+itens da §8**. É a única promessa grande do documento que a própria checklist não
+cobra — e as 3 embaixadoras são acompanhadas pessoalmente pelo fundador, então
+app cru que entrega insight verdadeiro ainda responde à pergunta do beta.
+
+**Degrau 2 — humor, sintoma e múltiplos bebês saem do polimento e do roteiro do
+P10. Recupera ~meio dia.**
+O **código fica** — removê-lo custaria mais que mantê-lo (§1, "bônus mantido sem
+custo"). O que sai é o custo deles: passo no roteiro de 30 passos e rodada de
+design. Nenhum dos três aparece em qualquer item da §8.
+
+**Degrau 3 — P8 encolhe ao que a checklist toca. Recupera ~meio dia.**
+Fica: erro de rede preservando o formulário (é o R8) e alvos de 44px. Sai:
+varredura de `accessibilityLabel` e a tela de 360px, que viram acabamento
+pós-beta e vão para a §10.
+
+**Degrau 4 — o piloto começa com 1 embaixadora, não 3.**
+Última linha antes de tocar em qualquer coisa acima. Uma mãe acompanhada de
+perto ainda responde à hipótese do beta; três respondem com mais confiança, mas
+o número 3 é amostra, não requisito. As outras duas entram na semana seguinte.
+
+**O que não sai em degrau nenhum:**
+
+| Não cortável | Porque |
+|---|---|
+| P2, P3, P4 (o motor) | É a razão de o beta existir. Item 9 da §8 |
+| P5, P6, P11 (PWA + janela de 7 dias) | Item 11. Sem isso a mãe é deslogada no dia 7 (R1) |
+| D3b (aceite do reset) | Item 2. Embaixadora sem senha está fora do piloto para sempre (§3.6) |
+| P0 §11.3 e §11.4 | Itens 12 e 13. Privacidade de dado de saúde de bebê |
+| P9 (termo LGPD) | Não é escopo, é obrigação legal. Não se negocia por prazo |
+
+Cortar qualquer linha dessa tabela não atrasa o beta — **cancela** ele. Se a
+conta não fechar nem depois do degrau 4, o certo é mover a data de 25/08, não
+raspar daqui.
 
 ---
 
@@ -492,18 +727,22 @@ celular que não é o de desenvolvimento.** Não é avaliação, é checklist.
 
 | # | Risco | Mitigação | Dia |
 |---|---|---|---|
-| R1 | Mãe não instala a PWA e é deslogada pelo iOS em ~7 dias | Banner in-app conduzindo a instalação + item 11 da checklist | D16–D17 |
-| R2 | **E-mail transacional cai em spam** — derruba o reset de senha | Resend com domínio próprio da Ninna, decidido no D1. Confirmação de signup desligada (§3.8), então só o reset depende de entrega. D3 não fecha sem o SMTP configurado | D1/D3 |
-| R3 | Insight sair errado — perde a embaixadora e a credibilidade | Média circular, soneca≠noite, limiar de 5 registros | D8–D10 |
-| R4 | Fuso horário desanda o horário médio | Hora local sempre, nunca UTC; testar com relógio em outro fuso | D9 |
-| R5 | LGPD sem via de saída para dado sensível de bebê | Termo com canal e prazo de exclusão + item 13 | D18 |
-| R6 | Bug de mãe real nunca chega até mim | Grupo WhatsApp + link "Relatar problema" | D18 |
+| R1 | Mãe não instala a PWA e é deslogada pelo iOS em ~7 dias | Banner in-app conduzindo a instalação + item 11 da checklist. **Antecipado**: no cronograma original a janela de 7 dias não cabia antes do piloto (§7.2) | P5–P6, fecha em P11 |
+| R2 | **E-mail transacional cai em spam** — derruba o reset de senha | Resend com domínio próprio da Ninna, decidido no D1. Confirmação de signup desligada (§3.8), então só o reset depende de entrega. D3 não fecha sem o SMTP configurado | P0-bis / P1 / D3b |
+| R3 | Insight sair errado — perde a embaixadora e a credibilidade | Média circular, soneca≠noite, limiar de 5 registros | P2–P4 |
+| R4 | Fuso horário desanda o horário médio | Hora local sempre, nunca UTC; testar com relógio em outro fuso | P3 |
+| R5 | LGPD sem via de saída para dado sensível de bebê | Termo com canal e prazo de exclusão + item 13 | P9 |
+| R6 | Bug de mãe real nunca chega até mim | Grupo WhatsApp + link "Relatar problema" | P9 |
 | R7 | ~~Tela branca permanente se uma fonte falhar ao carregar~~ | **Resolvido no D2** — `try/catch/finally` no `loadFonts` (§3.9) | ✅ D2 |
-| R8 | Sem modo offline: registro perdido no quarto com Wi-Fi fraco | Formulário preservado no erro + "tentar de novo". Limitação declarada | D14 |
+| R8 | Sem modo offline: registro perdido no quarto com Wi-Fi fraco | Formulário preservado no erro + "tentar de novo". Limitação declarada | P8 |
 | R9 | Regressão no build web mata o canal único | `expo export --platform web` ao fim de **todo** dia | diário |
 | R10 | Supabase free pausa por inatividade e limita e-mail | Verificar no D1; com uso diário não pausa | D1 |
 | R11 | Escopo se expandindo (o mais provável de todos) | Este documento; toda ideia nova vai para §10 | diário |
-| R12 | Bundle de 1,86 MB pesado em 4G | Medir tempo de carga no D17; só otimizar se doer | D17 |
+| R12 | Bundle de 1,88 MB pesado em 4G | Medir tempo de carga no dispositivo real; só otimizar se doer | P6 |
+| R13 | **Bloco pulado sem ninguém notar** — aconteceu com o D3, descoberto 6 blocos depois | Âncora de calendário e data alvo por bloco (§7.0/§7.3). Cronograma sem data não atrasa: encolhe em silêncio | diário |
+
+A coluna "Dia" usa as posições de §7.3, não os nomes de bloco — foi justamente a
+confusão entre as duas coisas que deixou o D3 escapar (§7.0).
 
 ## 9-bis. Scripts (`scripts/`)
 
@@ -582,7 +821,14 @@ por hora. Estourado o limite, o erro que aparece é `email rate limit exceeded` 
 que não se parece em nada com a causa real. É o risco R2 se manifestando antes
 mesmo do piloto.
 
-### 11.2 SMTP próprio via Resend — aguardando propagação de DNS
+### 11.2 SMTP próprio via Resend — ⚠️ estado não confirmado desde o D1
+
+**Bloco P0-bis: a primeira ação é descobrir em que pé isto está.** "Aguardando
+propagação" foi escrito no D1 e nunca reconfirmado — pode estar verificado, pode
+não ter domínio comprado ainda. É a única latência longa que resta, e ela não
+encurta com esforço: por isso sobe para o início da fila (§7.4), muito antes do
+código que depende dela.
+
 Domínio próprio da Ninna, **não** `@interdemo.com.br`: e-mail de reset chegando
 com o domínio de outro produto é exatamente o que o Gmail e a mãe leem como
 suspeito.
