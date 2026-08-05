@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,37 +7,24 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { useBaby } from '../../src/contexts/BabyContext';
 import { useRegistrosRecentes } from '../../src/hooks/useRegistrosRecentes';
 import { useAgoraTick } from '../../src/hooks/useAgoraTick';
-import { encerrarSono, resumirSonoEmAndamento, type TipoRegistro } from '../../src/lib/registros';
+import { encerrarSono, resumirSonoEmAndamento } from '../../src/lib/registros';
 import { formatarIdade, formatarIdadeCorrigida } from '../../src/lib/idade';
 import { formatarMomento } from '../../src/lib/horario';
+import { CATEGORIAS, CATEGORIA_POR_TIPO } from '../../src/theme/categorias';
 import { colors, spacing, radius, typography, elevation } from '../../src/theme/tokens';
 
-type Categoria = {
-  key: TipoRegistro;
-  label: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  bg: string;
-};
-
-// A `key` é também o parâmetro da rota /registro/[tipo] e o `tipo` de RegistroRecente —
-// um vocabulário só pros atalhos e pra lista.
-const categorias: Categoria[] = [
-  { key: 'amamentar', label: 'Amamentar', icon: 'heart', bg: colors.categoriaCoral },
-  { key: 'fralda', label: 'Fralda', icon: 'water', bg: colors.categoriaAmarelo },
-  { key: 'sono', label: 'Sono', icon: 'moon', bg: colors.categoriaLavanda },
-  { key: 'mamadeira', label: 'Mamadeira', icon: 'flask', bg: colors.categoriaMenta },
-  // Humor e Sintoma não têm cor de categoria própria no design system ainda. Em vez de
-  // inventar hex novo, reaproveitam tokens existentes: rosa da marca e `warning`
-  // (semântico de atenção, que é exatamente o papel do sintoma). Trocar quando o
-  // documento de design definir as oficiais.
-  { key: 'humor', label: 'Humor', icon: 'happy', bg: colors.rosa500 },
-  { key: 'sintoma', label: 'Sintoma', icon: 'thermometer', bg: colors.warning },
-];
-
-const porTipo = Object.fromEntries(categorias.map((c) => [c.key, c])) as Record<
-  TipoRegistro,
-  Categoria
->;
+/**
+ * No Safari do iPhone, segurar o dedo sobre um elemento dispara o callout do sistema
+ * e a seleção de texto antes de qualquer handler do app. Sem isso, o long-press da
+ * lista vira "copiar/compartilhar" do navegador em vez de atalho pra apagar.
+ *
+ * Só existe na web: no nativo essas propriedades não são estilo válido de RN, e o
+ * gesto já se comporta como esperado.
+ */
+const semCalloutNaWeb =
+  Platform.OS === 'web'
+    ? ({ userSelect: 'none', WebkitTouchCallout: 'none' } as any)
+    : null;
 
 export default function HojeScreen() {
   const { nomeMae } = useAuth();
@@ -134,7 +121,7 @@ export default function HojeScreen() {
 
         <Text style={styles.sectionLabel}>REGISTRAR</Text>
         <View style={styles.grid}>
-          {categorias.map((c) => (
+          {CATEGORIAS.map((c) => (
             <Pressable
               key={c.key}
               onPress={() => router.push(`/registro/${c.key}`)}
@@ -164,9 +151,20 @@ export default function HojeScreen() {
         ) : (
           <View style={styles.lista}>
             {registros.map((r) => {
-              const visual = porTipo[r.tipo];
+              const visual = CATEGORIA_POR_TIPO[r.tipo];
+              const abrir = () => router.push(`/detalhe/${r.tipo}/${r.id}`);
               return (
-                <View key={`${r.tipo}-${r.id}`} style={styles.registroItem}>
+                // Tocar abre o detalhe, que é onde mora o botão de apagar. O long-press
+                // leva ao mesmo lugar — é atalho, não o único caminho: no Safari do
+                // iPhone ele é abafado pelo callout do sistema e no desktop nem existe.
+                <Pressable
+                  key={`${r.tipo}-${r.id}`}
+                  onPress={abrir}
+                  onLongPress={abrir}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Abrir registro de ${visual.label}: ${r.resumo}`}
+                  style={[styles.registroItem, semCalloutNaWeb]}
+                >
                   <View style={[styles.registroBadge, { backgroundColor: visual.bg }]}>
                     <Ionicons name={visual.icon} size={15} color={colors.onDark} />
                   </View>
@@ -193,7 +191,7 @@ export default function HojeScreen() {
                   ) : (
                     <Text style={styles.registroHora}>{formatarMomento(r.ocorridoEm)}</Text>
                   )}
-                </View>
+                </Pressable>
               );
             })}
           </View>

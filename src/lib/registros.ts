@@ -5,7 +5,7 @@
 // dono vem do baby_id. Mandar user_id quebraria — a coluna nem existe.
 
 import { supabase } from './supabase';
-import { formatarDuracaoMin, minutosEntre } from './horario';
+import { formatarDuracaoMin, formatarMomento, minutosEntre } from './horario';
 import type {
   ConteudoFralda,
   DiaperRecord,
@@ -46,6 +46,29 @@ export const TIPOS_REGISTRO: TipoRegistro[] = [
 export function ehTipoRegistro(valor: string | undefined): valor is TipoRegistro {
   return TIPOS_REGISTRO.includes(valor as TipoRegistro);
 }
+
+/**
+ * Tipo do app → tabela do banco. Amamentar e mamadeira caem na mesma tabela: quem
+ * separa os dois é a coluna `type`, não a tabela.
+ */
+const TABELA: Record<TipoRegistro, string> = {
+  amamentar: 'feeding_records',
+  mamadeira: 'feeding_records',
+  fralda: 'diaper_records',
+  sono: 'sleep_records',
+  humor: 'mood_records',
+  sintoma: 'symptom_records',
+};
+
+/** Coluna que ancora o registro na linha do tempo — varia por tabela. */
+const COLUNA_TEMPO: Record<TipoRegistro, 'started_at' | 'recorded_at'> = {
+  amamentar: 'started_at',
+  mamadeira: 'started_at',
+  fralda: 'recorded_at',
+  sono: 'started_at',
+  humor: 'recorded_at',
+  sintoma: 'recorded_at',
+};
 
 // ============================================================
 // VOCABULÁRIO FECHADO
@@ -277,6 +300,45 @@ export async function encerrarSono(
   return { data: (data as SleepRecord) ?? null, error: null };
 }
 
+/**
+ * Apaga um registro de vez — hard delete, sem `deleted_at`.
+ *
+ * Soft delete complicaria a promessa de exclusão do termo LGPD (linha marcada
+ * continua sendo dado guardado) sem nenhum ganho no beta, já que não existe
+ * "desfazer".
+ *
+ * ATENÇÃO ao `.select()`: quando a RLS barra a linha, o PostgREST **não devolve
+ * erro**. O `delete` simplesmente não casa nada, e a resposta volta com sucesso e
+ * zero linhas. Sem o `.select()` pra contar o que saiu, a tela diria "apagado"
+ * para um registro que continua no banco — que é exatamente o cenário que o teste
+ * de RLS de duas contas precisa detectar.
+ *
+ * `apagado: false` com `error: null` é o caso legítimo de nada ter casado: a mãe
+ * tocou duas vezes, ou apagou o mesmo registro noutro aparelho. O estado desejado
+ * já está lá, então não é erro pra ela — mas fica no log, porque pela interface
+ * ela só enxerga os próprios registros e isso não deveria acontecer.
+ */
+export async function apagarRegistro(
+  tipo: TipoRegistro,
+  id: string
+): Promise<{ apagado: boolean; error: string | null }> {
+  const { data, error } = await supabase.from(TABELA[tipo]).delete().eq('id', id).select('id');
+
+  if (error) {
+    console.warn(`[registros] falha ao apagar ${tipo}:`, error.message);
+    return { apagado: false, error: 'Não consegui apagar esse registro agora. Tenta de novo em instantes.' };
+  }
+
+  const apagado = (data ?? []).length > 0;
+  if (!apagado) {
+    console.warn(
+      `[registros] delete de ${tipo} ${id} não casou nenhuma linha — ` +
+        'já tinha sido apagado, ou a RLS barrou.'
+    );
+  }
+  return { apagado, error: null };
+}
+
 // ============================================================
 // LEITURA
 // ============================================================
@@ -348,6 +410,129 @@ function resumirSintoma(r: SymptomRecord): string {
   const intensidade = rotular(INTENSIDADES, r.intensity);
   if (!intensidade) return nome;
   return `${nome} · ${intensidade.toLowerCase()}`;
+}
+
+/** Uma linha do registro aberto: "Lado" / "Peito esquerdo". */
+export type CampoDetalhe = { rotulo: string; valor: string };
+
+/**
+ * Registro aberto na tela de detalhe. Os `campos` já vêm rotulados em PT-BR daqui:
+ * a tela não conhece slug nenhum, e o vocabulário continua morando num lugar só.
+ */
+export type DetalheRegistro = {
+  id: string;
+  tipo: TipoRegistro;
+  ocorridoEm: string;
+  resumo: string;
+  emAndamento: boolean;
+  campos: CampoDetalhe[];
+  notas: string | null;
+};
+
+function camposDe(tipo: TipoRegistro, linha: any, agora: Date): CampoDetalhe[] {
+  const campos: CampoDetalhe[] = [];
+  const push = (rotulo: string, valor: string | null | undefined) => {
+    if (valor) campos.push({ rotulo, valor });
+  };
+
+  if (tipo === 'amamentar') {
+    const r = linha as FeedingRecord;
+    push('Lado', r.side ? LADO[r.side] : null);
+    push(
+      'Duração',
+      r.duration_seconds ? formatarDuracaoMin(Math.round(r.duration_seconds / 60)) : null
+    );
+    push('Início', formatarMomento(r.started_at, agora));
+  } else if (tipo === 'mamadeira') {
+    const r = linha as FeedingRecord;
+    push('Quantidade', r.amount_ml ? `${r.amount_ml} ml` : null);
+    push('Tipo de leite', r.bottle_type ? LEITE[r.bottle_type] : null);
+    push('Início', formatarMomento(r.started_at, agora));
+  } else if (tipo === 'sono') {
+    const r = linha as SleepRecord;
+    push('Começou', formatarMomento(r.started_at, agora));
+    if (r.ended_at) {
+      push('Terminou', formatarMomento(r.ended_at, agora));
+      push('Duração', formatarDuracaoMin(minutosEntre(r.started_at, r.ended_at)));
+    } else {
+      push('Terminou', 'ainda dormindo');
+      push('Até agora', formatarDuracaoMin(minutosEntre(r.started_at, agora)));
+    }
+  } else if (tipo === 'fralda') {
+    const r = linha as DiaperRecord;
+    push('Conteúdo', FRALDA[r.content]);
+    push('Quando', formatarMomento(r.recorded_at, agora));
+  } else if (tipo === 'humor') {
+    const r = linha as MoodRecord;
+    push('Estado', rotular(HUMORES, r.mood) ?? r.mood);
+    // 'unknown' vira frase, não "Não sei" pendurado num rótulo de motivo.
+    push(
+      'Motivo provável',
+      r.probable_reason === 'unknown'
+        ? 'não identificado'
+        : rotular(MOTIVOS_HUMOR, r.probable_reason)
+    );
+    push('Quando', formatarMomento(r.recorded_at, agora));
+  } else if (tipo === 'sintoma') {
+    const r = linha as SymptomRecord;
+    push('Sintoma', rotular([...SINTOMAS, ...SINTOMAS_APOSENTADOS], r.symptom) ?? r.symptom);
+    push('Intensidade', rotular(INTENSIDADES, r.intensity));
+    push('Quando', formatarMomento(r.recorded_at, agora));
+  }
+
+  return campos;
+}
+
+/**
+ * Busca um registro só, pra tela de detalhe.
+ *
+ * `maybeSingle` em vez de `single`: registro apagado noutro aparelho volta como
+ * `data: null` sem virar exceção, e a tela mostra "esse registro não está mais
+ * aqui" em vez de um erro genérico.
+ */
+export async function buscarRegistro(
+  tipo: TipoRegistro,
+  id: string,
+  agora: Date = new Date()
+): Promise<Resultado<DetalheRegistro | null>> {
+  const { data, error } = await supabase
+    .from(TABELA[tipo])
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error) {
+    console.warn(`[registros] falha ao buscar ${tipo}:`, error.message);
+    return { data: null, error: 'Não consegui abrir esse registro agora.' };
+  }
+  if (!data) return { data: null, error: null };
+
+  const emAndamento = tipo === 'sono' && (data as SleepRecord).ended_at === null;
+
+  const resumo =
+    tipo === 'sono'
+      ? resumirSono(data as SleepRecord, agora)
+      : tipo === 'fralda'
+        ? FRALDA[(data as DiaperRecord).content]
+        : tipo === 'humor'
+          ? resumirHumor(data as MoodRecord)
+          : tipo === 'sintoma'
+            ? resumirSintoma(data as SymptomRecord)
+            : resumirAlimentacao(data as FeedingRecord);
+
+  return {
+    data: {
+      id: data.id,
+      tipo,
+      ocorridoEm: data[COLUNA_TEMPO[tipo]],
+      resumo,
+      emAndamento,
+      campos: camposDe(tipo, data, agora),
+      // Sono é a única tabela sem coluna `notes`.
+      notas: typeof data.notes === 'string' && data.notes.trim() ? data.notes.trim() : null,
+    },
+    error: null,
+  };
 }
 
 /**

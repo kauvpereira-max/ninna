@@ -219,9 +219,22 @@ Home monta
 
 Removidas no D1: `(tabs)/ninna`, `(tabs)/insights`, `(tabs)/evolucao`.
 
-## 6. Banco — nenhuma migration nova
+## 6. Banco — uma migration, descoberta no D4
 
-`001_schema_inicial.sql` já cobre 100% do beta.
+O planejamento dizia "nenhuma migration nova". **Estava errado**, e o D4 mostrou
+por quê: nenhuma das 7 chaves estrangeiras do `001` declarou `on delete`, então
+todas ficaram em `no action`.
+
+Consequência: apagar uma mãe em `Authentication > Users` **falha com erro 23503**
+enquanto ela tiver bebê, e apagar um bebê falha enquanto tiver registro. A via de
+saída que o termo LGPD promete simplesmente não funcionava — e o item 13 da
+checklist (§8) não teria como passar.
+
+`002_cascade_exclusao.sql` põe `on delete cascade` nas 7. Seguro rodar agora: só
+troca a regra de integridade, não toca em nenhuma linha, e ainda não há mãe real
+no banco. **Precisa ser rodado no SQL Editor** — ver §11.3.
+
+Fora isso, `001` cobre o resto do beta.
 
 ```
 babies            usar
@@ -235,8 +248,9 @@ auth.users        user_metadata.nome ← cadastro da mãe
 ```
 
 Os índices `(baby_id, started_at desc)` já existem e são exatamente os que o
-motor e o histórico precisam. Migration em produção com mães reais dentro é a
-operação mais arriscada do projeto — o beta não faz nenhuma.
+motor e o histórico precisam. A regra segue valendo para o resto do beta:
+migration em produção com mães reais dentro é a operação mais arriscada do
+projeto, e a hora de fazer a do `002` é agora, antes do piloto.
 
 ---
 
@@ -267,10 +281,22 @@ inglês: *"Invalid login credentials"*).
 confirmação de que chegou na caixa de entrada e não em spam.
 **Este dia não fecha sem o remetente resolvido (§8/R2).**
 
-### D4 — Apagar registro + fechar dívida de humor/sintoma
-Long-press → confirmar → delete, nos 6 tipos. Salvar humor e sintoma de verdade
-no Supabase (nunca foram exercitados contra o banco real).
-**Ao final:** os 6 tipos gravam e voltam; registro errado some da lista e do banco.
+### D4 — Apagar registro + fechar dívida de humor/sintoma ✅ CÓDIGO FEITO
+Caminho principal é **tocar no registro → tela de detalhe → botão "Apagar"
+visível**, não long-press. O canal é PWA web: no Safari do iPhone o toque longo
+dispara o callout do sistema e a seleção de texto antes de qualquer handler, e no
+desktop o gesto não existe. Long-press ficou como atalho secundário para o mesmo
+destino, com `user-select` e `-webkit-touch-callout` desligados no item.
+
+Confirmação é inline, em duas etapas na própria tela — não `Alert.alert` (o
+react-native-web não implementa com dois botões) e não `window.confirm` (trava a
+página inteira).
+
+Hard delete, sem `deleted_at`: soft delete complicaria a promessa de exclusão do
+termo LGPD sem dar nada em troca no beta.
+
+**Pendente de execução sua:** rodar o `002` (§11.3), rodar o script de RLS
+(§11.4) e salvar humor e sintoma pelo app contra o banco real.
 
 ### D5 — Camada de leitura do histórico
 Generalizar `listarRegistrosRecentes`: janela de datas, paginação, filtro por
@@ -447,3 +473,24 @@ Settings > Authentication > SMTP Settings` no Supabase → remetente
 que não é o do fundador e confirmar que chegou **na caixa de entrada, não em
 spam**. Testar só no próprio e-mail não vale — o remetente conhecido do próprio
 domínio é justamente o caso que não reproduz o problema.
+
+### 11.3 Rodar `002_cascade_exclusao.sql` — bloqueia o item 13 da checklist
+`SQL Editor > New query`, colar o arquivo inteiro, rodar. Depois rodar a consulta
+de conferência comentada no fim: esperar **7 linhas, todas com
+`delete_rule = CASCADE`**.
+
+Sem isso não existe exclusão de conta, e o termo LGPD do D18 estaria prometendo
+algo que o banco recusa (§6).
+
+### 11.4 Rodar o teste de RLS de DELETE — bloqueia o item 12 da checklist
+```
+node scripts/teste-rls-delete.mjs
+```
+Cria duas contas descartáveis e prova, nos 6 tipos, que A não apaga registro de
+B, que a linha de B sobrevive à tentativa, e que B apaga o próprio (controle
+positivo — sem ele, uma policy que negasse tudo passaria no teste).
+
+Usa só a anon key, a mesma do app: o que está sendo testado é exatamente o que o
+navegador da mãe consegue fazer. Precisa do "Confirm email" já desligado (§11.1).
+
+Repetir depois de **qualquer** mexida em policy.

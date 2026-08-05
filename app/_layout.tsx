@@ -45,6 +45,8 @@ function RootNavigator() {
       {/* Registrar é ação de segundos, feita com o bebê no colo: entra por cima da Home
           e sai no gesto de arrastar pra baixo, sem parecer que saiu do app. */}
       <Stack.Screen name="registro/[tipo]" options={{ presentation: 'modal' }} />
+      {/* Detalhe do registro — mesma lógica: abre por cima da lista e volta pra ela. */}
+      <Stack.Screen name="detalhe/[tipo]/[id]" options={{ presentation: 'modal' }} />
       {/* Mesmo tratamento pro seletor de bebê e pro cadastro chamado por ele. */}
       <Stack.Screen name="bebes/index" options={{ presentation: 'modal' }} />
       <Stack.Screen name="bebes/novo" options={{ presentation: 'modal' }} />
