@@ -6,6 +6,16 @@ App de acompanhamento de rotina de bebê pra mães de primeira viagem, com motor
 personalização (calcula padrão de sono/mamada por bebê específico, não médias
 genéricas). Concorrente de referência: Blumy.
 
+## ⚠️ O projeto está em beta fechado de 21 dias — leia `BETA.md` primeiro
+
+`BETA.md` tem **precedência sobre este arquivo** enquanto o beta durar. Ele trava
+o escopo, e o escopo travado é a principal defesa do prazo.
+
+Em particular, o que está listado abaixo em "Próximos passos sugeridos" **não é
+mais a fila de trabalho** — os 14 tipos de registro restantes estão explicitamente
+fora do beta. Ideia nova vai pra seção "Depois do beta" do `BETA.md`, não pro
+código.
+
 ## Onde está a fonte da verdade
 
 - Design system completo: `src/theme/tokens.ts` (cores, tipografia, espaçamento —
