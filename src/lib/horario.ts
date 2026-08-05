@@ -1,0 +1,81 @@
+// Hora do dia — máscara, leitura e formatação.
+// Mesma restrição da data de nascimento: nada de picker nativo
+// (@react-native-community/datetimepicker quebraria o `expo export --platform web`),
+// então o horário é campo de texto com máscara HH:MM.
+
+/** Vai formatando HH:MM enquanto a mãe digita, sem exigir que ela digite os dois pontos. */
+export function aplicarMascaraHora(texto: string): string {
+  const digitos = texto.replace(/\D/g, '').slice(0, 4);
+  if (digitos.length <= 2) return digitos;
+  return `${digitos.slice(0, 2)}:${digitos.slice(2)}`;
+}
+
+/** 'HH:MM' de hoje. Serve de valor inicial dos formulários — registro quase sempre é "agora". */
+export function horaAtual(agora: Date = new Date()): string {
+  return `${String(agora.getHours()).padStart(2, '0')}:${String(agora.getMinutes()).padStart(2, '0')}`;
+}
+
+/**
+ * 'HH:MM' -> Date, ou null se a hora não existe (ex.: 25:70).
+ *
+ * Horário que ainda não chegou é lido como ontem: às 00:10 a mãe registra a mamada
+ * das 23:50, e essa é a situação mais comum do app (mamada da madrugada anotada
+ * depois da meia-noite). A lista da Home mostra "ontem 23:50", então o que foi
+ * salvo fica visível.
+ */
+export function horaParaData(hhmm: string, agora: Date = new Date()): Date | null {
+  const partes = /^(\d{2}):(\d{2})$/.exec(hhmm);
+  if (!partes) return null;
+
+  const horas = Number(partes[1]);
+  const minutos = Number(partes[2]);
+  if (horas > 23 || minutos > 59) return null;
+
+  const data = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate(), horas, minutos, 0, 0);
+  if (data.getTime() > agora.getTime()) data.setDate(data.getDate() - 1);
+  return data;
+}
+
+function mesmoDia(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+  );
+}
+
+/** Só as horas: "14:20". */
+export function formatarHora(iso: string): string {
+  const data = new Date(iso);
+  return `${String(data.getHours()).padStart(2, '0')}:${String(data.getMinutes()).padStart(2, '0')}`;
+}
+
+/** "14:20" hoje, "ontem 23:50", "03/08 14:20" mais pra trás. */
+export function formatarMomento(iso: string, agora: Date = new Date()): string {
+  const data = new Date(iso);
+  const hora = formatarHora(iso);
+
+  if (mesmoDia(data, agora)) return hora;
+
+  const ontem = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() - 1);
+  if (mesmoDia(data, ontem)) return `ontem ${hora}`;
+
+  const dia = String(data.getDate()).padStart(2, '0');
+  const mes = String(data.getMonth() + 1).padStart(2, '0');
+  return `${dia}/${mes} ${hora}`;
+}
+
+/** "12 min", "1h", "1h 20min". Abaixo de 1 minuto vira "menos de 1 min". */
+export function formatarDuracaoMin(minutos: number): string {
+  if (minutos < 1) return 'menos de 1 min';
+  if (minutos < 60) return `${minutos} min`;
+
+  const horas = Math.floor(minutos / 60);
+  const resto = minutos % 60;
+  return resto === 0 ? `${horas}h` : `${horas}h ${resto}min`;
+}
+
+/** Minutos completos entre dois instantes ISO (ou entre um ISO e agora). */
+export function minutosEntre(inicioIso: string, fim: Date | string = new Date()): number {
+  const inicio = new Date(inicioIso).getTime();
+  const termino = typeof fim === 'string' ? new Date(fim).getTime() : fim.getTime();
+  return Math.max(0, Math.floor((termino - inicio) / 60_000));
+}

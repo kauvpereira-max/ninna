@@ -31,6 +31,11 @@ yarn-error.*
 *.pem
 
 # local env files
+# `.env` guarda a URL e a anon key do Supabase. A anon key é pública por design
+# (`EXPO_PUBLIC_` vai pro bundle), então versioná-la não seria vazamento — mas é
+# esse o arquivo onde uma service_role key acabaria parando por engano. Fica fora.
+# O que é versionado é o `.env.example`, com os nomes das chaves e nenhum valor.
+.env
 .env*.local
 
 # typescript
