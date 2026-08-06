@@ -182,6 +182,29 @@ sai sempre. Fonte que falha degrada para a fonte de sistema: o app fica menos
 bonito e continua inteiro, porque tamanho, peso e espaçamento vêm dos tokens,
 não da família da fonte.
 
+### 3.10 Credencial mora só no `.env` — `.env.example` nunca recebe valor real
+
+`.env` é ignorado pelo git desde o D1. `.env.example` é **versionado**, e por isso
+carrega placeholder, nunca valor — nem para testar, nem temporariamente, nem
+"só até o script rodar".
+
+A regra é absoluta de propósito, e não é sobre a sensibilidade do valor da vez:
+é sobre o arquivo. "Esta credencial é descartável, então pode ficar" é uma
+avaliação que se faz por linha, e que uma hora vai ser feita errada — o arquivo
+tem lugar para a `service_role` key, que ignora a RLS por definição e é a única
+coisa neste projeto capaz de expor dado de saúde de bebê de todas as contas de
+uma vez. Se a decisão for caso a caso, ela erra nesse caso.
+
+**Valor em arquivo versionado não é apagável.** Commit já feito guarda a linha
+para sempre; remover depois limpa a árvore de trabalho e não o histórico, e o
+custo real aparece no `push` — que neste projeto ainda não existe (não há remote),
+mas o P5 é deploy, e deploy costuma vir de repositório conectado.
+
+Consequência prática, e é a única que importa no dia a dia: script que precisa de
+credencial **falha pedindo a chave no `.env`** (é o que o semeador e o
+`teste-rls-delete` já fazem no preflight). Preencher o `.example` para destravar
+um script é exatamente o atalho que esta regra proíbe.
+
 ---
 
 ## 4. Arquitetura
