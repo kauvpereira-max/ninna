@@ -121,7 +121,7 @@ export default function RotinaScreen() {
             <Aviso
               icone="leaf-outline"
               titulo="Nada por aqui ainda"
-              texto={`Assim que você registrar a primeira mamada, soneca ou troca de ${bebeAtivo.name}, ela aparece aqui.`}
+              texto={`A primeira mamada, soneca ou troca de ${bebeAtivo.name} aparece aqui assim que você registrar.`}
               acao={{ label: 'Fazer o primeiro registro', onPress: () => router.push('/(tabs)') }}
             />
           )

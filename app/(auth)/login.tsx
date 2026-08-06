@@ -36,7 +36,9 @@ export default function LoginScreen() {
         style={styles.content}
       >
         <Text style={styles.title}>Bem-vinda de volta</Text>
-        <Text style={styles.subtitle}>Entra pra continuar acompanhando a rotina dela</Text>
+        {/* "do seu bebê", nunca "dela": `sex` é opcional no cadastro, e esta tela
+            aparece antes de qualquer bebê existir — não há sequer o que consultar. */}
+        <Text style={styles.subtitle}>Entra pra continuar acompanhando a rotina do seu bebê</Text>
 
         <View style={{ marginTop: spacing.xl }}>
           <TextField

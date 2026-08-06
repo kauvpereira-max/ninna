@@ -86,7 +86,7 @@ export default function CadastroBebeScreen({
     const novosErros: Erros = {};
 
     const nomeLimpo = nome.trim();
-    if (!nomeLimpo) novosErros.nome = 'Conta pra mim como ele ou ela se chama.';
+    if (!nomeLimpo) novosErros.nome = 'Conta pra mim como seu bebê se chama.';
 
     const nascimentoISO = dataParaISO(nascimento);
     if (!nascimento.trim()) {
@@ -171,7 +171,7 @@ export default function CadastroBebeScreen({
               label="Nome"
               value={nome}
               onChangeText={setNome}
-              placeholder="Como você chama ele ou ela"
+              placeholder="Como você chama seu bebê"
               autoCapitalize="words"
               error={erros.nome}
             />

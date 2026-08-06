@@ -114,7 +114,7 @@ export default function DetalheRegistroScreen() {
     return (
       <Aviso
         titulo="Esse registro não está mais aqui"
-        texto={erro ?? 'Ele pode ter sido apagado noutro aparelho.'}
+        texto={erro ?? 'Esse registro pode ter sido apagado noutro aparelho.'}
         onFechar={() => router.back()}
       />
     );
@@ -168,7 +168,7 @@ export default function DetalheRegistroScreen() {
         {confirmando ? (
           <View style={styles.confirmacao}>
             <Text style={styles.confirmacaoTexto}>
-              Apagar este registro? Ele sai do histórico e das contas da Ninna.
+              Apagar este registro? Some do histórico e das contas da Ninna.
             </Text>
             <Pressable
               onPress={handleApagar}

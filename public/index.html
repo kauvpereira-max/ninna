@@ -54,6 +54,15 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Ninna" />
 
+    <!--
+      A padronizada, que o Chrome pede em lugar da tag da Apple. As DUAS ficam:
+      a `apple-` está deprecada no Chrome, não no Safari — e é o Safari que
+      decide se a mãe instala de verdade no iPhone. Remover a antiga para calar
+      um aviso de console trocaria um aviso por uma barra do Safari em cima do
+      app instalado, que é o R1 (BETA.md §3.1).
+    -->
+    <meta name="mobile-web-app-capable" content="yes" />
+
     <!-- The `react-native-web` recommended style reset -->
     <style id="expo-reset">
       /* These styles make the body full-height */

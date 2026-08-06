@@ -276,7 +276,7 @@ export async function iniciarSono(
   if ((emAndamento.data ?? []).length > 0) {
     return {
       data: null,
-      error: 'Ainda tem um sono correndo — encerra ele na Home antes de começar outro.',
+      error: 'Ainda tem um sono correndo — encerra esse sono na Home antes de começar outro.',
     };
   }
 
