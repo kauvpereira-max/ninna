@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { limparBebeAtivo } from '../lib/preferencias';
+import { traduzirErroAuth } from '../lib/mensagens-auth';
+import { urlRetornoResetSenha, retornoDeRecuperacaoNaUrl } from '../lib/urls';
 
 type AuthContextValue = {
   session: Session | null;
@@ -16,6 +18,19 @@ type AuthContextValue = {
   ) => Promise<{ error: string | null; precisaConfirmarEmail: boolean }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
+  /** Dispara o e-mail de reset. Ver a nota sobre enumeração em `recuperar-senha.tsx`. */
+  enviarResetSenha: (email: string) => Promise<{ error: string | null }>;
+  /** Troca a senha da sessão de recuperação aberta pelo link do e-mail. */
+  definirNovaSenha: (senha: string) => Promise<{ error: string | null }>;
+  /**
+   * True enquanto a mãe está voltando de um link de recuperação. Segura o
+   * RootNavigator na tela de definir senha: sem isso a sessão que o link cria
+   * levaria ela direto pra Home, logada, com a senha antiga ainda valendo e sem
+   * nunca ver o formulário.
+   */
+  emRecuperacao: boolean;
+  /** Desiste da recuperação (botão "voltar pro login" da tela de nova senha). */
+  sairDaRecuperacao: () => void;
 };
 
 /**
@@ -41,6 +56,10 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  // Lido de forma síncrona na primeira renderização: o supabase-js limpa o
+  // fragmento da URL durante a inicialização dele, que pode ser antes do
+  // listener abaixo existir. Ver `retornoDeRecuperacaoNaUrl`.
+  const [emRecuperacao, setEmRecuperacao] = useState(() => retornoDeRecuperacaoNaUrl() !== null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -48,8 +67,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((evento, newSession) => {
       setSession(newSession);
+      if (evento === 'PASSWORD_RECOVERY') setEmRecuperacao(true);
     });
 
     return () => listener.subscription.unsubscribe();
@@ -61,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password,
       options: { data: { nome: nome.trim() } },
     });
-    if (error) return { error: error.message, precisaConfirmarEmail: false };
+    if (error) return { error: traduzirErroAuth(error), precisaConfirmarEmail: false };
 
     // No beta a confirmação de e-mail está DESLIGADA no painel do Supabase, então o
     // signUp já devolve sessão e o RootNavigator leva a mãe direto pro cadastro do
@@ -75,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signIn(email: string, password: string) {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error?.message ?? null };
+    return { error: error ? traduzirErroAuth(error) : null };
   }
 
   async function signOut() {
@@ -85,11 +105,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await limparBebeAtivo();
   }
 
+  async function enviarResetSenha(email: string) {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: urlRetornoResetSenha(),
+    });
+    return { error: error ? traduzirErroAuth(error) : null };
+  }
+
+  async function definirNovaSenha(senha: string) {
+    const { error } = await supabase.auth.updateUser({ password: senha });
+    if (error) return { error: traduzirErroAuth(error) };
+
+    // Deu certo: a sessão da recuperação vira sessão normal e o RootNavigator
+    // volta a mandar pelo caminho de sempre (bebê cadastrado → tabs).
+    setEmRecuperacao(false);
+    return { error: null };
+  }
+
+  function sairDaRecuperacao() {
+    setEmRecuperacao(false);
+  }
+
   const user = session?.user ?? null;
 
   return (
     <AuthContext.Provider
-      value={{ session, user, nomeMae: extrairNome(user), loading, signUp, signIn, signOut }}
+      value={{
+        session,
+        user,
+        nomeMae: extrairNome(user),
+        loading,
+        signUp,
+        signIn,
+        signOut,
+        enviarResetSenha,
+        definirNovaSenha,
+        emRecuperacao,
+        sairDaRecuperacao,
+      }}
     >
       {children}
     </AuthContext.Provider>

@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments, usePathname } from 'expo-router';
 import * as Font from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
 import { BabyProvider, useBaby } from '../src/contexts/BabyContext';
+import { CAMINHO_NOVA_SENHA } from '../src/lib/urls';
 
 SplashScreen.preventAutoHideAsync();
 
 function RootNavigator() {
-  const { session, loading: authLoading } = useAuth();
+  const { session, loading: authLoading, emRecuperacao } = useAuth();
   const { bebeAtivo, loading: babyLoading } = useBaby();
   const segments = useSegments();
+  const pathname = usePathname();
   const router = useRouter();
 
   useEffect(() => {
@@ -20,6 +22,17 @@ function RootNavigator() {
     const grupo = segments[0];
     const inAuthGroup = grupo === '(auth)';
     const inOnboarding = grupo === '(onboarding)';
+
+    // Antes de qualquer outra via: o link de recuperação CRIA sessão, então sem
+    // este desvio a regra "tem sessão → tabs" mandaria a mãe pra Home logada,
+    // com a senha antiga ainda valendo e sem nunca ver o formulário de troca.
+    // Vale também sem sessão (link expirado) — a tela é quem explica o que houve.
+    if (emRecuperacao) {
+      // `usePathname` e não `segments`: `(auth)` é grupo, some da URL, e a rota
+      // final é `/nova-senha`.
+      if (pathname !== CAMINHO_NOVA_SENHA) router.replace('/(auth)/nova-senha');
+      return;
+    }
 
     if (!session) {
       if (!inAuthGroup) router.replace('/(auth)/login');
@@ -35,7 +48,7 @@ function RootNavigator() {
     }
 
     if (inAuthGroup || inOnboarding) router.replace('/(tabs)');
-  }, [session, authLoading, babyLoading, bebeAtivo, segments]);
+  }, [session, authLoading, babyLoading, bebeAtivo, segments, pathname, emRecuperacao]);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>

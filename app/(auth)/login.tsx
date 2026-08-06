@@ -20,7 +20,10 @@ export default function LoginScreen() {
     const { error } = await signIn(email.trim(), password);
     setLoading(false);
     if (error) {
-      setError('E-mail ou senha incorretos.');
+      // Já vem em PT-BR do contexto (src/lib/mensagens-auth.ts). Credencial errada
+      // e conta inexistente devolvem a MESMA frase de lá — distinguir as duas
+      // entregaria quais e-mails têm conta no Ninna.
+      setError(error);
       return;
     }
     router.replace('/(tabs)');
@@ -54,6 +57,12 @@ export default function LoginScreen() {
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
           <Button label="Entrar" onPress={handleLogin} loading={loading} style={{ marginTop: spacing.sm }} />
+
+          {/* Fica logo abaixo do botão, não escondido no rodapé: quem precisa
+              deste link já tentou entrar e falhou, e é aqui que ela está olhando. */}
+          <Link href="/(auth)/recuperar-senha" style={styles.linkSenha}>
+            <Text style={styles.linkText}>Esqueci minha senha</Text>
+          </Link>
         </View>
 
         <Link href="/(auth)/signup" style={styles.link}>
@@ -70,6 +79,7 @@ const styles = StyleSheet.create({
   title: { ...typography.h1, color: colors.headline, marginBottom: spacing.xs },
   subtitle: { ...typography.body, color: colors.neutro500 },
   errorText: { ...typography.caption, color: colors.coral600, marginBottom: spacing.sm },
+  linkSenha: { marginTop: spacing.md, alignSelf: 'center' },
   link: { marginTop: spacing.xl, alignSelf: 'center' },
   linkText: { ...typography.body, color: colors.rosa700, fontFamily: 'NunitoSans_600SemiBold' },
 });

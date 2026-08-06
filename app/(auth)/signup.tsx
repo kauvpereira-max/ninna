@@ -5,6 +5,7 @@ import { Link, router } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { Button } from '../../src/components/Button';
 import { TextField } from '../../src/components/TextField';
+import { erroDeSenhaLocal, SENHA_MINIMA } from '../../src/lib/mensagens-auth';
 import { colors, spacing, typography } from '../../src/theme/tokens';
 
 export default function SignupScreen() {
@@ -25,8 +26,12 @@ export default function SignupScreen() {
       setError('Conta pra gente como você quer ser chamada.');
       return;
     }
-    if (password.length < 6) {
-      setError('A senha precisa ter pelo menos 6 caracteres.');
+    // Mesma regra e MESMA frase da tela de definir nova senha — as duas puxam de
+    // `mensagens-auth.ts`. Divergindo, a mãe leria um mínimo ao criar a conta e
+    // outro ao trocar a senha.
+    const erroSenha = erroDeSenhaLocal(password);
+    if (erroSenha) {
+      setError(erroSenha);
       return;
     }
 
@@ -91,7 +96,7 @@ export default function SignupScreen() {
             value={password}
             onChangeText={setPassword}
             secureTextEntry
-            placeholder="mínimo 6 caracteres"
+            placeholder={`mínimo ${SENHA_MINIMA} caracteres`}
           />
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
 

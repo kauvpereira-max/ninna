@@ -31,7 +31,7 @@ nativo, ter push, ter assinatura.
 | 11 | Card de insight na Home | a fazer — **P4** |
 | 12 | Supabase configurado | pronto (5 tabelas + RLS); falta `002` e §11.1 — **P0** |
 | 13 | Interface próxima ao protótipo | parcial — **P8** |
-| 14 | Recuperar senha | ❌ **pulado no D3** — **P1 + D3b** |
+| 14 | Recuperar senha | código ✅ (P1); aceite de entrega em **D3b** |
 | 15 | Apagar registro | ✅ código pronto (D4); humor/sintoma reais em **P0** |
 | 16 | PWA instalável de verdade | a fazer — **P5/P6**, fecha em **P11** |
 | 17 | Termo LGPD com via de saída | a fazer — **P7** (portão da E1) |
@@ -243,7 +243,8 @@ Home monta
 |---|---|
 | `(auth)/login` | pronta |
 | `(auth)/signup` | + campo nome (D2) |
-| `(auth)/recuperar-senha` | ❌ **não existe** — pulada no D3, refeita em **P1** |
+| `(auth)/recuperar-senha` | ✅ feita no P1 |
+| `(auth)/nova-senha` | ✅ feita no P1 — destino do link do e-mail |
 | `(onboarding)/cadastro-bebe` | pronta |
 | `(tabs)/index` — Home | + card de insight (**P4**) |
 | `(tabs)/rotina` — Histórico | ✅ reescrita (D6–D7) |
@@ -664,11 +665,30 @@ faltaria é dia de bebê registrado.
 Os dois dias entre o alvo (08/08) e a entrada (11/08) são a margem para um "não"
 — dá tempo de convidar outra sem mover a data da E1.
 
-### P1 — D3a: código do reset + erros em português
-Fluxo de reset com redirect e tradução das mensagens do Supabase (hoje voltam em
-inglês: *"Invalid login credentials"*). Rota `(auth)/recuperar-senha` do §5.
-**Ao final:** o fluxo existe e funciona ponta a ponta contra o mailer que
-estiver configurado.
+### P1 — D3a: código do reset + erros em português ✅ FEITO
+Fluxo de reset com redirect e tradução das mensagens do Supabase (voltavam em
+inglês: *"Invalid login credentials"*). Rotas `(auth)/recuperar-senha` e
+`(auth)/nova-senha` do §5.
+
+**A tela de pedir o link nunca diz se a conta existe.** A confirmação é "se
+existir uma conta com esse e-mail, o link está a caminho" — dizer "não achamos
+essa conta" entrega, uma consulta por vez, quais e-mails têm conta no Ninna. A
+mesma regra vale no login: `invalid_credentials` e `user_not_found` devolvem a
+**mesma frase**, por construção do `mensagens-auth.ts`.
+
+**Erro no envio, porém, aparece.** O Supabase responde sucesso para e-mail sem
+conta, então o que sobra em `error` é falha de verdade — rede, formato,
+limite de envio. Esconder isso atrás do "enviamos" faria a mãe esperar para
+sempre por um e-mail que nunca saiu. A proteção contra enumeração mora no
+caminho de sucesso, que é idêntico exista ou não a conta.
+
+**O `emRecuperacao` no RootNavigator não é detalhe.** O link do e-mail *cria
+sessão* — sem esse desvio, a regra "tem sessão → tabs" mandaria a mãe para a
+Home logada, com a senha antiga ainda valendo e sem nunca ver o formulário.
+
+**Ao final:** o código existe, `tsc` e `expo export --platform web` passam, e o
+único pendente é o **D3b** — o e-mail chegando na caixa de entrada de um Gmail
+de terceiro, que depende do P0-bis (DNS do Resend).
 
 **Por que partido em dois:** o D3 original só fechava com o e-mail chegando na
 caixa de entrada de um Gmail de terceiro — critério certo, mas que depende de
@@ -1041,7 +1061,8 @@ faltando (`typography.caption` roda em Regular) · `src/theme/fonts.ts` citado e
 
 ## 11. Ações no painel do Supabase (fora do código)
 
-Estas duas não têm como ser feitas por commit. Sem elas o D3 não fecha.
+Nenhuma destas tem como ser feita por commit. Sem a §11.1, a §11.2 e a §11.5 o
+D3 não fecha; a §11.3 e a §11.4 barram os itens 12 e 13 da checklist.
 
 ### 11.1 Desligar confirmação de e-mail — ⚠️ AINDA NÃO ESTÁ APLICADA
 `Authentication > Sign In / Providers > Email` → desmarcar **Confirm email** →
@@ -1121,3 +1142,21 @@ auth ficam (removê-las exigiria service_role).
    implementada sobre cascata de deleção (`002`), e mexer em cascata é
    precisamente a mudança capaz de afrouxar uma policy sem dar nenhum aviso —
    nada quebra, nada avisa, e o dado de uma mãe passa a ser alcançável por outra.
+
+### 11.5 Allow-list do redirect de recuperação — nasce no P1, só fecha no P5
+
+`Authentication > URL Configuration > Redirect URLs`. O destino do link de reset
+precisa estar nessa lista. Se não estiver, o GoTrue **ignora o `redirectTo` e
+devolve a mãe para o Site URL padrão** — o link "funciona" indo para o lugar
+errado, que é o modo de falha mais difícil de diagnosticar, porque nada dá erro
+e a API responde `200` igual.
+
+O app monta esse endereço num lugar só (`src/lib/urls.ts`, `urlRetornoResetSenha`),
+para essa troca custar uma variável e não uma caça a string espalhada:
+
+- **hoje:** `http://localhost:8081/nova-senha` — a origem de onde o app é servido;
+- **a partir do P5:** o domínio da Vercel, via `EXPO_PUBLIC_APP_URL`.
+
+As duas entradas precisam existir na allow-list, e **o P5 não fecha enquanto a de
+produção não entrar**. Não dá para verificar de fora: só abrindo o link de um
+e-mail real e vendo onde ele cai — o que amarra esta conferência ao D3b.
