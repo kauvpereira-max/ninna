@@ -27,7 +27,7 @@ nativo, ter push, ter assinatura.
 | 7 | Registro de sono (+ em andamento) | ✅ pronto |
 | 8 | Registro de fralda | ✅ pronto |
 | 9 | Histórico dos registros | ✅ pronto (D5–D7) |
-| 10 | Motor de personalização (3 métricas) | P2 ✅ (matemática, contra massa em memória); ligar e conferir contra o banco — **P3** |
+| 10 | Motor de personalização (3 métricas) | ✅ P2 (matemática) + P3 (ligado e conferido contra o banco) |
 | 11 | Card de insight na Home | a fazer — **P4** |
 | 12 | Supabase configurado | pronto (5 tabelas + RLS); falta `002` e §11.1 — **P0** |
 | 13 | Interface próxima ao protótipo | parcial — **P8** |
@@ -534,7 +534,7 @@ antes — só a posição mudou.
 | **P0-ter** | **Recrutar a E1** — mãe **confirmada**, não convidada | **08/08** | latência humana |
 | **P1** | **D3a** — código do reset + erros em PT-BR | 06/08 | nada |
 | **P2** | D8 — motor, matemática pura ✅ | 06/08 | — |
-| **P3** | D9 — motor ligado ao app ⚠️ | 08/08 | P2 |
+| **P3** | D9 — motor ligado ao app ✅ | 06/08 | — |
 | **P4** | D10 — card de insight ⚠️ | 09/08 | P3 |
 | **P5** | D16 — PWA + deploy ⬆️ *antecipado de 20/08* | 10/08 | P4 |
 | **P6** | D17a — instalar no iPhone real ⏱️ *começa a janela de 7 dias* | 11/08 | aparelho ≠ o de dev |
@@ -746,20 +746,47 @@ cauda de hoje cresce ao longo do dia.
 dado real vindo do Supabase é aceite do **P3**, não deste bloco — e continua
 dependendo do semeador rodar (P0).
 
-### P3 — D9: Motor ligado ao app ⚠️ dia pesado
-`usePadroes` lê 7 dias e calcula. Testar com o relógio do celular em outro fuso.
+### P3 — D9: Motor ligado ao app ✅ FEITO
+`src/hooks/usePadroes.ts` lê a janela de 7 dias e chama `calcularPadroes`. Sem
+`baby_patterns` e sem Edge Function (§3.2). Recarrega a cada foco, mesmo padrão
+do `useRegistrosRecentes` — é o que faz o registro recém-salvo entrar na conta
+quando o modal fecha.
 
-**Herda um aceite do P2, de propósito.** O P2 provou a matemática contra a massa
-gerada em memória; o que ninguém provou ainda é a volta pelo banco. Então este
-bloco só fecha depois de rodar o motor sobre registros **lidos do Supabase** e
-bater os três números contra o gabarito do §9-bis. Se divergirem, o erro não está
-na matemática — está na leitura, no tipo de coluna ou no fuso da serialização, e
-é justamente essa a classe de erro que a massa em memória não alcança.
+**O aceite herdado do P2 fechou.** `node scripts/teste-motor-banco.ts` lê as
+linhas do Supabase, roda o motor sobre elas e compara com a mesma conta feita à
+mão — aritmética solta no próprio script, sem chamar `padroes.ts`, porque
+gabarito calculado pelo código que ele deveria conferir não confere nada.
 
-Depende do semeador ter rodado (P0), que continua aberto.
+```
+                      MOTOR (do banco)   GABARITO (à mão)
+intervalo mamadas     211 min            211 min
+duração soneca         70 min             70 min
+horário soneca        763 min = 12:43    763 min = 12:43
+```
 
-**Ao final:** os padrões reais do bebê de teste aparecem corretos na tela, e os
-números batem com o gabarito.
+Mais três conferências que só o banco permite: os 6 dias fechados voltam
+**instante a instante** iguais ao que o gerador escreveu (41 mamadas, 24 sonos),
+`ended_at` volta como `null` de verdade e não como string, e o sono noturno fica
+fora das métricas de soneca (6 noites, 19 sonecas).
+
+**Sono em andamento foi exercitado com linha real**, não sintética: o script cria
+um sono aberto em horário de soneca no bebê dedicado, confirma que ele entra na
+conta de horário (19 → 20 sonecas) e não na de duração (segue 70 min em 19), e
+apaga a linha num `finally`. O tratamento do D8 se sustenta.
+
+**Leitura própria, caminho conhecido.** `listarParaPadroes` mora em
+`registros.ts`, com o mesmo contrato `{ data, error }` e o mesmo recorte por
+`desde`. Não reusa `listarRegistros` porque a normalização daquela lista troca o
+`ended_at` pelo booleano `emAndamento` — basta pra tela, não basta pra duração de
+soneca. E não pagina: a janela é fechada, e paginar reintroduziria as janelas
+desalinhadas que o D5 resolveu.
+
+**Falha de leitura não vira número.** Diferente da lista, aqui falha parcial não
+serve: insight calculado sobre metade dos dados é número errado com cara de
+certeza (R3). Sem as duas leituras, `padroes` fica nulo e a tela cai no mesmo
+estado de "ainda estou conhecendo".
+
+O card é o P4 — aqui nada foi para a tela.
 
 ### P4 — D10: Card de insight na Home ⚠️ dia pesado
 `copyInsight.ts`: número → frase acolhedora. Variações por métrica e faixa de
@@ -1068,6 +1095,7 @@ Não são código do app: rodam no Node, fora do Expo, e não entram no bundle.
 | `node scripts/teste-paginacao.ts` | Cursor, desempate e bordas da paginação. Puro, sem banco |
 | `node scripts/teste-horario.ts` | Agrupamento por dia em hora local. Recusa rodar em offset zero, onde não provaria nada |
 | `node scripts/teste-padroes.ts` | As 3 métricas do motor, com fuso injetado e verificação por mutação. Puro, sem banco |
+| `node scripts/teste-motor-banco.ts` | Aceite do P3: motor sobre linhas LIDAS do Supabase, contra gabarito à mão. Exige a massa semeada |
 | `node scripts/semear-registros.mjs` | 7 dias de rotina plausível num bebê dedicado. `--limpar` desfaz |
 | `scripts/massa-semeada.mjs` | Não é teste: é o gerador da massa, importado pelo semeador **e** pela conferência do gabarito. Não toca em rede |
 

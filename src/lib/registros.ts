@@ -552,6 +552,72 @@ export async function buscarRegistro(
   };
 }
 
+/**
+ * As linhas cruas que o motor precisa — feeding + sleep de uma janela.
+ *
+ * POR QUE NÃO REUSA `listarRegistros`
+ *
+ * A lista unificada existe pra ser mostrada: ela normaliza tudo em
+ * `RegistroRecente`, e nessa normalização o `ended_at` vira o booleano
+ * `emAndamento`. Para a tela isso basta ("Dormindo há 40 min"); para o motor,
+ * não — sem o instante do fim não há duração de soneca. Reaproveitar aquela
+ * função exigiria devolver o registro cru junto, o que engorda a lista inteira
+ * pra servir a um consumidor só.
+ *
+ * O que É reaproveitado: o módulo, o contrato `{ data, error }`, o recorte por
+ * `desde` e a regra de nunca lançar exceção. Não há caminho novo de acesso.
+ *
+ * Também não pagina, e é de propósito: a janela do motor é fechada em 7 dias
+ * (~40 a 150 linhas), e paginar aqui só reintroduziria o problema que o D5
+ * resolveu — janelas desalinhadas entre as duas tabelas. O motor precisa das
+ * duas listas inteiras e alinhadas, ou de nenhuma.
+ */
+export type RegistrosDoMotor = {
+  mamadas: { started_at: string }[];
+  sonos: { started_at: string; ended_at: string | null }[];
+};
+
+export async function listarParaPadroes(
+  babyId: string,
+  opcoes: { desde: Date }
+): Promise<Resultado<RegistrosDoMotor>> {
+  const desde = opcoes.desde.toISOString();
+
+  const [alimentacao, sono] = await Promise.all([
+    supabase
+      .from('feeding_records')
+      .select('started_at')
+      .eq('baby_id', babyId)
+      .gte('started_at', desde)
+      .order('started_at', { ascending: true }),
+    supabase
+      .from('sleep_records')
+      .select('started_at, ended_at')
+      .eq('baby_id', babyId)
+      .gte('started_at', desde)
+      .order('started_at', { ascending: true }),
+  ]);
+
+  const falha = alimentacao.error ?? sono.error;
+  if (falha) console.warn('[registros] falha ao ler para o motor:', falha.message);
+
+  // Diferente da lista, aqui falha parcial NÃO serve: um insight calculado sobre
+  // metade dos dados é um número errado com cara de certeza, que é justamente o
+  // R3. Sem as duas leituras, o motor não roda e o card mostra a frase de
+  // aprendizado — silêncio honesto.
+  if (falha) {
+    return { data: { mamadas: [], sonos: [] }, error: ERRO_LISTAR };
+  }
+
+  return {
+    data: {
+      mamadas: (alimentacao.data ?? []) as { started_at: string }[],
+      sonos: (sono.data ?? []) as { started_at: string; ended_at: string | null }[],
+    },
+    error: null,
+  };
+}
+
 /** Quais tabelas precisam ser consultadas pra atender os tipos pedidos. */
 function tabelasPara(tipos: TipoRegistro[] | null | undefined): {
   alimentacao: 'ambos' | 'breast' | 'bottle' | null;
