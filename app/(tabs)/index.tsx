@@ -6,7 +6,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useBaby } from '../../src/contexts/BabyContext';
 import { useRegistrosRecentes } from '../../src/hooks/useRegistrosRecentes';
+import { usePadroes } from '../../src/hooks/usePadroes';
 import { useAgoraTick } from '../../src/hooks/useAgoraTick';
+import { escolherInsight } from '../../src/lib/copyInsight';
+import { CardInsight } from '../../src/components/CardInsight';
 import { encerrarSono, resumirSonoEmAndamento } from '../../src/lib/registros';
 import { formatarIdade, formatarIdadeCorrigida } from '../../src/lib/idade';
 import { formatarMomento } from '../../src/lib/horario';
@@ -19,6 +22,7 @@ export default function HojeScreen() {
   const { bebeAtivo, bebes } = useBaby();
   const router = useRouter();
   const { registros, carregando, erro, recarregar } = useRegistrosRecentes(bebeAtivo?.id ?? null);
+  const { padroes } = usePadroes(bebeAtivo?.id ?? null);
 
   const [encerrandoId, setEncerrandoId] = useState<string | null>(null);
   const [erroEncerrar, setErroEncerrar] = useState<string | null>(null);
@@ -38,10 +42,10 @@ export default function HojeScreen() {
   // Mãe de primeira viagem não precisa descobrir que aquilo ali não faz nada.
   const podeTrocar = bebes.length > 1;
 
-  // TODO: trocar por leitura real de baby_patterns quando o motor de personalização existir.
-  // Enquanto não há registro nenhum, a Ninna não finge saber um padrão que ainda não aprendeu.
-  // Construção sem artigo de gênero: `sex` é opcional no cadastro.
-  const insight = `Ainda estou conhecendo a rotina de ${bebeAtivo.name} — os primeiros registros já começam a revelar o padrão.`;
+  // O motor roda no cliente (BETA.md §3.2) — não há leitura de `baby_patterns`.
+  // Enquanto ele não tiver do que falar, a Ninna diz que ainda está conhecendo,
+  // em vez de fingir um padrão que não aprendeu.
+  const insight = escolherInsight(padroes, bebeAtivo.name);
 
   async function handleEncerrarSono(sonoId: string) {
     setEncerrandoId(sonoId);
@@ -96,16 +100,11 @@ export default function HojeScreen() {
           <View style={styles.header}>{conteudoHeader}</View>
         )}
 
-        <View style={styles.monitorCard}>
-          <View style={styles.monitorIconWrap}>
-            <Ionicons name="moon" size={18} color={colors.coral500} />
-          </View>
-          <View style={{ flex: 1 }}>
-            {/* Sem artigo antes do nome: `sex` é nullable e "DE A LIZ" não existe. */}
-            <Text style={styles.monitorLabel}>A ROTINA DE {bebeAtivo.name.toUpperCase()}</Text>
-            <Text style={styles.monitorText}>{insight}</Text>
-          </View>
-        </View>
+        <CardInsight
+          nomeBebe={bebeAtivo.name}
+          texto={insight.texto}
+          aprendendo={insight.aprendendo}
+        />
 
         <Text style={styles.sectionLabel}>REGISTRAR</Text>
         <View style={styles.grid}>
@@ -196,24 +195,7 @@ const styles = StyleSheet.create({
   avatarLetter: { ...typography.label, color: colors.headline },
   nome: { ...typography.h3, color: colors.headline },
   idade: { ...typography.caption, color: colors.neutro500 },
-  monitorCard: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    backgroundColor: colors.neutro800,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  monitorIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: radius.full,
-    backgroundColor: colors.noiteSurface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  monitorLabel: { ...typography.caption, color: colors.coral500, fontFamily: 'NunitoSans_700Bold', marginBottom: 2 },
-  monitorText: { ...typography.body, color: colors.onDark, fontFamily: 'NunitoSans_600SemiBold' },
+  // O visual do card de insight mudou-se pra src/components/CardInsight.tsx.
   sectionLabel: {
     ...typography.label,
     color: colors.neutro500,

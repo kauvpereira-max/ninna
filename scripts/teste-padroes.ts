@@ -25,6 +25,8 @@ import {
   ehSonoNoturno,
   minutosDoDiaLocal,
   MINIMO_REGISTROS,
+  DISPERSAO_MAXIMA_MINUTOS,
+  dispersaoCircularMinutos,
   type EntradaPadroes,
 } from '../src/lib/padroes.ts';
 
@@ -152,11 +154,70 @@ conferir(
   `${estavel.duracaoMediaSoneca.amostras} de 20 registros de sono`
 );
 
-const horario = estavel.horarioMedioSoneca.valor;
+// A média em si continua certa — o que mudou é ela não ser PUBLICADA neste caso
+// (ver 2-bis). Conferir aqui separa os dois: erro de matemática continuaria
+// aparecendo mesmo depois de o limiar de dispersão entrar em cena.
+const mediaCrua = mediaCircularMinutos(
+  rotinaEstavel(SP)
+    .sonos.map((s) => minutosDoDiaLocal(s.started_at, SP)!)
+    .filter((m) => !ehSonoNoturno(m))
+);
 conferir(
-  'horário médio de soneca cai entre as faixas da tarde',
-  horario !== null && horario > 12 * 60 + 45 && horario < 13 * 60,
-  `${horario} min = ${String(Math.floor((horario ?? 0) / 60)).padStart(2, '0')}:${String((horario ?? 0) % 60).padStart(2, '0')}`
+  'a média circular das sonecas cai entre as faixas da tarde',
+  mediaCrua !== null && mediaCrua > 12 * 60 + 45 && mediaCrua < 13 * 60,
+  `${mediaCrua} min = ${String(Math.floor((mediaCrua ?? 0) / 60)).padStart(2, '0')}:${String((mediaCrua ?? 0) % 60).padStart(2, '0')} — correta, e ainda assim não publicável`
+);
+
+// ------------------------------------------------------------------
+// 2-bis. Dispersão — a métrica que existe e não descreve nada
+// ------------------------------------------------------------------
+
+conferir(
+  'horários agrupados têm dispersão pequena',
+  (dispersaoCircularMinutos([540, 555, 530, 545, 560]) ?? 999) < 30,
+  `${dispersaoCircularMinutos([540, 555, 530, 545, 560])} min`
+);
+conferir(
+  'sonecas de 9h, 13h e 16h30 se espalham por mais de 1h30',
+  (dispersaoCircularMinutos([540, 780, 990]) ?? 0) > DISPERSAO_MAXIMA_MINUTOS,
+  `${dispersaoCircularMinutos([540, 780, 990])} min`
+);
+
+// Bebê de três sonecas: a média cai em meio-dia e meia, horário em que ele
+// justamente NÃO dorme. Confiança de sobra e nada a dizer.
+conferir(
+  'com três sonecas por dia, o horário médio sai como "não se aplica"',
+  estavel.horarioMedioSoneca.confianca === 'nao_se_aplica' &&
+    estavel.horarioMedioSoneca.valor === null,
+  `${estavel.horarioMedioSoneca.amostras} sonecas, e ainda assim sem horário publicável`
+);
+conferir(
+  'e isso NÃO contamina as outras métricas',
+  estavel.duracaoMediaSoneca.confianca === 'suficiente'
+);
+
+// Bebê mais velho, soneca única depois do almoço: mesma função, outro desfecho.
+const sonecaUnica: EntradaPadroes = {
+  mamadas: [],
+  sonos: DIAS_TESTE.concat('2026-07-31', '2026-08-06').map((dia, i) => {
+    const inicio = local(SP, dia, 13, (i % 3) * 15);
+    return {
+      started_at: inicio,
+      ended_at: new Date(new Date(inicio).getTime() + 90 * 60_000).toISOString(),
+    };
+  }),
+};
+const umaSoneca = calcularPadroes(sonecaUnica, { agora: AGORA, fusoHorario: SP });
+conferir(
+  'com soneca única, o horário médio volta a ser publicável',
+  umaSoneca.horarioMedioSoneca.confianca === 'suficiente' && umaSoneca.horarioMedioSoneca.valor !== null,
+  `${umaSoneca.horarioMedioSoneca.valor} min = ${String(Math.floor((umaSoneca.horarioMedioSoneca.valor ?? 0) / 60)).padStart(2, '0')}:${String((umaSoneca.horarioMedioSoneca.valor ?? 0) % 60).padStart(2, '0')}`
+);
+conferir(
+  '"não se aplica" é estado diferente de "insuficiente"',
+  estavel.horarioMedioSoneca.confianca !== 'insuficiente' &&
+    estavel.horarioMedioSoneca.amostras >= MINIMO_REGISTROS,
+  'não é falta de dado — é conta que não descreve este bebê'
 );
 
 // ------------------------------------------------------------------

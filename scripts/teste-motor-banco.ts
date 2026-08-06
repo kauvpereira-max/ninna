@@ -30,6 +30,7 @@ import {
   JANELA_DIAS,
 } from '../src/lib/padroes.ts';
 import { gerarMassa, NOME_BEBE_TESTE } from './massa-semeada.mjs';
+import { escolherInsight } from '../src/lib/copyInsight.ts';
 
 function lerEnv() {
   // Caminho como string, não `new URL(...)`: o `URL` global aqui é o do DOM (os
@@ -229,17 +230,20 @@ conferir(
   motor.duracaoMediaSoneca.valor === gabDuracao,
   `${motor.duracaoMediaSoneca.valor} vs ${gabDuracao}`
 );
+// O horário NÃO é comparado por igualdade: este bebê tira três sonecas por dia,
+// então a média existe (o gabarito à mão a calcula) e o motor a retém de
+// propósito. Conferir os dois lados separa "a conta está errada" de "a conta não
+// descreve este bebê" — que são coisas diferentes e têm correções diferentes.
 conferir(
-  'horário médio da soneca: motor == gabarito',
-  motor.horarioMedioSoneca.valor === gabHorario,
-  `${motor.horarioMedioSoneca.valor} vs ${gabHorario}`
+  'horário médio da soneca: o motor retém o valor por dispersão alta',
+  motor.horarioMedioSoneca.valor === null && motor.horarioMedioSoneca.confianca === 'nao_se_aplica',
+  `à mão daria ${gabHorario} min = ${hm(gabHorario!)}, horário em que este bebê não dorme`
 );
 
 conferir(
-  'as três métricas têm confiança suficiente com a massa semeada',
-  [motor.intervaloMedioMamadas, motor.duracaoMediaSoneca, motor.horarioMedioSoneca].every(
-    (m) => m.confianca === 'suficiente'
-  ),
+  'as duas métricas publicáveis têm confiança suficiente com a massa semeada',
+  motor.intervaloMedioMamadas.confianca === 'suficiente' &&
+    motor.duracaoMediaSoneca.confianca === 'suficiente',
   `amostras: ${motor.intervaloMedioMamadas.amostras} mamadas, ${motor.duracaoMediaSoneca.amostras} sonecas`
 );
 
@@ -332,6 +336,29 @@ try {
     );
   }
 }
+
+// ------------------------------------------------------------------
+// 5. O que a mãe veria na Home, com este dado
+// ------------------------------------------------------------------
+
+console.log('\n--- a frase do card, nos próximos 7 dias ---');
+
+for (let d = 0; d < 7; d++) {
+  const dia = new Date(agora.getTime() + d * 24 * 60 * 60_000);
+  const { texto } = escolherInsight(motor, bebe.name, { agora: dia, fusoHorario: fuso });
+  console.log(`   ${chaveDia(dia.toISOString())}  ${texto}`);
+}
+
+const hoje = escolherInsight(motor, bebe.name, { agora, fusoHorario: fuso });
+conferir(
+  'com a massa semeada, o card mostra insight de verdade e não a frase de aprendizado',
+  !hoje.aprendendo
+);
+conferir(
+  'o horário médio não é publicado para este bebê (3 sonecas por dia)',
+  motor.horarioMedioSoneca.confianca === 'nao_se_aplica',
+  `dispersão acima do limiar — ${motor.horarioMedioSoneca.amostras} sonecas e nenhum horário típico`
+);
 
 console.log(
   `\n${falhas === 0 ? 'Motor confere contra o banco.' : `${falhas} verificação(ões) falharam.`}`

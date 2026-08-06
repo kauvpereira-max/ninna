@@ -21,14 +21,14 @@ nativo, ter push, ter assinatura.
 | 1 | Autenticação e-mail/senha | ✅ pronto |
 | 2 | Cadastro da mãe (nome) | ✅ pronto (D2) |
 | 3 | Cadastro do bebê | ✅ pronto |
-| 4 | Home | pronta; falta o card de insight real — **P4** |
+| 4 | Home | ✅ pronta, com o card de insight real (P4) |
 | 5 | Registro de amamentação | ✅ pronto |
 | 6 | Registro de mamadeira | ✅ pronto |
 | 7 | Registro de sono (+ em andamento) | ✅ pronto |
 | 8 | Registro de fralda | ✅ pronto |
 | 9 | Histórico dos registros | ✅ pronto (D5–D7) |
 | 10 | Motor de personalização (3 métricas) | ✅ P2 (matemática) + P3 (ligado e conferido contra o banco) |
-| 11 | Card de insight na Home | a fazer — **P4** |
+| 11 | Card de insight na Home | ✅ P4 |
 | 12 | Supabase configurado | pronto (5 tabelas + RLS); falta `002` e §11.1 — **P0** |
 | 13 | Interface próxima ao protótipo | parcial — **P8** |
 | 14 | Recuperar senha | código ✅ (P1); aceite de entrega em **D3b** |
@@ -122,6 +122,34 @@ apenas sonecas.
 **Limiar de confiança: mínimo de 5 registros da métrica na janela.** Abaixo
 disso o card mostra a frase de aprendizado e **nenhum número**. Silêncio honesto
 é infinitamente melhor que número errado — mesmo princípio da copy de saúde.
+
+**Extensão da regra, decidida no P4: métrica que não descreve nada não é
+publicada, mesmo com confiança de sobra.** Confiança responde "tenho registros
+bastante?". Falta a outra pergunta: "esses registros descrevem alguma coisa?".
+
+O caso concreto é o horário médio de soneca. Um bebê com sonecas às 9h, 13h e
+16h30 tem média em torno de meio-dia e meia — horário em que ele justamente não
+dorme. O número está certo, a confiança está alta, e a frase seria falsa. Não é o
+mesmo problema da média circular (que erra a conta): aqui a conta acerta e **o
+conceito não se aplica**.
+
+Então há um limiar de **dispersão** (`DISPERSAO_MAXIMA_MINUTOS`, 1h30) sobre o
+desvio padrão circular. Acima dele a métrica sai como `nao_se_aplica` — um
+terceiro estado, distinto de `insuficiente`:
+
+| estado | significa | a tela faz |
+|---|---|---|
+| `suficiente` | sei, e descreve | vira frase |
+| `insuficiente` | ainda não sei | frase de aprendizado |
+| `nao_se_aplica` | sei, e não descreve | **nada** — outra métrica ocupa o card |
+
+`nao_se_aplica` **não** vira frase de aprendizado: não falta dado, e dizer "ainda
+estou conhecendo" seria mentira. A métrica só sai de cena.
+
+O limiar não é arbitrário nem permanente para o bebê: soneca única de bebê mais
+velho tem dispersão de ~45 min, e aí o horário volta a significar algo. É o mesmo
+bebê crescendo, e a métrica aparece exatamente quando passa a descrever a rotina
+dele.
 
 ### 3.4 Cadastro da mãe sem tabela nova
 Campo "Como você quer ser chamada?" no signup → `user_metadata` do Supabase
@@ -255,7 +283,7 @@ Home monta
 | `(auth)/recuperar-senha` | ✅ feita no P1 |
 | `(auth)/nova-senha` | ✅ feita no P1 — destino do link do e-mail |
 | `(onboarding)/cadastro-bebe` | pronta |
-| `(tabs)/index` — Home | + card de insight (**P4**) |
+| `(tabs)/index` — Home | ✅ com card de insight (P4) |
 | `(tabs)/rotina` — Histórico | ✅ reescrita (D6–D7) |
 | `(tabs)/mais` | nome ✅; + sobre, feedback, sair (**P7**) |
 | `registro/[tipo]` modal, 6 tipos | ✅ + apagar (D4) |
@@ -535,7 +563,7 @@ antes — só a posição mudou.
 | **P1** | **D3a** — código do reset + erros em PT-BR | 06/08 | nada |
 | **P2** | D8 — motor, matemática pura ✅ | 06/08 | — |
 | **P3** | D9 — motor ligado ao app ✅ | 06/08 | — |
-| **P4** | D10 — card de insight ⚠️ | 09/08 | P3 |
+| **P4** | D10 — card de insight ✅ | 06/08 | — |
 | **P5** | D16 — PWA + deploy ⬆️ *antecipado de 20/08* | 10/08 | P4 |
 | **P6** | D17a — instalar no iPhone real ⏱️ *começa a janela de 7 dias* | 11/08 | aparelho ≠ o de dev |
 | **·** | **D3b** — aceite do reset em Gmail de terceiro | *quando o DNS verificar* | P0-bis |
@@ -788,11 +816,36 @@ estado de "ainda estou conhecendo".
 
 O card é o P4 — aqui nada foi para a tela.
 
-### P4 — D10: Card de insight na Home ⚠️ dia pesado
-`copyInsight.ts`: número → frase acolhedora. Variações por métrica e faixa de
-confiança + estado "ainda aprendendo". Revisão de tom.
-**Ao final:** conta com 8 registros vê insight verdadeiro; conta com 2 vê a
-frase de aprendizado. **Este é o dia que define se o beta tem valor.**
+### P4 — D10: Card de insight na Home ✅ FEITO
+`src/lib/copyInsight.ts` (número → frase) e `src/components/CardInsight.tsx`.
+A copy foi aprovada como texto **antes** de virar código — tom é a única coisa
+aqui que não se descobre depois de implementada.
+
+**As regras de tom são o produto**, e estão no cabeçalho do módulo: descrever e
+nunca prescrever; nada que soe como diagnóstico ou preocupação; nenhum
+julgamento do padrão; sem gênero (nem pronome, nem artigo antes do nome); sem
+linguagem de painel; e a frase de aprendizado nunca como erro do app ou cobrança
+da mãe.
+
+**A faixa de confiança muda o hedge, não o conteúdo.** "Vem passando" com pouco
+dado vira "passa" com muito. Sem adjetivo avaliativo — a ausência de hedge já é o
+grau de certeza.
+
+**Uma frase por dia, não por foco de tela.** A escolha da métrica e da variação
+vem do dia do calendário local. A mãe abre a Home dez vezes por dia; texto que
+muda a cada abertura parece instável, não vivo.
+
+**Dado atípico não tem ramo de copy.** A frase descreve o que a conta deu, no
+mesmo tom, seja qual for o número. Se não houver o que descrever, cala — é o
+`nao_se_aplica` do §3.3.
+
+`node scripts/teste-copy-insight.ts` varre **todas** as frases possíveis (3
+métricas × 3 faixas × variações + aprendizado) contra 9 proibições. Copy não
+quebra nada quando erra: passa, vai pro ar, e a mãe lê às 3h da manhã.
+
+**Ao final:** com a massa semeada o card mostra insight verdadeiro, conferido
+contra o gabarito no `teste-motor-banco.ts`; conta nova com 2 registros vê a
+frase de aprendizado.
 
 ### P5 — D16: PWA de verdade + deploy ⬆️ antecipado
 `public/manifest.json` (`display: standalone`, ícones 180/192/512, theme e
@@ -1096,6 +1149,7 @@ Não são código do app: rodam no Node, fora do Expo, e não entram no bundle.
 | `node scripts/teste-horario.ts` | Agrupamento por dia em hora local. Recusa rodar em offset zero, onde não provaria nada |
 | `node scripts/teste-padroes.ts` | As 3 métricas do motor, com fuso injetado e verificação por mutação. Puro, sem banco |
 | `node scripts/teste-motor-banco.ts` | Aceite do P3: motor sobre linhas LIDAS do Supabase, contra gabarito à mão. Exige a massa semeada |
+| `node scripts/teste-copy-insight.ts` | Varre TODAS as frases do card contra as proibições de tom. Puro, sem banco |
 | `node scripts/semear-registros.mjs` | 7 dias de rotina plausível num bebê dedicado. `--limpar` desfaz |
 | `scripts/massa-semeada.mjs` | Não é teste: é o gerador da massa, importado pelo semeador **e** pela conferência do gabarito. Não toca em rede |
 

@@ -27,7 +27,20 @@
  *    máquina foi o erro que o `teste-horario.ts` já pegou uma vez.
  */
 
-export type Confianca = 'suficiente' | 'insuficiente';
+/**
+ * `nao_se_aplica` é um terceiro estado, e não um sinônimo de `insuficiente`.
+ *
+ * Insuficiente = ainda não sei (faltam registros). Não se aplica = eu sei, e a
+ * conta não descreve nada deste bebê. Um bebê com sonecas às 9h, 13h e 16h30 tem
+ * média em torno de meio-dia e meia — horário em que ele não costuma dormir. O
+ * número existe e é inútil.
+ *
+ * A tela trata os dois de forma diferente: `insuficiente` vira a frase de
+ * aprendizado; `nao_se_aplica` simplesmente não vira frase nenhuma, e outra
+ * métrica ocupa o card. É a regra do silêncio honesto do §3.3 estendida —
+ * métrica que não descreve nada não é publicada, mesmo com registros de sobra.
+ */
+export type Confianca = 'suficiente' | 'insuficiente' | 'nao_se_aplica';
 
 export type Metrica = {
   /**
@@ -76,6 +89,23 @@ export type OpcoesPadroes = {
 export const MINIMO_REGISTROS = 5;
 
 export const JANELA_DIAS = 7;
+
+/**
+ * Espalhamento máximo, em minutos, para o horário médio de soneca ser publicado.
+ *
+ * Acima disso a média existe mas não descreve nenhuma soneca daquele bebê, e a
+ * métrica sai como `nao_se_aplica`. 1h30 separa os dois casos reais:
+ *
+ *   * bebê de soneca única, tudo em volta do mesmo horário → dispersão ~45 min,
+ *     e "por volta das 13h" descreve mesmo o que acontece;
+ *   * bebê de três sonecas (9h, 13h, 16h30) → dispersão ~3h, e a média cai em
+ *     meio-dia e meia, horário em que ele justamente não dorme.
+ *
+ * É o mesmo bebê envelhecendo: quando as sonecas se juntam numa só, a dispersão
+ * cai e a métrica volta a significar algo. O limiar é o que faz ela aparecer na
+ * hora certa em vez de sempre.
+ */
+export const DISPERSAO_MAXIMA_MINUTOS = 90;
 
 /** Sono que COMEÇA nesta faixa (hora local) é noite, não soneca. */
 export const HORA_INICIO_NOITE = 19;
@@ -170,6 +200,35 @@ export function mediaCircularMinutos(minutos: number[]): number | null {
   const resultado = (angulo * MINUTOS_NO_DIA) / (2 * Math.PI);
   // O módulo fecha a borda: 1439,7 arredondado viraria 1440, que não existe.
   return Math.round(resultado) % MINUTOS_NO_DIA;
+}
+
+/**
+ * Quanto os horários se espalham em volta da média circular, em minutos.
+ *
+ * Desvio padrão circular: `sqrt(-2 ln R)`, onde R é o comprimento da resultante
+ * usada na média. R perto de 1 = horários agrupados (dispersão perto de zero);
+ * R perto de 0 = espalhados pelo dia inteiro.
+ *
+ * Não é a mesma pergunta do limiar de confiança. Confiança pergunta "tenho
+ * registros bastante?"; dispersão pergunta "esses registros descrevem um
+ * horário?". Dá pra ter vinte sonecas e nenhuma resposta.
+ */
+export function dispersaoCircularMinutos(minutos: number[]): number | null {
+  if (minutos.length === 0) return null;
+
+  let somaSeno = 0;
+  let somaCosseno = 0;
+  for (const m of minutos) {
+    const angulo = (2 * Math.PI * m) / MINUTOS_NO_DIA;
+    somaSeno += Math.sin(angulo);
+    somaCosseno += Math.cos(angulo);
+  }
+
+  const resultante = Math.sqrt(somaSeno ** 2 + somaCosseno ** 2) / minutos.length;
+  if (resultante <= 0) return null;
+
+  const desvioRadianos = Math.sqrt(-2 * Math.log(Math.min(resultante, 1)));
+  return Math.round((desvioRadianos * MINUTOS_NO_DIA) / (2 * Math.PI));
 }
 
 // ------------------------------------------------------------------
@@ -280,11 +339,18 @@ export function calcularPadroes(entrada: EntradaPadroes, opcoes: OpcoesPadroes =
   if (sonecas.length < MINIMO_REGISTROS) {
     horarioMedioSoneca = insuficiente(sonecas.length);
   } else {
-    const circular = mediaCircularMinutos(sonecas.map((s) => s.inicioLocal));
-    horarioMedioSoneca =
-      circular === null
-        ? insuficiente(sonecas.length)
-        : { valor: circular, confianca: 'suficiente', amostras: sonecas.length };
+    const inicios = sonecas.map((s) => s.inicioLocal);
+    const circular = mediaCircularMinutos(inicios);
+    const dispersao = dispersaoCircularMinutos(inicios);
+
+    if (circular === null || dispersao === null || dispersao > DISPERSAO_MAXIMA_MINUTOS) {
+      // Registros de sobra e nenhuma resposta: as sonecas deste bebê estão
+      // espalhadas demais pra existir "o horário da soneca". A métrica sai de
+      // cena em silêncio, e o card usa outra.
+      horarioMedioSoneca = { valor: null, confianca: 'nao_se_aplica', amostras: sonecas.length };
+    } else {
+      horarioMedioSoneca = { valor: circular, confianca: 'suficiente', amostras: sonecas.length };
+    }
   }
 
   return {
