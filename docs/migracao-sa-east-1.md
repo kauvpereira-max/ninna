@@ -40,18 +40,27 @@ próprio script recria (ele tenta `signInWithPassword` e cai em `signUp`).
 
 ## Antes de começar: o limite do plano
 
-O plano gratuito do Supabase permite **2 projetos ativos por organização**. Hoje
-existem dois: `interdemo` e o da Ninna. **Criar o terceiro provavelmente será
-recusado.**
+O plano gratuito permite **2 projetos ativos por organização**, e hoje existem
+dois: `interdemo` e o da Ninna. Mas — confirmado na documentação em 06/08/2026 —
+**projeto pausado não ocupa vaga**:
 
-Resolva isso primeiro, porque bloqueia tudo:
+> "You are entitled to two active free projects. Paused projects do not count
+> towards your quota." — [Billing FAQ](https://supabase.com/docs/guides/platform/billing-faq)
 
-- se `interdemo` não estiver em uso, pause ou apague;
-- ou faça a migração e só então apague o projeto antigo da Ninna — mas isso exige
-  poder ter três ao mesmo tempo, o que é justamente o que o limite impede.
+Então o desbloqueio é simples e reversível: **pause o `interdemo`** antes do
+passo 1. Isso libera a vaga para criar o projeto da Ninna em `sa-east-1`, e os
+dois da Ninna coexistem durante a migração — que é exatamente o que ela precisa,
+já que o antigo só se apaga no passo 8.
 
-Confirme no painel antes do passo 1. Se o limite morder, pausar o `interdemo` é o
-caminho mais barato.
+Duas ressalvas:
+
+- **A cota é somada entre todos os membros Owner/Admin da organização.** Numa
+  organização de uma pessoa só, é o que se espera. Se houver outro Owner ou Admin
+  que já tenha gastado a cota dele, o limite morde mesmo com projetos pausados —
+  a saída aí é criar o projeto novo em **outra organização**, que tem cota
+  própria.
+- **Pausar é reversível**, mas se o `interdemo` tiver algo que você queira
+  preservar, confirme as condições de restauração antes — ou tire um backup.
 
 ---
 
@@ -59,7 +68,7 @@ caminho mais barato.
 
 ### 1. Criar o projeto novo
 
-Painel do Supabase → **New project**.
+Com o `interdemo` pausado (ver acima), painel do Supabase → **New project**.
 
 - **Region: South America (São Paulo) — `sa-east-1`.** É o item inteiro da
   migração; conferir duas vezes.
