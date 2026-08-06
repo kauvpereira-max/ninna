@@ -5,6 +5,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
 import { BabyProvider, useBaby } from '../src/contexts/BabyContext';
+import { BannerInstalar } from '../src/components/BannerInstalar';
 import { CAMINHO_NOVA_SENHA } from '../src/lib/urls';
 
 SplashScreen.preventAutoHideAsync();
@@ -51,19 +52,26 @@ function RootNavigator() {
   }, [session, authLoading, babyLoading, bebeAtivo, segments, pathname, emRecuperacao]);
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="(auth)" />
-      <Stack.Screen name="(onboarding)" />
-      {/* Registrar é ação de segundos, feita com o bebê no colo: entra por cima da Home
-          e sai no gesto de arrastar pra baixo, sem parecer que saiu do app. */}
-      <Stack.Screen name="registro/[tipo]" options={{ presentation: 'modal' }} />
-      {/* Detalhe do registro — mesma lógica: abre por cima da lista e volta pra ela. */}
-      <Stack.Screen name="detalhe/[tipo]/[id]" options={{ presentation: 'modal' }} />
-      {/* Mesmo tratamento pro seletor de bebê e pro cadastro chamado por ele. */}
-      <Stack.Screen name="bebes/index" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="bebes/novo" options={{ presentation: 'modal' }} />
-    </Stack>
+    <>
+      {/* Fica acima do Stack, e não dentro de uma tela, porque o primeiro acesso
+          da mãe é a tela de login — e no iOS a PWA instalada tem armazenamento
+          SEPARADO do Safari. Instalar depois de criar a conta faria ela entrar de
+          novo dentro do app instalado. Melhor instalar antes. */}
+      <BannerInstalar />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(onboarding)" />
+        {/* Registrar é ação de segundos, feita com o bebê no colo: entra por cima da Home
+            e sai no gesto de arrastar pra baixo, sem parecer que saiu do app. */}
+        <Stack.Screen name="registro/[tipo]" options={{ presentation: 'modal' }} />
+        {/* Detalhe do registro — mesma lógica: abre por cima da lista e volta pra ela. */}
+        <Stack.Screen name="detalhe/[tipo]/[id]" options={{ presentation: 'modal' }} />
+        {/* Mesmo tratamento pro seletor de bebê e pro cadastro chamado por ele. */}
+        <Stack.Screen name="bebes/index" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="bebes/novo" options={{ presentation: 'modal' }} />
+      </Stack>
+    </>
   );
 }
 

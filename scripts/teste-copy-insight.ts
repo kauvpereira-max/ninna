@@ -19,7 +19,8 @@ import {
   formatarIntervalo,
   faixaDe,
 } from '../src/lib/copyInsight.ts';
-import type { Padroes } from '../src/lib/padroes.ts';
+import { calcularPadroes, type Padroes } from '../src/lib/padroes.ts';
+import { local } from './ajuda-tempo.ts';
 
 let falhas = 0;
 function conferir(nome: string, condicao: boolean, detalhe = '') {
@@ -76,7 +77,11 @@ const PROIBIDO: { rotulo: string; re: RegExp }[] = [
   },
   { rotulo: 'cobrança / gamificação', re: /\b(desbloque\w*|insuficient\w*|falta\w*|complete|meta)\b/i },
   { rotulo: 'alarme', re: /\b(aten[çc][ãa]o|alerta|cuidado|preocup\w*|risco)\b/i },
-  { rotulo: 'número cru com unidade', re: /\d+\s*(min|minutos|h\b(?!\d)|horas)\b/i },
+  // Hora de RELÓGIO não é medida crua: "por volta de 13h" é como uma brasileira
+  // lê horário, e está na copy aprovada. O proibido é DURAÇÃO em número —
+  // "70 min", "3 horas" —, que é o que soa a painel. A versão anterior desta
+  // regra pegava `13h` e deixava `13h30` passar, o que não era regra, era acaso.
+  { rotulo: 'duração em número', re: /\d+\s*(min|minutos)\b|\d+\s*horas?\b/i },
   { rotulo: 'decimal', re: /\d+[.,]\d/ },
 ];
 
@@ -227,6 +232,90 @@ conferir(
   'e em 30 dias ela nunca aparece',
   ![...soHorarioNaoSeAplica].some((f) => f.includes('por volta')),
   `${soHorarioNaoSeAplica.size} frases, nenhuma de horário`
+);
+
+// ------------------------------------------------------------------
+// 5. Ponta a ponta: massa de soneca única → motor → frase de horário
+//
+// Até aqui a métrica de horário só foi exercitada com `Metrica` montada à mão. O
+// bebê da massa semeada tira três sonecas por dia, então o ramo que PUBLICA
+// horário nunca rodou de verdade — nem no teste do motor, nem no do banco.
+//
+// Código testado só no ramo que não publica é código não testado. Aqui a massa é
+// de bebê mais velho: uma soneca por dia, sempre depois do almoço, que é o caso
+// em que a métrica volta a descrever a rotina.
+// ------------------------------------------------------------------
+
+console.log('\n--- ponta a ponta: bebê de soneca única ---');
+
+const DIAS = [
+  '2026-07-31', '2026-08-01', '2026-08-02', '2026-08-03',
+  '2026-08-04', '2026-08-05', '2026-08-06',
+];
+
+// Sempre por volta das 13h, variando poucos minutos — rotina de bebê que já
+// juntou as sonecas numa só.
+const desvios = [-10, 5, 0, 10, -5, 15, -15];
+const sonecaUnica = {
+  mamadas: [],
+  sonos: DIAS.map((d, i) => {
+    const inicio = local(FUSO, d, 13, 0);
+    const comDesvio = new Date(new Date(inicio).getTime() + desvios[i] * 60_000);
+    return {
+      started_at: comDesvio.toISOString(),
+      ended_at: new Date(comDesvio.getTime() + 95 * 60_000).toISOString(),
+    };
+  }),
+};
+
+const AGORA_TESTE = new Date(local(FUSO, '2026-08-06', 18));
+const motorSonecaUnica = calcularPadroes(sonecaUnica, { agora: AGORA_TESTE, fusoHorario: FUSO });
+
+conferir(
+  'com soneca única o horário É publicado',
+  motorSonecaUnica.horarioMedioSoneca.confianca === 'suficiente',
+  `dispersão baixa — valor ${motorSonecaUnica.horarioMedioSoneca.valor} min`
+);
+conferir(
+  'e o valor é por volta das 13h, como a massa foi construída',
+  motorSonecaUnica.horarioMedioSoneca.valor !== null &&
+    Math.abs(motorSonecaUnica.horarioMedioSoneca.valor - 13 * 60) <= 10,
+  `${motorSonecaUnica.horarioMedioSoneca.valor} min`
+);
+
+// A duração também é publicável aqui, então força-se a mão pra garantir que a
+// frase que sai é MESMO a de horário: as outras duas ficam de fora.
+const soHorario = {
+  intervaloMedioMamadas: metrica(null, 0, 'insuficiente'),
+  duracaoMediaSoneca: metrica(null, 0, 'insuficiente'),
+  horarioMedioSoneca: motorSonecaUnica.horarioMedioSoneca,
+} as Padroes;
+
+const frasesDeHorario = new Set<string>();
+for (let d = 1; d <= 30; d++) {
+  frasesDeHorario.add(
+    escolherInsight(soHorario, NOME, {
+      agora: new Date(Date.UTC(2026, 7, d, 18, 0)),
+      fusoHorario: FUSO,
+    }).texto
+  );
+}
+
+for (const f of [...frasesDeHorario].sort()) console.log(`   ${f}`);
+
+conferir(
+  'a frase de horário sai de verdade, vinda da massa',
+  frasesDeHorario.size > 0 && [...frasesDeHorario].every((f) => f.includes('por volta de')),
+  `${frasesDeHorario.size} variações`
+);
+conferir(
+  'e diz 13h — o horário que a massa tem, não outro',
+  [...frasesDeHorario].every((f) => f.includes('13h')),
+  [...frasesDeHorario][0]
+);
+conferir(
+  'nenhuma frase de horário quebra as regras de tom',
+  ![...frasesDeHorario].some((f) => PROIBIDO.some(({ re }) => re.test(f)))
 );
 
 console.log(`\n${falhas === 0 ? 'Copy dentro das regras de tom.' : `${falhas} verificação(ões) falharam.`}`);

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<!--
+  Template do HTML do build web.
+
+  POR QUE AQUI E NÃO EM app/+html.tsx
+
+  O `+html.tsx` do expo-router só é usado quando `web.output` é `static` ou
+  `server`. Este projeto roda em `single` (SPA), que é o padrão do SDK 54 e o que
+  todos os builds do beta já validaram — e no caminho `single` o HTML sai de
+  `createTemplateHtmlFromExpoConfigAsync`, que procura ESTE arquivo em `public/`
+  antes de cair no template embutido do Expo.
+
+  Trocar pra `static` faria o `+html.tsx` funcionar, mas passaria a renderizar
+  toda rota no Node na hora do build — e o app toca `window`, AsyncStorage e
+  Supabase. BETA.md §3.5: o canal do beta é este build, e não se arrisca o canal
+  por uma preferência de arquivo.
+
+  ⚠️ NÃO escrever os marcadores do template (o de idioma e o de título, entre
+  sinais de porcentagem) dentro deste comentário: o Expo substitui apenas a
+  PRIMEIRA ocorrência de cada um no arquivo. Citá-los aqui consome a
+  substituição, e o `lang` e o `<title>` lá embaixo saem literais no HTML final.
+  Já aconteceu.
+
+  A cor do tema e a descrição são injetadas a partir do app.json — não repetir
+  aqui, ou saem duplicadas.
+-->
+<html lang="%LANG_ISO_CODE%">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+
+    <!--
+      `viewport-fit=cover` é o que deixa o app usar a área do notch. Sem ele
+      sobra uma faixa clara no topo do iPhone em modo standalone, que denuncia
+      "isto é um site". O SafeAreaProvider já impede conteúdo embaixo do notch.
+    -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, shrink-to-fit=no, viewport-fit=cover"
+    />
+
+    <title>%WEB_TITLE%</title>
+
+    <link rel="manifest" href="/manifest.json" />
+
+    <!--
+      iOS: o Safari ignora boa parte do manifest.json. Ícone da tela de início,
+      modo sem barra do navegador e cor da barra de status vêm destas tags, não
+      de lá. Sem elas a mãe "instala" e o app abre com a barra do Safari por
+      cima — que é o sintoma de não ter instalado de verdade (BETA.md §3.1).
+    -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/icone-180.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Ninna" />
+
+    <!-- The `react-native-web` recommended style reset -->
+    <style id="expo-reset">
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+
+    <style id="ninna-base">
+      /*
+        Entre o toque no ícone e o primeiro frame do React existe um intervalo em
+        que só o HTML está pintado. Sem esta cor, esse intervalo é branco puro —
+        o flash que faz o app instalado parecer um site abrindo.
+      */
+      html,
+      body {
+        background-color: #fff9f2;
+        overscroll-behavior: none;
+      }
+      body {
+        margin: 0;
+        -webkit-tap-highlight-color: transparent;
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript>Você precisa habilitar o JavaScript para usar a Ninna.</noscript>
+    <div id="root"></div>
+  </body>
+</html>
