@@ -1,0 +1,298 @@
+// A Edge Function do assistente — o Desenho B do PRODUTO.md §3.1.
+//
+//   supabase functions deploy assistente
+//   supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+//
+// ------------------------------------------------------------------
+// O QUE ELA FAZ, E O QUE ELA DE PROPÓSITO NÃO FAZ
+//
+// Faz: recebe a pergunta, pede ao modelo que escolha UMA consulta da superfície,
+// roda a consulta contra os registros daquele bebê e devolve a frase que o
+// `copyInsight.ts` escreveu.
+//
+// NÃO faz: o modelo não vê registro nenhum, não calcula nada e não escreve o
+// texto que a mãe lê. Isso não é economia de token — é o que torna a resposta
+// verificável. A frase é determinística, passa nas varreduras de tom e é
+// ancorada por construção.
+//
+// ------------------------------------------------------------------
+// TRÊS BARREIRAS, E NENHUMA DELAS É UM PEDIDO DE BOM COMPORTAMENTO
+//
+// 1. A chave da API mora aqui, nunca no bundle. Todo `EXPO_PUBLIC_` vai pro
+//    JavaScript que a mãe baixa; uma chave de API lá é uma chave pública.
+//
+// 2. Os registros são lidos com o JWT DELA, não com a service_role. A RLS
+//    continua valendo dentro da função, então uma conta não alcança o bebê de
+//    outra nem por bug de código nosso.
+//
+// 3. A pergunta de saúde não tem consulta que a responda. O modelo devolve
+//    {"fora":"saude"} ou devolve qualquer outra coisa que o `interpretar()`
+//    recusa — nos dois caminhos a mãe recebe o texto travado que devolve a
+//    decisão pra ela.
+
+import Anthropic from 'npm:@anthropic-ai/sdk@0.68.0';
+import { createClient } from 'npm:@supabase/supabase-js@2';
+
+import {
+  gramaticaParaModelo,
+  interpretar,
+  responder,
+  RESPOSTA_DESCONHECIDA,
+  RESPOSTA_SAUDE,
+  type EventoBruto,
+} from '../../../src/lib/consultas.ts';
+import { narrar } from '../../../src/lib/copyInsight.ts';
+import { validarAncoragem } from '../../../src/lib/ancoragem.ts';
+
+// ------------------------------------------------------------------
+// Configuração
+// ------------------------------------------------------------------
+
+/**
+ * Teto generoso de propósito: quase ninguém encosta nele, e o pior caso deixa de
+ * ser ilimitado. É o que faz a conta do §5 ter um máximo conhecido.
+ */
+const LIMITE_DIARIO = 30;
+
+/** Janela de registros que a superfície pode precisar — 15 dias + folga. */
+const DIAS_DE_HISTORICO = 17;
+
+const FUSO_DO_MERCADO = 'America/Sao_Paulo';
+
+const RESPOSTA_LIMITE =
+  'Por hoje já conversamos bastante — amanhã eu volto a responder. Seus registros ' +
+  'continuam aqui, e a Rotina mostra tudo que você anotou.';
+
+const RESPOSTA_ERRO =
+  'Não consegui responder agora. Tenta de novo em instantes — seus registros estão salvos.';
+
+const json = (corpo: unknown, status = 200) =>
+  new Response(JSON.stringify(corpo), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+/** Dia do mercado, não do cliente e não em UTC — ver o comentário da migration. */
+function diaDoMercado(agora: Date): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: FUSO_DO_MERCADO,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(agora);
+}
+
+// ------------------------------------------------------------------
+// Leitura dos registros — com o JWT dela
+// ------------------------------------------------------------------
+
+type Linha = { started_at?: string; recorded_at?: string; ended_at?: string | null };
+
+const AS_TABELAS: { tabela: string; coluna: 'started_at' | 'recorded_at'; tipo: EventoBruto['tipo'] }[] = [
+  { tabela: 'feeding_records', coluna: 'started_at', tipo: 'amamentar' },
+  { tabela: 'sleep_records', coluna: 'started_at', tipo: 'sono' },
+  { tabela: 'diaper_records', coluna: 'recorded_at', tipo: 'fralda' },
+  { tabela: 'mood_records', coluna: 'recorded_at', tipo: 'humor' },
+  { tabela: 'symptom_records', coluna: 'recorded_at', tipo: 'sintoma' },
+];
+
+async function lerEventos(
+  cliente: ReturnType<typeof createClient>,
+  babyId: string,
+  desde: Date
+): Promise<EventoBruto[]> {
+  const iso = desde.toISOString();
+
+  const respostas = await Promise.all(
+    AS_TABELAS.map(({ tabela, coluna, tipo }) => {
+      // `type` só existe em feeding_records, onde separa amamentação de
+      // mamadeira — a mesma tabela cobre as duas (ver registros.ts).
+      const colunas =
+        tabela === 'feeding_records'
+          ? 'started_at, type'
+          : tabela === 'sleep_records'
+            ? 'started_at, ended_at'
+            : coluna;
+      return cliente
+        .from(tabela)
+        .select(colunas)
+        .eq('baby_id', babyId)
+        .gte(coluna, iso)
+        .order(coluna, { ascending: true })
+        .then((r) => ({ ...r, tabela, coluna, tipo }));
+    })
+  );
+
+  const eventos: EventoBruto[] = [];
+  for (const r of respostas) {
+    if (r.error) throw new Error(`${r.tabela}: ${r.error.message}`);
+    for (const linha of (r.data ?? []) as (Linha & { type?: string })[]) {
+      const ocorridoEm = r.coluna === 'started_at' ? linha.started_at : linha.recorded_at;
+      if (!ocorridoEm) continue;
+      eventos.push({
+        tipo:
+          r.tabela === 'feeding_records'
+            ? linha.type === 'bottle'
+              ? 'mamadeira'
+              : 'amamentar'
+            : r.tipo,
+        ocorridoEm,
+        fimEm: r.tabela === 'sleep_records' ? (linha.ended_at ?? null) : undefined,
+      });
+    }
+  }
+  return eventos;
+}
+
+// ------------------------------------------------------------------
+// A escolha da consulta — a única coisa que o modelo faz
+// ------------------------------------------------------------------
+
+const { instrucoes, schema } = gramaticaParaModelo();
+
+async function escolherConsulta(anthropic: Anthropic, pergunta: string): Promise<unknown> {
+  const resposta = await anthropic.messages.create({
+    model: 'claude-opus-5',
+    max_tokens: 2048,
+    // O prompt é estável entre chamadas; o cache paga a partir da segunda.
+    cache_control: { type: 'ephemeral' },
+    system: instrucoes,
+    // `effort: low` porque a tarefa é interpretar uma frase curta, não raciocinar.
+    // O pensamento fica LIGADO (é o padrão do Opus 5): desligá-lo neste modelo
+    // pode vazar marcação interna na saída, e a saída aqui é um JSON validado —
+    // uma frase a mais de raciocínio custa menos que uma resposta malformada.
+    output_config: { effort: 'low', format: { type: 'json_schema', schema } },
+    messages: [{ role: 'user', content: pergunta }],
+  });
+
+  // `stop_reason` ANTES de ler `content`: os classificadores do Opus 5 podem
+  // recusar, e aí `content` vem vazio.
+  //
+  // Não usamos `fallbacks` de propósito. Recusa aqui é o desfecho DESEJADO —
+  // significa que a pergunta era clínica —, e roteá-la para outro modelo seria
+  // procurar quem responda o que a Ninna decidiu não responder.
+  if (resposta.stop_reason === 'refusal') return { fora: 'saude' };
+
+  const bloco = resposta.content.find((b) => b.type === 'text');
+  if (!bloco || bloco.type !== 'text') return { fora: 'desconhecida' };
+
+  try {
+    return JSON.parse(bloco.text);
+  } catch {
+    return { fora: 'desconhecida' };
+  }
+}
+
+// ------------------------------------------------------------------
+// A função
+// ------------------------------------------------------------------
+
+Deno.serve(async (req: Request) => {
+  if (req.method !== 'POST') return json({ erro: 'método não suportado' }, 405);
+
+  const autorizacao = req.headers.get('Authorization') ?? '';
+  if (!autorizacao.startsWith('Bearer ')) return json({ erro: 'sem sessão' }, 401);
+
+  const url = Deno.env.get('SUPABASE_URL');
+  const anon = Deno.env.get('SUPABASE_ANON_KEY');
+  const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  const chaveDaApi = Deno.env.get('ANTHROPIC_API_KEY');
+  if (!url || !anon || !service || !chaveDaApi) {
+    console.error('[assistente] faltando variável de ambiente');
+    return json({ resposta: RESPOSTA_ERRO }, 500);
+  }
+
+  // Cliente COM O JWT DELA: a RLS vale dentro da função (barreira 2).
+  const comoUsuaria = createClient(url, anon, {
+    global: { headers: { Authorization: autorizacao } },
+  });
+
+  const { data: sessao } = await comoUsuaria.auth.getUser();
+  const usuaria = sessao?.user;
+  if (!usuaria) return json({ erro: 'sem sessão' }, 401);
+
+  let corpo: { pergunta?: unknown; babyId?: unknown };
+  try {
+    corpo = await req.json();
+  } catch {
+    return json({ erro: 'corpo inválido' }, 400);
+  }
+
+  const pergunta = typeof corpo.pergunta === 'string' ? corpo.pergunta.trim() : '';
+  const babyId = typeof corpo.babyId === 'string' ? corpo.babyId : '';
+  if (!pergunta || !babyId) return json({ erro: 'pergunta e babyId são obrigatórios' }, 400);
+  if (pergunta.length > 500) return json({ resposta: RESPOSTA_DESCONHECIDA });
+
+  const agora = new Date();
+
+  // --- Teto diário. Escrita com service_role: se o cliente pudesse escrever
+  // --- aqui, poderia zerar o próprio contador e o teto viraria decoração.
+  const comoServico = createClient(url, service);
+  const dia = diaDoMercado(agora);
+
+  const { data: usoAtual } = await comoServico
+    .from('assistant_usage')
+    .select('perguntas')
+    .eq('user_id', usuaria.id)
+    .eq('dia', dia)
+    .maybeSingle();
+
+  const jaFeitas = (usoAtual?.perguntas as number | undefined) ?? 0;
+  if (jaFeitas >= LIMITE_DIARIO) {
+    return json({ resposta: RESPOSTA_LIMITE, restantes: 0, limite: true });
+  }
+
+  await comoServico
+    .from('assistant_usage')
+    .upsert({ user_id: usuaria.id, dia, perguntas: jaFeitas + 1 }, { onConflict: 'user_id,dia' });
+
+  try {
+    const anthropic = new Anthropic({ apiKey: chaveDaApi });
+    const bruto = await escolherConsulta(anthropic, pergunta);
+    const consulta = interpretar(bruto);
+
+    if ('fora' in consulta) {
+      return json({
+        resposta: consulta.fora === 'saude' ? RESPOSTA_SAUDE : RESPOSTA_DESCONHECIDA,
+        restantes: LIMITE_DIARIO - jaFeitas - 1,
+      });
+    }
+
+    // O nome vem da mesma leitura com RLS: bebê de outra conta não aparece, e a
+    // função não tem o que responder sobre ele.
+    const { data: bebe } = await comoUsuaria
+      .from('babies')
+      .select('name')
+      .eq('id', babyId)
+      .maybeSingle();
+    if (!bebe) return json({ erro: 'bebê não encontrado' }, 404);
+
+    const desde = new Date(agora.getTime() - DIAS_DE_HISTORICO * 24 * 60 * 60_000);
+    const eventos = await lerEventos(comoUsuaria, babyId, desde);
+
+    const resultado = responder(consulta, eventos, { agora, fusoHorario: FUSO_DO_MERCADO });
+    const frase = narrar(resultado, bebe.name as string);
+
+    // Cinto e suspensório: no Desenho B a frase é ancorada por construção, mas
+    // uma mudança futura em `narrar()` poderia soltá-la. Número solto na mão da
+    // mãe é o erro que este projeto inteiro existe pra não cometer — então a
+    // resposta some em vez de sair errada, e o log grita.
+    if (resultado.estado === 'ok') {
+      const problemas = validarAncoragem(frase, resultado.numeros);
+      if (problemas.length > 0) {
+        console.error(
+          `[assistente] frase não ancorada: "${frase}" — sobrou ${problemas
+            .map((p) => p.trecho)
+            .join(', ')}`
+        );
+        return json({ resposta: RESPOSTA_ERRO, restantes: LIMITE_DIARIO - jaFeitas - 1 });
+      }
+    }
+
+    return json({ resposta: frase, restantes: LIMITE_DIARIO - jaFeitas - 1 });
+  } catch (erro) {
+    // A mensagem de erro nunca vaza pra mãe: ela pode conter nome de tabela.
+    console.error('[assistente]', erro instanceof Error ? erro.message : erro);
+    return json({ resposta: RESPOSTA_ERRO, restantes: LIMITE_DIARIO - jaFeitas - 1 });
+  }
+});

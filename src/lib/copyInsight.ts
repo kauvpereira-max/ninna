@@ -36,6 +36,13 @@
  */
 
 import type { Metrica, Padroes } from './padroes';
+import {
+  RESPOSTA_DESCONHECIDA,
+  RESPOSTA_SAUDE,
+  type Alvo,
+  type Dia,
+  type Resultado,
+} from './consultas.ts';
 
 // ------------------------------------------------------------------
 // Números em palavras
@@ -239,4 +246,287 @@ export function escolherInsight(
   const variacao = variacoes[Math.floor(semente / candidatas.length) % variacoes.length];
 
   return { texto: variacao(nomeBebe, escolhida.metrica.valor!), aprendendo: false };
+}
+
+// ==================================================================
+// RESPOSTAS DO ASSISTENTE — o Desenho B
+// ==================================================================
+//
+// A superfície de consulta devolve números; aqui eles viram frase. No Desenho B
+// é ESTE módulo que escreve a resposta, e não o modelo — o modelo só interpreta
+// a pergunta.
+//
+// POR QUE A FRASE NÃO SAI DO MODELO
+//
+// Recall é a pergunta mais frequente de mãe de recém-nascido. Se o modelo
+// narrasse, a resposta mais lida do app seria a menos verificada — e o tom é o
+// produto. Aqui a frase é determinística: passa nas mesmas varreduras de gênero
+// e de linguagem de média que o resto da copy, e é ancorada por construção,
+// porque o número vem do motor e não de uma geração.
+//
+// ------------------------------------------------------------------
+// UMA EMENDA CONSCIENTE À REGRA "SEM DURAÇÃO EM NÚMERO"
+//
+// A regra do topo deste arquivo proíbe minuto cru — "70 min" — e está certa para
+// o CARD, que descreve um padrão: prometer precisão sobre o sono de um bebê é
+// falsa exatidão, e "pouco mais de uma hora" é mais honesto que "70 min".
+//
+// Recall é o caso oposto. "Faz quanto tempo desde a última mamada?" é uma
+// pergunta sobre um fato que a mãe pode conferir na lista, e responder "faz
+// pouco mais de duas horas e meia" seria vagueza falsa — ela vai decidir se
+// amamenta agora com base nisso. Então:
+//
+//   * PADRÃO descreve com palavra ("cerca de uma hora");
+//   * RECALL, CONTAGEM e COMPARAÇÃO respondem com número ("faz 2h40", "6
+//     mamadas"), porque o número É a resposta.
+//
+// O que continua proibido nas duas é a ABREVIAÇÃO de painel: "45 min" não, "45
+// minutos" sim. Abreviação é vocabulário de planilha; a palavra inteira é fala.
+
+/**
+ * Gênero GRAMATICAL do substantivo — "a mamada", "o sono".
+ *
+ * ⚠️ Não confundir com o gênero do bebê, que o app não sabe e nunca escolhe.
+ * Aqui é concordância com a palavra, não com a criança.
+ */
+type RotuloAlvo = {
+  ultimo: string;
+  /**
+   * "a última mamada e a anterior", e não "as duas últimas mamadas".
+   *
+   * Não é preferência de estilo: "duas" é palavra de número, e o validador de
+   * ancoragem — corretamente — não sabe distinguir um número estrutural da frase
+   * de um número que veio do motor. Escrever sem numeral mantém o validador
+   * afiado em vez de obrigá-lo a abrir exceção.
+   */
+  ultimaEAnterior: string;
+  singular: string;
+  plural: string;
+  registrada: string;
+};
+
+const ROTULO_ALVO: Record<Alvo, RotuloAlvo> = {
+  mamada: {
+    ultimo: 'A última mamada',
+    ultimaEAnterior: 'a última mamada e a anterior',
+    singular: 'mamada',
+    plural: 'mamadas',
+    registrada: 'registrada',
+  },
+  sono: {
+    ultimo: 'O último sono',
+    ultimaEAnterior: 'o último sono e o anterior',
+    singular: 'sono',
+    plural: 'sonos',
+    registrada: 'registrado',
+  },
+  fralda: {
+    ultimo: 'A última troca',
+    ultimaEAnterior: 'a última troca e a anterior',
+    singular: 'troca',
+    plural: 'trocas',
+    registrada: 'registrada',
+  },
+  humor: {
+    ultimo: 'O último registro de humor',
+    ultimaEAnterior: 'o último registro de humor e o anterior',
+    singular: 'registro de humor',
+    plural: 'registros de humor',
+    registrada: 'registrado',
+  },
+  sintoma: {
+    ultimo: 'O último registro de sintoma',
+    ultimaEAnterior: 'o último registro de sintoma e o anterior',
+    singular: 'registro de sintoma',
+    plural: 'registros de sintoma',
+    registrada: 'registrado',
+  },
+};
+
+/** Horário de relógio, exato — recall não arredonda (ver a emenda acima). */
+export function formatarHorarioExato(minutosDoDia: number): string {
+  const total = ((minutosDoDia % 1440) + 1440) % 1440;
+  const hora = Math.floor(total / 60);
+  const minuto = total % 60;
+  return minuto === 0 ? `${hora}h` : `${hora}h${String(minuto).padStart(2, '0')}`;
+}
+
+/** "faz 2h40", "faz 45 minutos", "agora há pouco". */
+export function formatarFaz(minutos: number): string {
+  if (minutos < 5) return 'agora há pouco';
+  if (minutos < 60) return `faz ${minutos} minutos`;
+  const horas = Math.floor(minutos / 60);
+  const resto = minutos % 60;
+  return resto === 0 ? `faz ${horas}h` : `faz ${horas}h${String(resto).padStart(2, '0')}`;
+}
+
+/** Diferença entre duas medidas de tempo, em fala e não em planilha. */
+function formatarDiferenca(minutos: number): string {
+  if (minutos < 60) return `${minutos} minutos`;
+  const horas = Math.floor(minutos / 60);
+  const resto = minutos % 60;
+  return resto === 0 ? `${horas}h` : `${horas}h${String(resto).padStart(2, '0')}`;
+}
+
+const QUANDO: Record<Dia, string> = { hoje: 'Hoje', ontem: 'Ontem' };
+
+// ------------------------------------------------------------------
+// A narração
+// ------------------------------------------------------------------
+
+const CHAVE_DO_PADRAO = {
+  intervalo_mamadas: 'intervalo',
+  duracao_soneca: 'duracao',
+  horario_soneca: 'horario',
+} as const;
+
+function narrarOk(r: Extract<Resultado, { estado: 'ok' }>, nome: string): string {
+  const c = r.consulta;
+  const n = r.numeros;
+
+  switch (c.nome) {
+    case 'ultimo_registro': {
+      const rotulo = ROTULO_ALVO[c.alvo];
+      const faz = formatarFaz(n.faz_minutos.valor);
+      // O horário pode faltar quando o fuso não resolve o instante — a frase
+      // continua verdadeira sem ele, então ela encolhe em vez de sumir.
+      if (!n.horario) return `${rotulo.ultimo} foi ${faz}.`;
+      const hora = formatarHorarioExato(n.horario.valor);
+      return faz === 'agora há pouco'
+        ? `${rotulo.ultimo} foi agora há pouco, às ${hora}.`
+        : `${rotulo.ultimo} foi às ${hora} — ${faz}.`;
+    }
+
+    case 'contagem_do_dia': {
+      const rotulo = ROTULO_ALVO[c.alvo];
+      const quantos = n.quantos.valor;
+      const quando = QUANDO[c.dia];
+      const ateAgora = c.dia === 'hoje' ? ' até agora' : '';
+
+      if (quantos === 0) {
+        return `${quando} ainda não tem ${rotulo.singular} ${rotulo.registrada}.`;
+      }
+      if (quantos === 1) {
+        return `${quando} teve ${rotulo.registrada === 'registrada' ? 'uma' : 'um'} ${rotulo.singular}${ateAgora}.`;
+      }
+      return `${quando} foram ${quantos} ${rotulo.plural}${ateAgora}.`;
+    }
+
+    case 'total_sono_do_dia': {
+      const quando = QUANDO[c.dia];
+      const duracao = formatarDuracao(n.total_minutos.valor);
+      const vezes = n.quantos_sonos.valor;
+      return vezes === 1
+        ? `${quando} deu ${duracao} de sono.`
+        : `${quando} deu ${duracao} de sono, em ${vezes} vezes.`;
+    }
+
+    case 'intervalo_entre_ultimos': {
+      const rotulo = ROTULO_ALVO[c.alvo];
+      return `Entre ${rotulo.ultimaEAnterior} deu ${formatarIntervalo(n.intervalo_minutos.valor)}.`;
+    }
+
+    case 'comparar_dias': {
+      const hoje = n.hoje.valor;
+      const ontem = n.ontem.valor;
+
+      if (c.metrica === 'sono_total') {
+        if (hoje === ontem) {
+          return `Até essa hora, hoje e ontem deram o mesmo tanto de sono: ${formatarDuracao(hoje)}.`;
+        }
+        return `Até essa hora, hoje deu ${formatarDuracao(hoje)} de sono; ontem, ${formatarDuracao(ontem)}.`;
+      }
+
+      const plural = c.metrica === 'mamadas' ? 'mamadas' : 'trocas';
+      if (hoje === ontem) {
+        return `Até essa hora, hoje e ontem estão iguais: ${hoje} ${plural}.`;
+      }
+      return `Até essa hora, hoje foram ${hoje} ${plural}; ontem, tinham sido ${ontem}.`;
+    }
+
+    case 'comparar_semanas': {
+      const esta = n.esta_semana.valor;
+      const passada = n.semana_passada.valor;
+      const diferenca = n.diferenca.valor;
+
+      const plural = c.metrica === 'mamadas' ? 'mamadas' : 'trocas';
+
+      if (diferenca === 0) {
+        return c.metrica === 'sono_total'
+          ? `Essa semana o sono de ${nome} deu o mesmo tanto da passada.`
+          : `Essa semana e a passada tiveram o mesmo tanto: ${esta} ${plural}.`;
+      }
+
+      const aMais = esta > passada ? 'a mais' : 'a menos';
+
+      if (c.metrica === 'sono_total') {
+        return `${nome} dormiu ${formatarDiferenca(diferenca)} ${aMais} essa semana que na passada.`;
+      }
+
+      return `Essa semana foram ${esta} ${plural}; na semana passada, ${passada}.`;
+    }
+
+    case 'padrao': {
+      // Reusa as frases do card: o padrão é a mesma resposta, perguntada em vez
+      // de oferecida. Variação por dia não entra — quem perguntou quer a
+      // resposta, não novidade.
+      const chave = CHAVE_DO_PADRAO[c.metrica];
+      return FRASES[chave][faixaDe(n.amostras.valor)][0](nome, n.valor.valor);
+    }
+  }
+}
+
+function narrarSemDado(r: Extract<Resultado, { estado: 'sem_dado' }>, nome: string): string {
+  const c = r.consulta;
+
+  switch (c.nome) {
+    case 'ultimo_registro': {
+      const rotulo = ROTULO_ALVO[c.alvo];
+      return `Ainda não tem ${rotulo.singular} ${rotulo.registrada} por aqui.`;
+    }
+
+    case 'contagem_do_dia':
+      return 'Ontem eu ainda não estava acompanhando, então não sei te dizer.';
+
+    case 'total_sono_do_dia':
+      return `${QUANDO[c.dia]} ainda não tem sono encerrado por aqui.`;
+
+    case 'intervalo_entre_ultimos': {
+      const rotulo = ROTULO_ALVO[c.alvo];
+      const tem = r.falta.motivo === 'poucos_registros' ? r.falta.tem : 0;
+      const artigo = rotulo.registrada === 'registrada' ? 'uma' : 'um';
+      return tem === 0
+        ? `Ainda não tem ${rotulo.singular} ${rotulo.registrada} por aqui.`
+        : `Por enquanto tem ${artigo} ${rotulo.singular} só, então ainda não dá pra falar de intervalo.`;
+    }
+
+    case 'comparar_dias':
+      return 'Ainda não dá pra comparar com ontem — o dia de ontem começou antes de eu estar acompanhando.';
+
+    case 'comparar_semanas':
+      return 'Ainda não tenho duas semanas inteiras pra comparar.';
+
+    case 'padrao':
+      // A mesma frase de aprendizado do card, e pelo mesmo motivo: não é erro do
+      // app nem cobrança da mãe.
+      return APRENDIZADO[0](nome);
+  }
+}
+
+/**
+ * A resposta do assistente, inteira, sem passar por modelo nenhum.
+ *
+ * Ancorada por construção: cada número da frase sai de `resultado.numeros`, que
+ * é o mesmo objeto que `ancoragem.ts` usa para validar. O teste confere isso
+ * frase por frase, e não por confiança.
+ */
+export function narrar(resultado: Resultado, nomeBebe: string): string {
+  switch (resultado.estado) {
+    case 'ok':
+      return narrarOk(resultado, nomeBebe);
+    case 'sem_dado':
+      return narrarSemDado(resultado, nomeBebe);
+    case 'fora_de_escopo':
+      return resultado.razao === 'saude' ? RESPOSTA_SAUDE : RESPOSTA_DESCONHECIDA;
+  }
 }

@@ -613,3 +613,93 @@ function inicioDoDiaLocal(agora: Date, fuso: string): number {
   const minutos = minutosDoDiaLocal(agora.toISOString(), fuso) ?? 0;
   return agora.getTime() - minutos * 60_000;
 }
+
+// ------------------------------------------------------------------
+// A gramática que o modelo recebe — gerada daqui, nunca escrita à mão
+// ------------------------------------------------------------------
+
+export const DIAS: Dia[] = ['hoje', 'ontem'];
+export const METRICAS_COMPARAVEIS: MetricaComparavel[] = ['sono_total', 'mamadas', 'trocas'];
+export const METRICAS_DE_PADRAO: MetricaDePadrao[] = [
+  'intervalo_mamadas',
+  'duracao_soneca',
+  'horario_soneca',
+];
+
+/** Que parâmetros cada consulta aceita. Runtime, porque tipo não existe em runtime. */
+export const PARAMETROS: Record<NomeConsulta, ('alvo' | 'dia' | 'comparavel' | 'padrao')[]> = {
+  ultimo_registro: ['alvo'],
+  contagem_do_dia: ['alvo', 'dia'],
+  total_sono_do_dia: ['dia'],
+  intervalo_entre_ultimos: ['alvo'],
+  comparar_dias: ['comparavel'],
+  comparar_semanas: ['comparavel'],
+  padrao: ['padrao'],
+};
+
+/**
+ * O prompt e o schema que o modelo recebe, montados a partir do manifesto.
+ *
+ * Gerar em vez de escrever à mão não é elegância: é o que garante que a
+ * gramática e a superfície não divirjam. Consulta nova entra na união de tipos,
+ * ganha entrada no `SUPERFICIE`, e aparece aqui sozinha — sem ninguém lembrar de
+ * atualizar um texto solto.
+ *
+ * O modelo faz UMA coisa: escolher a consulta. Ele não vê registro nenhum, não
+ * calcula nada e não escreve a resposta — a frase sai de `copyInsight.ts`.
+ * É o Desenho B do PRODUTO.md §3.1.
+ */
+export function gramaticaParaModelo(): { instrucoes: string; schema: Record<string, unknown> } {
+  const linhas = NOMES_CONSULTA.map((nome) => {
+    const d = SUPERFICIE[nome];
+    const params = PARAMETROS[nome];
+    const assinatura = params.length === 0 ? '' : ` (${params.join(', ')})`;
+    return [
+      `- ${nome}${assinatura}: ${d.responde}`,
+      `  exemplos: ${d.exemplos.map((e) => `"${e}"`).join(' · ')}`,
+    ].join('\n');
+  }).join('\n');
+
+  const instrucoes = [
+    'Você recebe a pergunta de uma mãe sobre o próprio bebê e escolhe UMA consulta da lista.',
+    '',
+    'Você NÃO responde a pergunta. Você não tem conhecimento geral nenhum, não tem',
+    'acesso a registro nenhum e não escreve texto para a mãe. Sua única saída é a',
+    'consulta escolhida.',
+    '',
+    'CONSULTAS DISPONÍVEIS',
+    linhas,
+    '',
+    'PARÂMETROS',
+    `- alvo: ${ALVOS.join(' | ')}`,
+    `- dia: ${DIAS.join(' | ')}`,
+    `- comparavel: ${METRICAS_COMPARAVEIS.join(' | ')}`,
+    `- padrao: ${METRICAS_DE_PADRAO.join(' | ')}`,
+    '',
+    'QUANDO NÃO ESCOLHER NENHUMA',
+    '- Pergunta sobre saúde, sintoma, febre, remédio, se algo é normal, se deve procurar',
+    '  atendimento, ou qualquer avaliação clínica: responda {"fora": "saude"}.',
+    '  Isso vale mesmo que a pergunta pareça simples. Não existe consulta que avalie nada.',
+    '- Qualquer outra coisa que não caiba na lista: responda {"fora": "desconhecida"}.',
+    '',
+    'Na dúvida entre uma consulta e "fora", escolha "fora".',
+  ].join('\n');
+
+  const schema = {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      nome: { type: 'string', enum: NOMES_CONSULTA },
+      alvo: { type: 'string', enum: ALVOS },
+      dia: { type: 'string', enum: DIAS },
+      metrica: {
+        type: 'string',
+        enum: [...METRICAS_COMPARAVEIS, ...METRICAS_DE_PADRAO],
+      },
+      fora: { type: 'string', enum: ['saude', 'desconhecida'] },
+    },
+    required: [],
+  };
+
+  return { instrucoes, schema };
+}

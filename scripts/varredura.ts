@@ -18,7 +18,10 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 export const RAIZ = join(import.meta.dirname, '..');
-export const PASTAS_DE_COPY = ['app', 'src'];
+// `supabase/functions` entra porque a Edge Function do assistente tem copy que a
+// mãe lê — o texto do teto diário e o de erro. Copy fora da varredura é copy que
+// deriva, e o caminho da Edge Function é justamente o menos revisitado.
+export const PASTAS_DE_COPY = ['app', 'src', 'supabase/functions'];
 
 export type Achado = { arquivo: string; linha: number; texto: string; tipo: 'literal' | 'jsx' };
 

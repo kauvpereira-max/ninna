@@ -21,6 +21,7 @@
 
 import {
   ALVOS,
+  gramaticaParaModelo,
   interpretar,
   NOMES_CONSULTA,
   responder,
@@ -28,8 +29,10 @@ import {
   type Consulta,
   type EventoBruto,
   type NumeroAncorado,
+  RESPOSTA_SAUDE,
 } from '../src/lib/consultas.ts';
 import { formasAutorizadas, validarAncoragem } from '../src/lib/ancoragem.ts';
+import { narrar } from '../src/lib/copyInsight.ts';
 import { local } from './ajuda-tempo.ts';
 
 let falhas = 0;
@@ -480,7 +483,257 @@ conferir(
   ALVOS.every((a) => !('fora' in interpretar({ nome: 'ultimo_registro', alvo: a })))
 );
 
+// ==================================================================
+// 8. Narração — o Desenho B: a frase sai do código, não do modelo
+// ==================================================================
+//
+// Recall é a pergunta mais frequente de mãe de recém-nascido. Se o modelo
+// narrasse, a resposta mais lida do app seria a menos verificada — e o tom é o
+// produto. Então a frase é determinística, e é aqui que ela se prova.
+//
+// A EMENDA À REGRA "SEM DURAÇÃO EM NÚMERO"
+//
+// O card descreve um padrão e por isso fala em palavra ("cerca de uma hora"):
+// prometer minuto sobre o sono de um bebê é falsa exatidão. Recall responde um
+// fato que a mãe confere na lista, e "faz pouco mais de duas horas e meia" seria
+// vagueza falsa — ela decide se amamenta agora com base nisso. O que continua
+// proibido nos dois é a ABREVIAÇÃO de planilha: "45 min" não, "45 minutos" sim.
+
+console.log('\n--- narração (Desenho B) ---');
+
+const NOME = 'Liz';
+
+const PROIBIDO_NA_NARRACAO: { rotulo: string; re: RegExp }[] = [
+  { rotulo: 'artigo de gênero antes do nome', re: /\b(a|o|da|do|na|no|pela|pelo)\s+Liz\b/i },
+  { rotulo: 'pronome de gênero', re: /\b(ele|ela|dele|dela|nele|nela)\b/i },
+  { rotulo: 'linguagem de painel', re: /\b(m[ée]dia|dados|m[ée]trica|percentual|%)\b/i },
+  { rotulo: 'abreviação de planilha', re: /\d+\s*min\b/i },
+  { rotulo: 'prescrição', re: /\b(ideal|recomend\w*|dever\w*|tente|procure)\b/i },
+  {
+    rotulo: 'julgamento',
+    re: /\bpouco(?!\s+mais)\b|\bmuito\b|\b(irregular|constante|normal|anormal|adequad\w+|excessiv\w+)\b/i,
+  },
+  { rotulo: 'cobrança / gamificação', re: /\b(desbloque\w*|insuficient\w*|complete|meta)\b/i },
+  { rotulo: 'alarme', re: /\b(aten[çc][ãa]o|alerta|cuidado|preocup\w*|risco)\b/i },
+  { rotulo: 'decimal', re: /\d+[.,]\d/ },
+  { rotulo: 'linguagem de média', re: /\bbeb[êe]s\b|\bpara a idade\b|\bo esperado\b/i },
+];
+
+/** 17 dias de rotina: massa farta o bastante pra quase toda consulta responder. */
+function massaFarta(): EventoBruto[] {
+  const eventos: EventoBruto[] = [];
+  const base = new Date(AGORA).getTime();
+  const DIA = 24 * 60 * 60_000;
+  for (let d = 16; d >= 0; d--) {
+    const meiaNoite = base - d * DIA - 17 * 60 * 60_000;
+    for (const h of [6, 9, 12, 15]) {
+      eventos.push({ tipo: 'amamentar', ocorridoEm: new Date(meiaNoite + h * 60 * 60_000).toISOString() });
+    }
+    for (const h of [7, 13]) {
+      eventos.push({ tipo: 'fralda', ocorridoEm: new Date(meiaNoite + h * 60 * 60_000).toISOString() });
+    }
+    const inicioSono = meiaNoite + 10 * 60 * 60_000;
+    eventos.push({
+      tipo: 'sono',
+      ocorridoEm: new Date(inicioSono).toISOString(),
+      // Sonecas mais longas na semana atual: dá conteúdo pra comparação.
+      fimEm: new Date(inicioSono + (d < 7 ? 100 : 60) * 60_000).toISOString(),
+    });
+  }
+  return eventos;
+}
+
+const TODAS_AS_CONSULTAS: Consulta[] = [
+  ...ALVOS.map((alvo) => ({ nome: 'ultimo_registro' as const, alvo })),
+  ...ALVOS.flatMap((alvo) =>
+    (['hoje', 'ontem'] as const).map((dia) => ({ nome: 'contagem_do_dia' as const, alvo, dia }))
+  ),
+  ...(['hoje', 'ontem'] as const).map((dia) => ({ nome: 'total_sono_do_dia' as const, dia })),
+  ...ALVOS.map((alvo) => ({ nome: 'intervalo_entre_ultimos' as const, alvo })),
+  ...(['sono_total', 'mamadas', 'trocas'] as const).map((metrica) => ({
+    nome: 'comparar_dias' as const,
+    metrica,
+  })),
+  ...(['sono_total', 'mamadas', 'trocas'] as const).map((metrica) => ({
+    nome: 'comparar_semanas' as const,
+    metrica,
+  })),
+  ...(['intervalo_mamadas', 'duracao_soneca', 'horario_soneca'] as const).map((metrica) => ({
+    nome: 'padrao' as const,
+    metrica,
+  })),
+];
+
+const frases = new Set<string>();
+let semDadoVistos = 0;
+let okVistos = 0;
+let desancoradas = 0;
+
+// Três massas: farta (quase tudo responde), vazia (quase tudo é recusa) e a
+// janela fria de um registro só.
+for (const eventos of [massaFarta(), [] as EventoBruto[], [mamada('2026-08-06', 14, 20)]]) {
+  for (const consulta of TODAS_AS_CONSULTAS) {
+    const r = responder(consulta, eventos, ctx(AGORA));
+    const frase = narrar(r, NOME);
+    frases.add(frase);
+
+    if (r.estado === 'ok') {
+      okVistos++;
+      const problemas = validarAncoragem(frase, r.numeros);
+      if (problemas.length > 0) {
+        desancoradas++;
+        console.log(
+          `[ FALHA] frase não ancorada em ${consulta.nome}: "${frase}" — sobrou ${problemas
+            .map((p) => p.trecho)
+            .join(', ')}`
+        );
+      }
+    } else if (r.estado === 'sem_dado') {
+      semDadoVistos++;
+    }
+  }
+}
+
+// As duas recusas também são frase, e entram na varredura de tom.
+frases.add(narrar({ estado: 'fora_de_escopo', razao: 'saude' }, NOME));
+frases.add(narrar({ estado: 'fora_de_escopo', razao: 'desconhecida' }, NOME));
+
+conferir(
+  'toda resposta com dado virou frase ancorada',
+  desancoradas === 0,
+  `${okVistos} respostas ok`
+);
+conferir('as recusas por falta de dado também têm frase', semDadoVistos > 0, `${semDadoVistos} recusas`);
+conferir(
+  'nenhuma frase saiu vazia',
+  [...frases].every((f) => f.trim().length > 10),
+  `${frases.size} frases distintas`
+);
+
+/**
+ * A copy de saúde travada é exceção declarada, não frase esquecida.
+ *
+ * A regra "alarme" existe para impedir que o app assuste. Esta frase faz o
+ * contrário: "se você estiver preocupada" descreve o estado DA MÃE e devolve a
+ * decisão pra ela, que é exatamente o que o CLAUDE.md manda. Ela é a mesma
+ * promessa do texto da tela de sintoma, e não se reescreve por varredura —
+ * mesma razão pela qual ela já é exceção declarada na varredura de gênero.
+ */
+const FRASES_TRAVADAS = new Set([RESPOSTA_SAUDE]);
+
+let violacoesDeTom = 0;
+let travadasVistas = 0;
+for (const frase of frases) {
+  if (FRASES_TRAVADAS.has(frase)) {
+    travadasVistas++;
+    continue;
+  }
+  for (const regra of PROIBIDO_NA_NARRACAO) {
+    if (regra.re.test(frase)) {
+      violacoesDeTom++;
+      console.log(`[ FALHA] ${regra.rotulo}: "${frase}"`);
+    }
+  }
+}
+conferir(
+  'a copy de saúde travada continua sendo produzida',
+  travadasVistas === FRASES_TRAVADAS.size,
+  'exceção que deixa de ser alcançada é permissão órfã'
+);
+conferir(
+  'nenhuma frase possível quebra as regras de tom',
+  violacoesDeTom === 0,
+  `${frases.size} frases x ${PROIBIDO_NA_NARRACAO.length} proibições`
+);
+
+// A frase da tese, saindo do código.
+{
+  const base = new Date(AGORA).getTime();
+  const DIA = 24 * 60 * 60_000;
+  const semanaPassada: EventoBruto[] = [];
+  const estaSemana: EventoBruto[] = [];
+  for (let i = 0; i < 7; i++) {
+    const antigo = base - (13 - i) * DIA - 60 * 60_000;
+    const novo = base - (6 - i) * DIA;
+    semanaPassada.push({
+      tipo: 'sono',
+      ocorridoEm: new Date(antigo).toISOString(),
+      fimEm: new Date(antigo + 60 * 60_000).toISOString(),
+    });
+    // +40 min no total da semana, espalhados: é o exemplo do PRODUTO.md.
+    estaSemana.push({
+      tipo: 'sono',
+      ocorridoEm: new Date(novo).toISOString(),
+      fimEm: new Date(novo + (60 + (i === 0 ? 40 : 0)) * 60_000).toISOString(),
+    });
+  }
+  const marco: EventoBruto = {
+    tipo: 'sono',
+    ocorridoEm: new Date(base - 15 * DIA).toISOString(),
+    fimEm: new Date(base - 15 * DIA + 30 * 60_000).toISOString(),
+  };
+
+  const r = responder(
+    { nome: 'comparar_semanas', metrica: 'sono_total' },
+    [marco, ...semanaPassada, ...estaSemana],
+    ctx(AGORA)
+  );
+  const frase = narrar(r, NOME);
+  conferir(
+    'a frase da tese sai do código, comparando Liz com Liz',
+    frase.includes('40 minutos a mais') && frase.startsWith(NOME) && !/beb[êe]s/i.test(frase),
+    frase
+  );
+  conferir(
+    'e ela está ancorada no número que o motor calculou',
+    r.estado === 'ok' && validarAncoragem(frase, r.numeros).length === 0
+  );
+}
+
+// ==================================================================
+// 9. A gramática do modelo — gerada da superfície, nunca escrita à mão
+// ==================================================================
+
+console.log('\n--- gramática do modelo ---');
+
+{
+  const { instrucoes, schema } = gramaticaParaModelo();
+
+  conferir(
+    'toda consulta da superfície aparece na gramática',
+    NOMES_CONSULTA.every((n) => instrucoes.includes(n)),
+    'consulta nova sem entrada na gramática seria capacidade que o modelo nunca escolhe'
+  );
+
+  const props = (schema.properties ?? {}) as Record<string, { enum?: string[] }>;
+  conferir(
+    'o schema oferece exatamente as consultas que existem',
+    JSON.stringify(props.nome?.enum) === JSON.stringify(NOMES_CONSULTA)
+  );
+  conferir(
+    'e exatamente os alvos que existem',
+    JSON.stringify(props.alvo?.enum) === JSON.stringify(ALVOS)
+  );
+  conferir(
+    'a gramática ensina o desvio de saúde',
+    instrucoes.includes('"fora": "saude"') && (props.fora?.enum ?? []).includes('saude'),
+    'sem isso o modelo tentaria encaixar febre em alguma consulta'
+  );
+  conferir(
+    'e manda escolher "fora" na dúvida',
+    /na d[úu]vida[^.]*fora/i.test(instrucoes),
+    'o viés do modelo tem que apontar pra recusa, não pra resposta'
+  );
+
+  // A gramática é texto que vai pro modelo, não copy — mas se ela ensinasse o
+  // modelo a falar de população, a tese cairia por dentro.
+  conferir(
+    'a gramática não contém linguagem de média',
+    !/\bpara a idade\b|\bo esperado\b|\bpercentil\b/i.test(instrucoes)
+  );
+}
+
 console.log(
-  `\n${falhas === 0 ? 'Superfície de consulta e ancoragem corretas.' : `${falhas} falha(s).`}`
+  `\n${falhas === 0 ? 'Superfície de consulta, ancoragem, narração e gramática corretas.' : `${falhas} falha(s).`}`
 );
 process.exit(falhas === 0 ? 0 : 1);
