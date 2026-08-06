@@ -118,6 +118,7 @@ const MINUTOS_NO_DIA = 1440;
 // ------------------------------------------------------------------
 
 const formatadores = new Map<string, Intl.DateTimeFormat>();
+const formatadoresDeDia = new Map<string, Intl.DateTimeFormat>();
 
 /**
  * `Intl` com `timeZone` explícito, e não `getHours()`, porque `getHours()` lê o
@@ -156,6 +157,35 @@ export function minutosDoDiaLocal(iso: string, fuso: string): number | null {
   // `hourCycle: 'h23'` já devolve 0 para meia-noite, mas o `% 24` protege contra
   // implementações que devolvem 24.
   return (hora % 24) * 60 + minuto;
+}
+
+/**
+ * A que DIA local um instante pertence — 'AAAA-MM-DD'.
+ *
+ * Existe aqui, e não em `horario.ts`, porque o `chaveDoDia` de lá usa
+ * `getFullYear()` e amigos: lê o fuso da máquina, que é o certo para agrupar a
+ * lista na tela da mãe e é impossível de injetar num teste. As consultas de
+ * "ontem" e de "essa semana contra a passada" têm a mesma exigência do motor —
+ * fuso por parâmetro — então a primitiva mora junto do motor, reusando o mesmo
+ * cache de formatador.
+ *
+ * `en-CA` porque o formato dele já é AAAA-MM-DD; a chave é ordenável como string.
+ */
+export function diaLocal(iso: string, fuso: string): string | null {
+  const instante = new Date(iso);
+  if (Number.isNaN(instante.getTime())) return null;
+
+  let f = formatadoresDeDia.get(fuso);
+  if (!f) {
+    f = new Intl.DateTimeFormat('en-CA', {
+      timeZone: fuso,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    formatadoresDeDia.set(fuso, f);
+  }
+  return f.format(instante);
 }
 
 /** Classificação pelo INÍCIO do sono, em hora local. */

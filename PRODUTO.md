@@ -237,7 +237,7 @@ O trabalho central é enumerar o que o assistente sabe responder:
 | Recall | "quando foi a última mamada?", "ela dormiu essa noite?" | 1 |
 | Contagem | "quantas fraldas hoje?", "quantas mamadas ontem?" | 1 |
 | Intervalo | "faz quanto tempo?", "de quanto em quanto tempo ela mama?" | 2 |
-| Comparação própria | "essa semana foi diferente da passada?" | ~14 |
+| Comparação própria | "essa semana foi diferente da passada?" | ~15 |
 | Padrão | "que horas ela costuma dormir?" | 5 na métrica |
 | Projeção | "quando ela deve dormir?" | ~20 (§3.3) |
 
@@ -414,15 +414,22 @@ uma mãe de recém-nascido pergunta não precisa de padrão nenhum:
 | **1** | "A última mamada foi às 14h20 — faz 2h40" | leitura direta |
 | **2** | "Entre as duas últimas deu 3h10" | subtração |
 | ~1 dia | "Hoje foram 6 mamadas e 4 trocas" | contagem |
-| **2 dias** | "Ontem foram 7; hoje, até agora, 6" | comparação dela com ela |
+| **3º dia** | "Ontem foram 7; hoje, até agora, 6" | comparação dela com ela |
 | 5 na métrica | "Costuma pegar no sono por volta das 13h" | `padroes.ts` |
-| ~14 dias | "Dormiu 40 min a mais essa semana que na passada" | o seu exemplo |
+| ~15 dias | "Dormiu 40 min a mais essa semana que na passada" | o seu exemplo |
 | ~20+ | Previsão com faixa | §3.3 |
 
 **"Faz quanto tempo desde a última mamada?" é a pergunta mais frequente de mãe de
 recém-nascido, e ela é respondível com UM registro.** A janela verdadeiramente
-fria — em que a Ninna não tem nada dela para dizer — dura horas, não semanas. E
-já no segundo dia existe comparação própria, que é a tese inteira em miniatura.
+fria — em que a Ninna não tem nada dela para dizer — dura horas, não semanas.
+
+Os dois degraus de comparação custam um dia a mais do que parece, e a razão é a
+mesma nos dois: **a janela anterior precisa ter começado com o app já gravando.**
+Comparar "hoje até as 17h" com "ontem até as 17h" só é honesto se ontem estava
+coberto desde a meia-noite — senão faltam as mamadas da madrugada em que o app
+ainda não existia, e sai "hoje teve 5, ontem teve 3", plausível e errado. Por
+isso a comparação de dias abre no 3º dia, não no 2º, e a de semanas no 15º dia,
+não no 14º. É o mesmo silêncio honesto do motor, um degrau acima.
 
 Isso não é um remendo para o cold start: é reconhecer que **recall e contagem são
 tão "sobre este bebê" quanto padrão**, e valem desde o primeiro toque.
