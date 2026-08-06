@@ -69,11 +69,57 @@ alter table baby_patterns
 -- ============================================================
 -- CONFERÊNCIA — rodar depois e esperar 7 linhas, todas com delete_rule = CASCADE
 -- ============================================================
--- select tc.table_name, tc.constraint_name, rc.delete_rule
---   from information_schema.table_constraints tc
---   join information_schema.referential_constraints rc
---     on rc.constraint_name = tc.constraint_name
---    and rc.constraint_schema = tc.table_schema
---  where tc.constraint_type = 'FOREIGN KEY'
---    and tc.table_schema = 'public'
---  order by tc.table_name;
+--
+-- POR QUE ESTA CONSULTA LÊ O CATÁLOGO, E NÃO O information_schema
+--
+-- A versão anterior consultava information_schema.table_constraints juntando com
+-- referential_constraints. Em 06/08/2026 ela devolveu "Success. No rows returned"
+-- num banco onde as 7 cascatas existiam e estavam corretas — conferido em seguida
+-- pelo catálogo, na mesma sessão, como `postgres`.
+--
+-- Gabarito que reprova banco certo é pior que gabarito nenhum: este arquivo é a
+-- prova de um item de checklist (§11.3 do BETA.md, que libera o termo LGPD), e o
+-- zero levou a investigar perda de integridade referencial que nunca houve. O
+-- passo seguinte teria sido reescrever uma migration sadia.
+--
+-- ⚠️ O modo de falha exato daquela consulta NÃO foi reproduzido, e não está
+-- escrito aqui como se fosse conhecido. O que se sabe, e já basta para não voltar
+-- a depender daquelas views numa prova:
+--
+--   * elas filtram por privilégio da sessão (pg_has_role sobre o dono da tabela).
+--     A mesma consulta responde coisas diferentes conforme o papel de quem roda —
+--     e resposta que depende do papel não serve de gabarito;
+--   * o join era por nome de constraint, e nome de constraint só é único DENTRO
+--     de uma tabela. Duas tabelas com FK de mesmo nome no mesmo schema cruzariam
+--     linhas. Hoje não acontece porque os 7 nomes diferem, mas é defeito latente
+--     numa consulta cuja única função é provar.
+--
+-- pg_constraint não tem filtro de privilégio e traz a tabela na própria linha.
+--
+-- select t.relname   as tabela,
+--        c.conname   as constraint_name,
+--        ref.relname as referencia,
+--        case c.confdeltype
+--          when 'a' then 'NO ACTION'
+--          when 'r' then 'RESTRICT'
+--          when 'c' then 'CASCADE'
+--          when 'n' then 'SET NULL'
+--          when 'd' then 'SET DEFAULT'
+--        end as delete_rule
+--   from pg_constraint c
+--   join pg_class t     on t.oid = c.conrelid
+--   join pg_namespace n on n.oid = t.relnamespace
+--   join pg_class ref   on ref.oid = c.confrelid
+--  where c.contype = 'f'
+--    and n.nspname = 'public'
+--  order by t.relname;
+--
+-- Resultado esperado, e o que foi obtido em 06/08/2026:
+--
+--   babies           babies_user_id_fkey           users   CASCADE
+--   baby_patterns    baby_patterns_baby_id_fkey    babies  CASCADE
+--   diaper_records   diaper_records_baby_id_fkey   babies  CASCADE
+--   feeding_records  feeding_records_baby_id_fkey  babies  CASCADE
+--   mood_records     mood_records_baby_id_fkey     babies  CASCADE
+--   sleep_records    sleep_records_baby_id_fkey    babies  CASCADE
+--   symptom_records  symptom_records_baby_id_fkey  babies  CASCADE

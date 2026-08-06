@@ -9,22 +9,23 @@ mãe entra antes de o pacote existir (BETA.md §7.3-bis).
 | `roteiro-instalacao.md` | Uma página ensinando a instalar | PDF, junto com o link do app |
 | `canal-feedback.md` | Convite do grupo + destino do botão | O convite vai como mensagem; o resto é interno |
 
-## Antes de enviar — dois bloqueios de banco
+## Antes de enviar — os dois bloqueios de banco
 
-**O termo não pode ser enviado enquanto o `002_cascade_exclusao.sql` não tiver
-rodado (§11.3).** Ele promete exclusão total em até 2 dias, e sem a cascata o
-banco recusa apagar uma mãe que tenha bebê — erro 23503. Prometer uma via de
-saída que o banco recusa é pior que não prometer nada: no primeiro caso ela
-confia, pede, e a promessa falha exatamente no momento em que importa.
+✅ **`002_cascade_exclusao.sql` aplicado e verificado em 06/08/2026** (§11.3): as 7
+chaves em `CASCADE`, conferidas no catálogo. Era o que impedia o envio — o termo
+promete exclusão total em até 2 dias, e sem a cascata o banco recusaria apagar
+uma mãe que tenha bebê (erro 23503). Prometer uma via de saída que o banco recusa
+é pior que não prometer nada: ela confia, pede, e a promessa falha exatamente no
+momento em que importa. **O termo está liberado para envio.**
 
-**O aceite do P7 fica incompleto até o `teste-rls-delete.mjs` passar (§11.4).**
+⛔ **O aceite do P7 segue incompleto até o `teste-rls-delete.mjs` passar (§11.4).**
 Ele prova que a mãe A não apaga registro da mãe B. O termo promete que cada conta
 enxerga só os próprios dados; esse teste é o que sustenta a frase. Segue
 bloqueado pelo autoconfirm — o preflight exige "Confirm email" desligado em
 `Authentication`.
 
-Ordem prática: roda o `002` → envia o termo → E1 entra. O `11.4` não impede a
-entrega, mas impede declarar o P7 fechado.
+Ordem prática: ~~roda o `002`~~ → **envia o termo → E1 entra**. O §11.4 não impede
+a entrega, mas impede declarar o P7 fechado.
 
 ## Campos a preencher
 

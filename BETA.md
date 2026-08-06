@@ -891,20 +891,20 @@ prometeria além do próprio piloto. Com três mães e execução manual no pain
 ⛔ **Este bloco NÃO fecha enquanto §11.3 e §11.4 não passarem, e o termo não é
 enviado antes do §11.3.** Não é formalidade de checklist:
 
-- **§11.3 (`002_cascade_exclusao.sql`) bloqueia o envio.** O termo promete
-  exclusão total em até 2 dias; sem a cascata o banco recusa apagar uma mãe que
-  tenha bebê (erro 23503). **Promessa de exclusão que o banco recusa é pior que
-  promessa nenhuma** — sem promessa ela decide sabendo; com a promessa quebrada
-  ela decide confiando, e descobre no único momento em que isso importa. Enviar o
-  termo antes de rodar o `002` é coletar dado sensível com uma garantia que não
-  existe.
-- **§11.4 (`teste-rls-delete.mjs`) bloqueia o aceite.** O termo afirma que cada
+- ✅ **§11.3 (`002_cascade_exclusao.sql`) bloqueava o envio — cumprido em
+  06/08/2026**, com as 7 chaves em `CASCADE` conferidas no catálogo. O termo
+  promete exclusão total em até 2 dias; sem a cascata o banco recusaria apagar
+  uma mãe que tenha bebê (erro 23503). **Promessa de exclusão que o banco recusa
+  é pior que promessa nenhuma** — sem promessa ela decide sabendo; com a promessa
+  quebrada ela decide confiando, e descobre no único momento em que isso importa.
+  **O termo está liberado para envio.**
+- ⛔ **§11.4 (`teste-rls-delete.mjs`) bloqueia o aceite.** O termo afirma que cada
   conta enxerga apenas os próprios dados; esse teste é o que sustenta a frase. Não
   impede a entrega do pacote, impede declarar o P7 fechado. **Segue bloqueado
   pelo autoconfirm** — o preflight exige "Confirm email" desligado (§11.1).
 
 O aceite do P7 tem, portanto, três partes: os textos entregues, o `002` rodado, e
-o teste de RLS verde. Hoje só a primeira está feita.
+o teste de RLS verde. **Duas estão feitas; falta o §11.4.**
 
 **Subiu de 16/08 para 11/08 porque a E1 subiu.** Os três itens deste bloco são
 exatamente o que uma embaixadora precisa ter em mãos para *ser* embaixadora: o
@@ -1267,7 +1267,7 @@ que não é o do fundador e confirmar que chegou **na caixa de entrada, não em
 spam**. Testar só no próprio e-mail não vale — o remetente conhecido do próprio
 domínio é justamente o caso que não reproduz o problema.
 
-### 11.3 Rodar `002_cascade_exclusao.sql` — bloqueia o item 13 da checklist
+### 11.3 Rodar `002_cascade_exclusao.sql` — item 13 da checklist ✅ FEITO EM 06/08/2026
 `SQL Editor > New query`, colar o arquivo inteiro, rodar. Depois rodar a consulta
 de conferência comentada no fim: esperar **7 linhas, todas com
 `delete_rule = CASCADE`**.
@@ -1275,12 +1275,27 @@ de conferência comentada no fim: esperar **7 linhas, todas com
 Sem isso não existe exclusão de conta, e o termo LGPD do D18 estaria prometendo
 algo que o banco recusa (§6).
 
-⛔ **Regra travada no P7: o termo não é enviado a nenhuma mãe antes desta consulta
-devolver as 7 linhas em CASCADE.** O termo promete apagar tudo em até 2 dias, e a
-mãe que pedir exclusão com o `002` pendente recebe um erro 23503 em vez da saída
-que aceitou por escrito. Promessa de exclusão que o banco recusa é pior que
-promessa nenhuma: a primeira ela avalia antes de entrar, a segunda ela só
+**Aplicado e verificado em 06/08/2026**: as 7 chaves (`babies` → `auth.users` e as
+6 tabelas de registro → `babies`) em `CASCADE`, conferidas como `postgres`. A
+regra travada no P7 — *o termo não é enviado a nenhuma mãe antes das 7 linhas em
+CASCADE* — está **cumprida, e o termo está liberado para envio**. Ela continua
+valendo para qualquer mudança futura em cascata ou em policy: promessa de
+exclusão que o banco recusa é pior que promessa nenhuma, porque a mãe só
 descobre no momento em que quer sair.
+
+⚠️ **A consulta de conferência original mentiu, e foi substituída.** A versão que
+usava `information_schema` devolveu *"Success. No rows returned"* com as 7
+cascatas corretas no banco — resultado que custou uma investigação de perda de
+integridade referencial que nunca houve, e cujo passo seguinte teria sido
+reescrever uma migration sadia. **O modo de falha não foi reproduzido** e está
+registrado como não sabido no cabeçalho do `002`; o que se sabe é que aquelas
+views filtram por privilégio da sessão (resposta que muda com o papel não serve
+de prova) e que o join por nome de constraint é defeito latente. A conferência
+agora lê `pg_constraint`, que não tem filtro de privilégio.
+
+Lição que vale além deste item: **gabarito que reprova banco certo é pior que
+gabarito nenhum.** Um item de checklist cuja prova é uma consulta merece a mesma
+desconfiança que se dá ao código que ela verifica.
 
 ### 11.4 Rodar o teste de RLS de DELETE — bloqueia o item 12 da checklist
 ```
