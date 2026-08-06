@@ -42,10 +42,10 @@
 
 import { readFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
-
-const MARCA = 'SEMEADO';
-const NOME_BEBE_TESTE = 'SEMEADO-Teste';
-const DIAS = 7;
+// O gerador mora em `massa-semeada.mjs` pra conferência do gabarito do D8 poder
+// usar a MESMA rotina sem tocar no banco. Duplicá-lo faria o gabarito divergir
+// da massa realmente semeada sem ninguém notar.
+import { gerarMassa, NOME_BEBE_TESTE, DIAS } from './massa-semeada.mjs';
 
 // ------------------------------------------------------------------
 // Ambiente
@@ -78,142 +78,6 @@ const EMAIL = exigir('SEMEAR_EMAIL', 'A sua conta do app — ver .env.example.')
 const SENHA = exigir('SEMEAR_SENHA', 'A sua conta do app — ver .env.example.');
 
 if (!URL_SUPABASE || !ANON || !EMAIL || !SENHA) process.exit(1);
-
-// ------------------------------------------------------------------
-// Aleatoriedade determinística
-//
-// Semente fixa: duas execuções produzem a mesma massa. Sem isso, "conferi o
-// intervalo médio na calculadora" não significa nada na execução seguinte.
-// ------------------------------------------------------------------
-
-let semente = 20260805;
-function aleatorio() {
-  semente = (semente * 1103515245 + 12345) % 2147483648;
-  return semente / 2147483648;
-}
-const entre = (min, max) => min + aleatorio() * (max - min);
-const inteiro = (min, max) => Math.floor(entre(min, max + 1));
-const escolher = (lista) => lista[Math.floor(aleatorio() * lista.length)];
-
-// ------------------------------------------------------------------
-// Geração
-// ------------------------------------------------------------------
-
-/** Meia-noite local de `diasAtras` dias atrás. Hora LOCAL de propósito: é assim
- *  que o motor lê "horário da soneca", e é assim que a mãe lê a tela. */
-function meiaNoite(diasAtras) {
-  const d = new Date();
-  d.setDate(d.getDate() - diasAtras);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-const iso = (dia, horas) => new Date(meiaNoite(dia).getTime() + horas * 3_600_000).toISOString();
-
-function gerar(babyId) {
-  const alimentacao = [];
-  const sono = [];
-  const fralda = [];
-  const humor = [];
-  const sintoma = [];
-
-  for (let dia = DIAS - 1; dia >= 0; dia--) {
-    const hoje = dia === 0;
-    const agoraHoras = new Date().getHours() + new Date().getMinutes() / 60;
-    // No dia de hoje só semeia o que já aconteceu — registro no futuro apareceria
-    // como "ontem" na lista (a máscara HH:MM lê hora futura como do dia anterior).
-    const limite = hoje ? agoraHoras : 24;
-
-    // Mamadas a cada ~3h, começando às 6h.
-    for (let h = 6; h < limite; h += entre(2.7, 3.3)) {
-      const peito = aleatorio() < 0.6;
-      alimentacao.push(
-        peito
-          ? {
-              baby_id: babyId,
-              type: 'breast',
-              side: escolher(['left', 'right', 'both']),
-              duration_seconds: inteiro(8, 22) * 60,
-              started_at: iso(dia, h),
-              notes: MARCA,
-            }
-          : {
-              baby_id: babyId,
-              type: 'bottle',
-              amount_ml: inteiro(6, 15) * 10,
-              bottle_type: escolher(['breast_milk', 'formula']),
-              started_at: iso(dia, h),
-              notes: MARCA,
-            }
-      );
-    }
-
-    // Três sonecas em faixas estáveis + o sono da noite.
-    for (const faixa of [
-      [8.5, 9.5],
-      [12.5, 13.5],
-      [16.0, 17.0],
-    ]) {
-      const inicio = entre(faixa[0], faixa[1]);
-      if (inicio >= limite) continue;
-      const duracao = entre(0.7, 1.5);
-      sono.push({
-        baby_id: babyId,
-        started_at: iso(dia, inicio),
-        ended_at: iso(dia, inicio + duracao),
-      });
-    }
-
-    const noite = entre(19.5, 20.5);
-    if (noite < limite) {
-      sono.push({
-        baby_id: babyId,
-        started_at: iso(dia, noite),
-        ended_at: iso(dia, noite + entre(8, 10)),
-      });
-    }
-
-    // Fraldas, humor e sintoma — esparsos.
-    for (let n = 0; n < inteiro(3, 5); n++) {
-      const h = entre(6, 22);
-      if (h >= limite) continue;
-      fralda.push({
-        baby_id: babyId,
-        content: escolher(['pee', 'pee', 'poop', 'both']),
-        recorded_at: iso(dia, h),
-        notes: MARCA,
-      });
-    }
-
-    if (aleatorio() < 0.7) {
-      const h = entre(7, 21);
-      if (h < limite) {
-        humor.push({
-          baby_id: babyId,
-          mood: escolher(['happy', 'calm', 'crying', 'sleepy', 'agitated', 'irritated']),
-          probable_reason: escolher(['hunger', 'sleep', 'diaper', 'colic', 'holding', 'unknown']),
-          recorded_at: iso(dia, h),
-          notes: MARCA,
-        });
-      }
-    }
-
-    if (aleatorio() < 0.25) {
-      const h = entre(8, 20);
-      if (h < limite) {
-        sintoma.push({
-          baby_id: babyId,
-          symptom: escolher(['fever', 'runny_nose', 'cough', 'colic']),
-          intensity: escolher(['mild', 'moderate']),
-          recorded_at: iso(dia, h),
-          notes: MARCA,
-        });
-      }
-    }
-  }
-
-  return { alimentacao, sono, fralda, humor, sintoma };
-}
 
 // ------------------------------------------------------------------
 // Execução
@@ -345,7 +209,7 @@ async function main() {
     return;
   }
 
-  const massa = gerar(bebe.id);
+  const massa = gerarMassa(bebe.id);
 
   for (const [tabela, linhas] of [
     ['feeding_records', massa.alimentacao],

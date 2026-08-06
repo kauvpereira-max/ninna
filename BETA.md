@@ -27,7 +27,7 @@ nativo, ter push, ter assinatura.
 | 7 | Registro de sono (+ em andamento) | ✅ pronto |
 | 8 | Registro de fralda | ✅ pronto |
 | 9 | Histórico dos registros | ✅ pronto (D5–D7) |
-| 10 | Motor de personalização (3 métricas) | a fazer — **P2/P3** |
+| 10 | Motor de personalização (3 métricas) | P2 ✅ (matemática); falta ligar — **P3** |
 | 11 | Card de insight na Home | a fazer — **P4** |
 | 12 | Supabase configurado | pronto (5 tabelas + RLS); falta `002` e §11.1 — **P0** |
 | 13 | Interface próxima ao protótipo | parcial — **P8** |
@@ -97,6 +97,15 @@ Janela móvel de 7 dias, sempre em **hora local do dispositivo** (nunca UTC —
 
 1. **Intervalo médio entre mamadas** — diferenças entre `started_at`
    consecutivos de `feeding_records`.
+
+   ⚠️ **Decisão em aberto, descoberta no P2 e que cai no P4.** Assim escrito, o
+   salto da noite entra na conta: a massa semeada dá **3h31**, não os ~3h que o
+   próprio semeador prevê, porque cada dia tem ~6 intervalos de ~3h e um de até
+   8h36 entre a última mamada e a primeira do dia seguinte. Sem os saltos
+   noturnos daria **2h57**. Nenhum dos dois é errado — são frases diferentes
+   ("ela mama a cada 3h30" descreve o dia inteiro; "a cada 3h" descreve o dia
+   acordado). O motor implementa a regra como está escrita aqui; **qual das duas
+   a mãe lê é decisão da copy do P4**, e precisa ser tomada lá, não deduzida.
 2. **Duração média da soneca** — só sonecas.
 3. **Horário médio da soneca** — **média circular**, não aritmética.
 
@@ -524,7 +533,7 @@ antes — só a posição mudou.
 | **P0-bis** | **Domínio no Resend** (SPF + DKIM) — só *iniciar* | **05–06/08** | latência de DNS |
 | **P0-ter** | **Recrutar a E1** — mãe **confirmada**, não convidada | **08/08** | latência humana |
 | **P1** | **D3a** — código do reset + erros em PT-BR | 06/08 | nada |
-| **P2** | D8 — motor, matemática pura ⚠️ | 07/08 | massa semeada (P0) |
+| **P2** | D8 — motor, matemática pura ✅ | 06/08 | — |
 | **P3** | D9 — motor ligado ao app ⚠️ | 08/08 | P2 |
 | **P4** | D10 — card de insight ⚠️ | 09/08 | P3 |
 | **P5** | D16 — PWA + deploy ⬆️ *antecipado de 20/08* | 10/08 | P4 |
@@ -702,11 +711,26 @@ chegou **na caixa de entrada, não em spam**. Testar no próprio e-mail não val
 **É o item 2 da checklist e o risco R2. O D3 não está fechado sem isto** — P1
 sozinho não conta.
 
-### P2 — D8: Motor, matemática pura, sem UI ⚠️ dia pesado
-`padroes.ts` com as 3 métricas, separação soneca/noite, média circular e
-limiares. Validado contra dados sintéticos.
-**Ao final:** dado um array de registros, saem 3 números **conferidos à mão na
-calculadora**.
+### P2 — D8: Motor, matemática pura, sem UI ✅ FEITO
+`src/lib/padroes.ts` com as 3 métricas, separação soneca/noite, média circular e
+o limiar de 5. Função pura e síncrona, sem Supabase e sem React Native — roda no
+Node, mesma razão do `paginacao.ts`. O "agora" e o fuso entram por parâmetro:
+sem isso não há como testar fuso nenhum.
+
+**O fuso é injetado, nunca herdado da máquina.** `Intl` com `timeZone` explícito
+em vez de `getHours()`, porque `getHours()` lê o fuso do ambiente e no Windows a
+variável `TZ` é ignorada para nomes IANA — foi assim que o teste do D6 passou
+verde sem provar nada. O teste mede **a mesma massa em dois fusos**: as 15
+sonecas de São Paulo viram noite em Tóquio, e o que sobra como "soneca" são os
+sonos noturnos, de 9 horas. É o R4 visível.
+
+**Verificado por mutação**, como o D5: as três implementações que o §3.3 proíbe
+(média aritmética, misturar noite e soneca, classificar em UTC) são escritas de
+propósito no teste, e o que se confere é que **cada uma reprova** em alguma das
+conferências. Mutação que passasse significaria conferência decorativa.
+
+**Ao final:** `node scripts/teste-padroes.ts` verde nas 3 métricas e nas 3
+mutações, e o gabarito da massa semeada conferido à mão (§9-bis).
 
 ### P3 — D9: Motor ligado ao app ⚠️ dia pesado
 `usePadroes` lê 7 dias e calcula. Testar com o relógio do celular em outro fuso.
@@ -1018,7 +1042,9 @@ Não são código do app: rodam no Node, fora do Expo, e não entram no bundle.
 | `node scripts/teste-rls-delete.mjs` | RLS de DELETE entre duas contas (§11.4). Pré-requisito de qualquer mexida em policy |
 | `node scripts/teste-paginacao.ts` | Cursor, desempate e bordas da paginação. Puro, sem banco |
 | `node scripts/teste-horario.ts` | Agrupamento por dia em hora local. Recusa rodar em offset zero, onde não provaria nada |
+| `node scripts/teste-padroes.ts` | As 3 métricas do motor, com fuso injetado e verificação por mutação. Puro, sem banco |
 | `node scripts/semear-registros.mjs` | 7 dias de rotina plausível num bebê dedicado. `--limpar` desfaz |
+| `scripts/massa-semeada.mjs` | Não é teste: é o gerador da massa, importado pelo semeador **e** pela conferência do gabarito. Não toca em rede |
 
 **Por que `paginacao.ts` mora separado de `registros.ts`:** para não importar
 Supabase nem React Native, e assim poder rodar no Node. Cursor com desempate é a
