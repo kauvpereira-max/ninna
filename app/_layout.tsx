@@ -70,6 +70,8 @@ function RootNavigator() {
         {/* Mesmo tratamento pro seletor de bebê e pro cadastro chamado por ele. */}
         <Stack.Screen name="bebes/index" options={{ presentation: 'modal' }} />
         <Stack.Screen name="bebes/novo" options={{ presentation: 'modal' }} />
+        {/* Sobre também entra por cima: é consulta, e a mãe volta pra onde estava. */}
+        <Stack.Screen name="sobre" options={{ presentation: 'modal' }} />
       </Stack>
     </>
   );

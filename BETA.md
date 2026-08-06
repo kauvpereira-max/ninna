@@ -880,6 +880,32 @@ Termo curto e honesto, contendo obrigatoriamente:
 Mais: canal de feedback (grupo WhatsApp + link na aba Mais) e roteiro de 1
 página de instalação. Reexecutar §11.4 como parte do aceite.
 
+**Os três textos estão escritos, em `docs/embaixadora/`** — termo (versão 1,
+06/08/2026), canal de feedback e roteiro de instalação, com os campos de contato
+marcados para preencher. O `README.md` da pasta guarda o procedimento de aceite.
+Prazo do termo: **confirmo em 1 dia, apago em até 2**. Não são 7: sete dias
+contados a partir de um pedido feito perto do fim caem depois de 25/08, e o termo
+prometeria além do próprio piloto. Com três mães e execução manual no painel,
+48h é o que dá para cumprir de verdade.
+
+⛔ **Este bloco NÃO fecha enquanto §11.3 e §11.4 não passarem, e o termo não é
+enviado antes do §11.3.** Não é formalidade de checklist:
+
+- **§11.3 (`002_cascade_exclusao.sql`) bloqueia o envio.** O termo promete
+  exclusão total em até 2 dias; sem a cascata o banco recusa apagar uma mãe que
+  tenha bebê (erro 23503). **Promessa de exclusão que o banco recusa é pior que
+  promessa nenhuma** — sem promessa ela decide sabendo; com a promessa quebrada
+  ela decide confiando, e descobre no único momento em que isso importa. Enviar o
+  termo antes de rodar o `002` é coletar dado sensível com uma garantia que não
+  existe.
+- **§11.4 (`teste-rls-delete.mjs`) bloqueia o aceite.** O termo afirma que cada
+  conta enxerga apenas os próprios dados; esse teste é o que sustenta a frase. Não
+  impede a entrega do pacote, impede declarar o P7 fechado. **Segue bloqueado
+  pelo autoconfirm** — o preflight exige "Confirm email" desligado (§11.1).
+
+O aceite do P7 tem, portanto, três partes: os textos entregues, o `002` rodado, e
+o teste de RLS verde. Hoje só a primeira está feita.
+
 **Subiu de 16/08 para 11/08 porque a E1 subiu.** Os três itens deste bloco são
 exatamente o que uma embaixadora precisa ter em mãos para *ser* embaixadora: o
 termo que a informa, o canal por onde ela relata, e o papel que ensina a
@@ -1248,6 +1274,13 @@ de conferência comentada no fim: esperar **7 linhas, todas com
 
 Sem isso não existe exclusão de conta, e o termo LGPD do D18 estaria prometendo
 algo que o banco recusa (§6).
+
+⛔ **Regra travada no P7: o termo não é enviado a nenhuma mãe antes desta consulta
+devolver as 7 linhas em CASCADE.** O termo promete apagar tudo em até 2 dias, e a
+mãe que pedir exclusão com o `002` pendente recebe um erro 23503 em vez da saída
+que aceitou por escrito. Promessa de exclusão que o banco recusa é pior que
+promessa nenhuma: a primeira ela avalia antes de entrar, a segunda ela só
+descobre no momento em que quer sair.
 
 ### 11.4 Rodar o teste de RLS de DELETE — bloqueia o item 12 da checklist
 ```
