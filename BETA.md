@@ -498,6 +498,7 @@ antes — só a posição mudou.
 |---|---|---|---|
 | **P0** | **Destrave** — §11.1, §11.3, §11.4, semear, humor/sintoma reais | 05–06/08 | você |
 | **P0-bis** | **Domínio no Resend** (SPF + DKIM) — só *iniciar* | **05–06/08** | latência de DNS |
+| **P0-ter** | **Recrutar a E1** — mãe **confirmada**, não convidada | **08/08** | latência humana |
 | **P1** | **D3a** — código do reset + erros em PT-BR | 06/08 | nada |
 | **P2** | D8 — motor, matemática pura ⚠️ | 07/08 | massa semeada (P0) |
 | **P3** | D9 — motor ligado ao app ⚠️ | 08/08 | P2 |
@@ -514,7 +515,7 @@ antes — só a posição mudou.
 | **P13** | D21 — **leitura** do piloto, não a execução dele | 23–25/08 | trilha E (§7.3-bis) |
 
 P0 a P13 são 14 posições em 20 dias de calendário (06/08 a 25/08), com 4 dias de
-reserva dentro. **Cabe.** P0-bis e D3b não têm posição própria porque não
+reserva dentro. **Cabe.** P0-bis, P0-ter e D3b não têm posição própria porque não
 consomem dia: são espera correndo por baixo dos outros blocos.
 
 A folga toda mora em P12, de propósito — reserva espalhada é reserva que some
@@ -542,7 +543,7 @@ encurta isso (§7.1, R14).
 
 | Trilha | Quem | Entra | Tem, na leitura |
 |---|---|---|---|
-| **E1** | 1ª embaixadora, acompanhada de perto no 1º cadastro | **11/08** — depois do PWA no ar (P5) **e do pacote (P7)** | ~14 dias de registro |
+| **E1** | 1ª embaixadora, acompanhada de perto no 1º cadastro | **11/08** — depois do PWA no ar (P5) **e do pacote (P7)**; pessoa confirmada no **P0-ter**, até 08/08 | ~14 dias de registro |
 | **E2 + E3** | as outras duas, com o app já polido | **18/08** — depois do P10 | ~7 dias de registro |
 | **P13** | leitura: as 3 chegaram ao insight? o insight estava certo? | 23–25/08 | — |
 
@@ -612,6 +613,33 @@ bloco custa zero e o D3b pode disparar junto do P1.
 
 ⚠️ O §3.8 pareava isto com o D2 ("permite os dois correrem em paralelo enquanto
 o DNS propaga"). O D2 acabou; o par agora é este bloco.
+
+### P0-ter — Recrutar a E1 👤 EM PARALELO, alvo 08/08
+**Item do P0, com data própria porque é o único do bloco cuja demora não depende
+de você.** Nada no plano tratava de *quem* é a E1 — a trilha do §7.3-bis marcava
+a data de entrada e presumia a pessoa.
+
+Alvo: **mãe confirmada até 08/08 — confirmada, não convidada.** Convite mandado
+não é relógio começado.
+
+Critério de quem serve:
+- **bebê de até ~8 meses** — rotina ainda em formação é onde o insight tem valor;
+  bebê com rotina já assentada não testa o motor, confirma o óbvio;
+- **disposta a registrar diariamente** — o limiar do §3.3 é de registro, não de
+  tempo. Mãe entusiasmada que registra três vezes na semana chega ao P13 na frase
+  de aprendizado;
+- **alcançável por WhatsApp** — é o canal humano do §3.7, e é por onde o bug dela
+  chega até você (R6).
+
+Sobe para o P0 pela mesma regra do §7.1: **latência humana é relógio de parede.**
+Convidar mãe de recém-nascido tem espera que não comprime — ela pode levar dias
+para responder, pode aceitar e desistir, pode ter a semana virada pelo próprio
+bebê. Sem pessoa confirmada até 11/08 o relógio mais longo do projeto não começa,
+e nenhum degrau da §7.5 recupera isso: os degraus cortam trabalho, e o que
+faltaria é dia de bebê registrado.
+
+Os dois dias entre o alvo (08/08) e a entrada (11/08) são a margem para um "não"
+— dá tempo de convidar outra sem mover a data da E1.
 
 ### P1 — D3a: código do reset + erros em português
 Fluxo de reset com redirect e tradução das mensagens do Supabase (hoje voltam em
@@ -700,7 +728,9 @@ Ela entra com a interface ainda crua, e isso é decisão, não concessão: o que
 está testando é se o motor diz algo verdadeiro sobre o bebê dela, e isso não
 depende de a tela estar bonita. Ver §7.3-bis.
 
-**Não entra sem o P7 fechado.** É a única precedência rígida da trilha.
+**Não entra sem o P7 fechado.** É a única precedência rígida da trilha — e a
+pessoa já tem que estar confirmada desde o P0-ter (08/08), senão não há quem
+entre em 11/08.
 
 ### P8 — D11–D13: Interface conforme protótipo
 D11 Home · D12 modais de registro · D13 histórico, auth e onboarding.
@@ -801,6 +831,17 @@ inteiro. O que se perde é a resposta sobre onboarding sem acompanhamento — qu
 pergunta de escala, não de hipótese, e pode esperar a semana seguinte com um app
 honestamente pronto.
 
+⚠️ **O custo escondido deste degrau — não é "menos informação".** Cortar E2 e E3
+deixa a leitura do P13 inteira pendurada em **uma pessoa**. Se a E1 abandonar no
+dia 4 — e mãe de recém-nascido abandona sem avisar, isso não é hipótese remota —
+o beta não termina com uma resposta mais estreita sobre a hipótese: termina **sem
+resposta nenhuma**. Com as três, a desistência de uma ainda deixa duas leituras.
+É o único degrau da escada cujo pior caso é ficar com zero, e ele não tem aviso
+prévio: você só descobre no P13, quando não há mais dia para convidar outra.
+Continua sendo o último degrau — os outros três custam mais cedo e com mais
+certeza — mas quem descer até aqui tem que descer sabendo que trocou "app menos
+polido" por "beta possivelmente sem conclusão".
+
 *Degraus 3 e 4 são acoplados:* se o aperto chegou a esse ponto, fazer o 4 sozinho
 é melhor que fazer o 3 sozinho. Convidar E2 e E3 para um app que você acabou de
 decidir não polir gasta duas embaixadoras para medir um app que você já sabe que
@@ -815,6 +856,7 @@ não está pronto.
 | D3b (aceite do reset) | Item 2. Embaixadora sem senha está fora do piloto para sempre (§3.6) |
 | P0 §11.3 e §11.4 | Itens 12 e 13. Privacidade de dado de saúde de bebê |
 | **P7 (pacote da embaixadora)** | Não é escopo, é obrigação legal. Não se negocia por prazo — e agora é **portão da E1**: sem ele nenhuma mãe real entra |
+| **P0-ter (E1 confirmada até 08/08)** | Sem pessoa, a data de 11/08 é só uma linha no diagrama. Latência humana não comprime, e o convite não tem degrau de corte que o substitua |
 | **E1 em 11/08** | É o relógio mais longo do projeto (R14). Atrasar a E1 atrasa o beta inteiro, e não há como recuperar depois |
 
 Cortar qualquer linha dessa tabela não atrasa o beta — **cancela** ele. Se a
