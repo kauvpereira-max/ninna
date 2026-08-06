@@ -27,7 +27,7 @@ nativo, ter push, ter assinatura.
 | 7 | Registro de sono (+ em andamento) | ✅ pronto |
 | 8 | Registro de fralda | ✅ pronto |
 | 9 | Histórico dos registros | ✅ pronto (D5–D7) |
-| 10 | Motor de personalização (3 métricas) | P2 ✅ (matemática); falta ligar — **P3** |
+| 10 | Motor de personalização (3 métricas) | P2 ✅ (matemática, contra massa em memória); ligar e conferir contra o banco — **P3** |
 | 11 | Card de insight na Home | a fazer — **P4** |
 | 12 | Supabase configurado | pronto (5 tabelas + RLS); falta `002` e §11.1 — **P0** |
 | 13 | Interface próxima ao protótipo | parcial — **P8** |
@@ -730,11 +730,36 @@ propósito no teste, e o que se confere é que **cada uma reprova** em alguma da
 conferências. Mutação que passasse significaria conferência decorativa.
 
 **Ao final:** `node scripts/teste-padroes.ts` verde nas 3 métricas e nas 3
-mutações, e o gabarito da massa semeada conferido à mão (§9-bis).
+mutações, e o gabarito da massa conferido à mão (§9-bis).
+
+⚠️ **O gabarito é do GERADOR, não do banco.** O semeador não chegou a rodar — o
+`.env` seguia sem `SEMEAR_EMAIL`/`SEMEAR_SENHA` —, então os números foram
+calculados importando `massa-semeada.mjs` direto, sem tocar no Supabase. Isso
+prova a matemática e **não prova** que as linhas entraram no banco, que a leitura
+as traz de volta, nem que os tipos do Postgres voltam como o motor espera.
+
+Vale porque o gerador é determinístico: semente fixa, e o dia de hoje é o último
+do laço, então os seis dias anteriores são idênticos em qualquer execução. Só a
+cauda de hoje cresce ao longo do dia.
+
+**A fronteira, explícita:** o P2 fecha **na matemática**. Conferir o motor contra
+dado real vindo do Supabase é aceite do **P3**, não deste bloco — e continua
+dependendo do semeador rodar (P0).
 
 ### P3 — D9: Motor ligado ao app ⚠️ dia pesado
 `usePadroes` lê 7 dias e calcula. Testar com o relógio do celular em outro fuso.
-**Ao final:** os padrões reais do bebê de teste aparecem corretos na tela.
+
+**Herda um aceite do P2, de propósito.** O P2 provou a matemática contra a massa
+gerada em memória; o que ninguém provou ainda é a volta pelo banco. Então este
+bloco só fecha depois de rodar o motor sobre registros **lidos do Supabase** e
+bater os três números contra o gabarito do §9-bis. Se divergirem, o erro não está
+na matemática — está na leitura, no tipo de coluna ou no fuso da serialização, e
+é justamente essa a classe de erro que a massa em memória não alcança.
+
+Depende do semeador ter rodado (P0), que continua aberto.
+
+**Ao final:** os padrões reais do bebê de teste aparecem corretos na tela, e os
+números batem com o gabarito.
 
 ### P4 — D10: Card de insight na Home ⚠️ dia pesado
 `copyInsight.ts`: número → frase acolhedora. Variações por métrica e faixa de
