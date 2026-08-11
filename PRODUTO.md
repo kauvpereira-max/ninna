@@ -511,6 +511,12 @@ paga o assistente.
 
 **Margem por assinante mensal, a R$24,90:**
 
+⚠️ **Atualizado em 11/08/2026:** a tabela abaixo foi escrita quando o canal era
+loja. Cobrando pela PWA (§6), a linha da loja vira Stripe — ~4,4% em vez de 15%,
+ou R$1,10 em vez de R$3,74. A margem mensal sobe de 60% para ~73%, e o plano
+anual deixa de ser apertado. A tabela fica como está para registrar o caso da
+loja, que volta a valer se um dia a venda acontecer dentro do app.
+
 | Item | Mensal | Anual (R$199/12) |
 |---|---:|---:|
 | Receita bruta | R$ 24,90 | R$ 16,58 |
@@ -544,24 +550,90 @@ negócio e eu não tenho como avaliá-la sozinho.
 
 ---
 
-## 6. A decisão de canal
+## 6. A decisão de canal — PWA inteira primeiro, nativo por último
 
-**PWA continua, nativo entra — nessa ordem, não em paralelo.**
+*Reordenado em 11/08/2026.* A versão anterior punha o canal nativo como bloco 2,
+"porque o relógio é de terceiro e corre em paralelo". Invertido: **o que não se
+controla vai para o fim**, e tudo que a PWA consegue fazer acontece antes.
 
-A tese não muda essa conclusão, mas **melhora um dos argumentos**: um assistente
-ancorado, que só lê os registros da própria usuária e se recusa a falar de
-saúde, é muito mais fácil de defender numa revisão da App Store do que um chat
-aberto sobre bebês. O risco N3 da versão anterior cai junto com o risco do bloco.
+O raciocínio que mudou: US$99, fila de revisão de dias a semanas e uma primeira
+submissão que costuma ser rejeitada não são "relógio que corre de graça" — são
+relógio que **bloqueia o lançamento** se estiver no caminho crítico. Fora dele,
+viram o que devem ser: uma etapa que acontece enquanto mães já usam e já pagam.
 
-**Por que nativo entra:** descoberta em loja (é de lá que vieram os 50 mil
-downloads do Blumy — PWA não aparece em busca de loja); assinatura no iOS, que
-o `CLAUDE.md` já resolveu como RevenueCat e que pressupõe app nativo; adesão a
-notificação; e o fim do R1 (o iOS limpando o storage em 7 dias simplesmente
-deixa de existir).
+**Por que a PWA aguenta ir sozinha até o fim:** ela está no ar, cobra sem
+intermediário (abaixo), entrega push em iOS instalado, e é onde `expo export
+--platform web` valida build desde o começo do projeto.
 
-**Por que PWA continua:** é o único canal no ar hoje; `expo export --platform
-web` é o que valida build neste projeto; custa quase nada manter; e é a única
-forma de alguém entrar antes de a loja aprovar.
+**Por que nativo ainda entra, só que depois:** descoberta em loja — é de lá que
+vieram os 50 mil downloads do Blumy — e as integrações de sistema que a web não
+tem (mais abaixo). Nada disso é pré-requisito para cobrar.
+
+### Cobrança em PWA: o que muda
+
+**A PWA cobra por Stripe direto, e a Apple não entra na conta.** Isso não é
+contorno de regra: as regras da App Store valem para o que é vendido *dentro de
+um app da loja*. Um site não é isso.
+
+O que essa diferença vale, sobre uma assinatura de R$24,90:
+
+| | Web (Stripe) | App Store |
+|---|---:|---:|
+| Taxa | ~4,4% (3,99% + 0,4% de recorrência) | 15% (Small Business) |
+| Custo por assinante/mês | ~R$ 1,10 | ~R$ 3,74 |
+| Revisão para lançar | nenhuma | 1 a 7 dias, com rejeição provável |
+| Custo fixo anual | zero | US$ 99 |
+
+São **R$ 2,64 por assinante por mês** de diferença, e — mais importante que o
+dinheiro — **zero dependência de aprovação para começar a cobrar**.
+
+**Pix fica para depois, e por um motivo concreto:** na Stripe ele está
+[disponível apenas para empresas convidadas](https://stripe.com/br/payment-method/pix).
+Pix é mais de 40% das transações online no Brasil, então isso é uma perda real
+de conversão — mas não é bloqueio. Cartão recorrente funciona hoje; Pix entra
+quando houver acesso, ou por outro provedor (Mercado Pago, Pagar.me, Asaas) se a
+conversão pedir. **Pix Automático** (recorrência nativa em Pix) está chegando ao
+mercado em 2026 e vale reavaliar então — não vale esperar.
+
+**RevenueCat sai do caminho crítico.** O `CLAUDE.md` o escolheu para resolver
+"Stripe puro não serve para assinatura dentro do app iOS", e isso continua
+verdade — **para o app iOS**, que agora é o último bloco. Para a PWA, Stripe
+Billing direto é menos peça e menos abstração. RevenueCat volta à mesa quando o
+nativo entrar, e hoje ele também cobre web, então dá para unificar depois sem
+refazer.
+
+**E o nativo herda a cobrança da web, em vez de reabri-la.** O padrão é o de
+Netflix e Spotify: assina no site, entra no app. O app da loja não vende nada,
+então a exigência de IAP não se aplica. O custo desse padrão é real e precisa
+ser planejado: na maior parte das jurisdições, a Apple proíbe o app de **linkar
+ou mencionar** a compra externa — a tela de assinatura vira "entre com sua
+conta", sem explicar onde assinar.
+
+### O que é tecnicamente impossível em PWA
+
+Não "pior": inexistente. Nenhum truque de front-end resolve — não há API.
+
+1. **Live Activity / Dynamic Island.** O cronômetro de sono correndo na tela de
+   bloqueio. É a perda mais dolorosa para este produto em particular: "Dormindo
+   há 40 min" visível sem abrir nada é exatamente o que uma mãe quer às 3h.
+2. **Widgets** de tela inicial ou de bloqueio.
+3. **Apple Health / Health Connect.** Nenhuma leitura ou escrita de peso, altura
+   ou sono no repositório de saúde do sistema.
+4. **Siri e Atalhos** — "Ei Siri, registrar mamada". O mesmo para App Actions no
+   Android.
+5. **Web Bluetooth no iOS.** O Safari não implementa. Balança inteligente, berço
+   conectado ou qualquer periférico ficam de fora no iPhone (no Android Chrome
+   funcionam).
+6. **Notificação local agendada.** Sem `Background Sync` e sem execução em
+   segundo plano no iOS, **toda** notificação precisa partir do servidor. Isso
+   não impede o bloco 3.2 — ele já foi desenhado com agendador — mas elimina o
+   lembrete que dispara sem rede.
+7. **Push sem instalar.** Continua exigindo "Adicionar à Tela de Início", que é
+   o R1 inteiro.
+8. **Share Target** — receber conteúdo compartilhado de outros apps no iOS.
+
+Os itens 1, 3 e 5 são os que um dia justificam o nativo sozinhos. Nenhum deles
+justifica atrasar cobrança.
 
 **O que nativo custa — o código é o barato:**
 
@@ -584,33 +656,28 @@ custa nada deixar correndo em paralelo.
 
 ## 7. Cronograma
 
-**A ordem mudou por causa da tese.** Na versão anterior o assistente era o
-último — caro, arriscado, dependente de tom calibrado. Ancorado, ele é barato,
-defensável, construído sobre o motor que já existe, e **é o diferencial**. Ele
-sobe.
+**A ordem mudou duas vezes, e por razões diferentes.** Primeiro a tese subiu o
+assistente de último para primeiro. Agora o canal nativo desce de segundo para
+último: o que não se controla sai do caminho crítico.
 
 | # | Bloco | Trabalho | Relógio | Por que aqui |
 |---|---|---:|---:|---|
-| 1 | Superfície de consulta + assistente ancorado | 2–3 sem | 1–2 sem | É a tese virando produto, sobre o motor que já existe. Nada bloqueia |
-| 2 | Canal nativo (apparatus + build) | 2–3 sem | 1–3 sem | Começa cedo **porque o relógio é de terceiro** e corre em paralelo ao resto |
-| 3 | Assinatura (RevenueCat) | 1,5 sem | 1 sem | O assistente tem custo marginal; sem receita, cada usuária piora a conta |
-| 4 | Refatorar registro (schema-driven) | 1,5 sem | — | Bloqueia o bloco 5 e paga a si mesmo no quinto tipo |
-| 5 | Monitoramento ampliado (14 tipos) | 3–4 sem | — | Cada tipo alarga a superfície de consulta do bloco 1 |
-| 6 | Notificações | 2–3 sem | 1 sem | Depende do nativo (adesão) e dos padrões dela |
-| 7 | Previsões | 2–3 sem | 4+ sem | Precisa de histórico acumulado pelos blocos 1–5 para o backtesting ter o que testar |
+| 0 | Fechar o que está aberto | 1 sem | DNS | Semeador, SMTP (§11.2), projeto antigo, tela do assistente |
+| 1 | **Cobrança por Stripe** | 1 sem | — | O assistente tem custo marginal; cada dia grátis no ar é dinheiro saindo |
+| 2 | Refatorar registro (schema-driven) | 1,5 sem | — | Bloqueia o bloco 3 e paga a si mesmo no quinto tipo |
+| 3 | Monitoramento ampliado (14 tipos) | 3–4 sem | — | Cada tipo alarga a superfície de consulta do assistente |
+| 4 | Notificações (Web Push) | 2–3 sem | 1 sem | Funciona em PWA instalada; o agendador é o mesmo que o nativo usaria |
+| 5 | Previsões | 2–3 sem | 4+ sem | Precisa do histórico acumulado pelos blocos 2–3 para o backtesting ter o que testar |
+| 6 | **Canal nativo** | 2–3 sem | 1–3 sem | Último, e em paralelo a mães já usando e já pagando |
 
-**Soma: 15–20 semanas de trabalho.** Com o relógio sobreposto, **4 a 6 meses**
-até a v1 completa, sozinho e em ritmo sustentável.
+**PWA completa e cobrando: ~12 semanas.** Cobrando a partir da **semana 2**.
 
-**O caminho curto mudou, e melhorou.** Antes, 8 semanas entregavam paridade com
-o concorrente. Agora, **os blocos 1 + 2 + 3 entregam em ~7 semanas um app nativo
-com o assistente ancorado** — que não é paridade, é o diferencial no ar. Com 6
-tipos de registro em vez de 20, mas 6 tipos que já cobrem mamada, sono, fralda,
-humor e sintoma: exatamente as perguntas que uma mãe de recém-nascido faz.
+O nativo soma 2–3 semanas de trabalho depois disso, mas o relógio dele deixa de
+importar — ninguém fica esperando.
 
-Recomendo esse caminho. Os 14 tipos são importantes, mas são **paridade** — e
-paridade lança melhor sobre uma base que já tem usuárias pagando pelo que só a
-Ninna faz.
+**Uma consequência de calendário que vale explicitar:** a conta Apple custa
+US$99/ano e o relógio começa na compra, não no uso. Abri-la três meses antes do
+bloco 6 desperdiça um quarto dela. Comprar quando o bloco 6 começar.
 
 **Três avisos que continuam valendo:** o bloco 7 tem relógio irredutível
 (backtesting precisa de semanas de dado real); a velocidade do beta não se
@@ -676,10 +743,11 @@ Se ela continuar, três coisas mudam já:
 
 ## 10. O que eu recomendo
 
-1. **Blocos 1, 2 e 3 — assistente ancorado, canal nativo, assinatura.** ~7
-   semanas até o diferencial no ar, cobrando. É a versão que eu levaria à loja;
-2. **Abra a conta da Apple esta semana**, independentemente de tudo. Relógio
-   puro, custo zero de deixar correndo;
+1. **Fechar o aberto e cobrar pela PWA.** ~2 semanas até o assistente no ar com
+   assinatura por Stripe, sem depender de aprovação de ninguém;
+2. **NÃO abra a conta da Apple ainda.** A recomendação anterior era o contrário,
+   e estava errada: US$99/ano começam a contar na compra, e o bloco nativo é o
+   último. Abrir agora desperdiça um quarto da anuidade esperando;
 3. **Desenho B do assistente** (motor responde, `copyInsight.ts` narra, modelo só
    interpreta a pergunta). É o que faz o plano anual fechar — e permite usar o
    modelo mais capaz por menos do que o mais barato custava no chat aberto;
