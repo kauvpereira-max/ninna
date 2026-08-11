@@ -40,10 +40,33 @@ export function useHistorico(
   janelaDias: number | null = null
 ) {
   const [grupos, setGrupos] = useState<GrupoDoDia[]>([]);
-  const [carregando, setCarregando] = useState(true);
+  const [carregandoRequisicao, setCarregandoRequisicao] = useState(true);
   const [carregandoMais, setCarregandoMais] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [temMais, setTemMais] = useState(false);
+
+  /**
+   * O QUE ESTÁ NA TELA CORRESPONDE AO QUE FOI PEDIDO?
+   *
+   * `carregandoRequisicao` sozinho não responde isso, e o buraco é de um render.
+   * A tela chama este hook antes de existir bebê ativo; sem bebê, `carregar` põe
+   * a lista em `[]` e desliga o carregando — corretamente, não há o que buscar.
+   * Quando o bebê chega, o efeito de foco só roda DEPOIS do render, e nesse
+   * render `carregando` já é `false` com a lista ainda vazia.
+   *
+   * A Rotina então afirma "Nada por aqui ainda" por uma fração de segundo. Para
+   * uma mãe às 3h da manhã isso pisca como se os registros tivessem sumido — a
+   * tela diz uma coisa antes de saber, que é o mesmo erro de classe do botão que
+   * fica "Confirmando" sem ter confirmado nada.
+   *
+   * A chave é o que corrige: enquanto a lista na tela for de OUTRO pedido —
+   * outro bebê, outro filtro, outra janela —, o estado é carregando, não vazio.
+   * Isso vale de graça para a troca de filtro também, onde o mesmo buraco existe
+   * quando a lista anterior estava vazia.
+   */
+  const chavePedida = `${babyId ?? ''}|${tipo ?? ''}|${janelaDias ?? ''}`;
+  const [chaveCarregada, setChaveCarregada] = useState<string | null>(null);
+  const carregando = carregandoRequisicao || chaveCarregada !== chavePedida;
 
   const cursor = useRef<CursorRegistro | null>(null);
   // Mesmo cuidado do BabyContext: resposta de um bebê que já não é o atual é
@@ -66,12 +89,13 @@ export function useHistorico(
         setGrupos([]);
         setErro(null);
         setTemMais(false);
-        setCarregando(false);
+        setCarregandoRequisicao(false);
+        setChaveCarregada(chavePedida);
         return;
       }
 
       if (continuando) setCarregandoMais(true);
-      else setCarregando(true);
+      else setCarregandoRequisicao(true);
 
       const { data, error } = await listarRegistros(babyId, {
         desde: janela(),
@@ -89,10 +113,13 @@ export function useHistorico(
         agrupar(continuando ? [...achatar(anteriores), ...data.registros] : data.registros)
       );
 
-      setCarregando(false);
+      // Depois de `setGrupos`: é esta linha que autoriza a tela a dizer "vazio",
+      // e ela só pode dizer isso sobre uma lista que corresponde ao pedido.
+      setChaveCarregada(chavePedida);
+      setCarregandoRequisicao(false);
       setCarregandoMais(false);
     },
-    [babyId, janela, tipo]
+    [babyId, janela, tipo, chavePedida]
   );
 
   // Recarrega do zero a cada foco — e também quando `tipo` muda, porque `carregar`
