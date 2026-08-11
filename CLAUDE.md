@@ -41,9 +41,10 @@ e o piloto deixou de ser validação de demanda.
 Ordem atual, resumida: PWA inteira primeiro, canal nativo por último. Cobrança
 por Stripe direto na web — sem taxa de loja e sem revisão.
 
-## Três regras que emergiram, e valem para qualquer sessão
+## As regras que emergiram, e valem para qualquer sessão
 
-Cada uma custou um incidente real. Estão aqui para não custar de novo.
+Cada uma custou um incidente real. Estão aqui para não custar de novo. A 2b é
+irmã da 2 — mesma família, ângulo diferente — e por isso não virou nº 4.
 
 ### 1. Configuração de painel se confere pelo servidor, nunca pela tela
 
@@ -79,6 +80,34 @@ Duas consequências práticas, e as duas já estão no código:
   `DEVE_PASSAR`);
 - **toda asserção sobre conteúdo confirma primeiro que houve conteúdo**
   (`respondeuDeVerdade` no `teste-assistente.mjs`).
+
+### 2b. A variante: rigor no runtime errado não é cobertura
+
+Um teste pode ser rigoroso, falhar de verdade quando o código quebra, e ainda
+assim ser **estruturalmente cego** para a falha que chega — porque roda no lugar
+errado.
+
+O `teste-assistente.mjs` prova modelo, ancoragem e barreira de saúde com rigor.
+Ele roda no Node, e **Node não faz preflight de CORS**. As funções `assinatura` e
+`assistente` começavam com `if (req.method !== 'POST') return 405`, então
+reprovavam o `OPTIONS` e o navegador cancelava o POST antes de enviá-lo. Do lado
+da mãe: "não consegui abrir a tela de pagamento". Do lado do log: nenhum erro da
+Stripe, porque o corpo da função nunca rodou — só `OPTIONS → 405` e nenhum POST.
+
+Duas perguntas, então, e não uma:
+
+1. este teste falha quando o código quebra? (regra 2)
+2. este teste roda onde a falha mora?
+
+O que a nº 2 cobre e a nº 1 não: CORS, service worker, `expo export` vs Metro,
+iOS instalado vs aba do Safari, Deno vs Node. `expo export --platform web` já
+está na lista de fechamento de bloco por essa razão — é o único que exercita o
+empacotamento real.
+
+Para as funções, a prova mora em `curl` contra o que está no ar, **com controle**:
+preflight de origem conhecida volta 204 **com** `Allow-Origin`, e de origem
+desconhecida volta 204 **sem** ele. Sem o segundo caso, `*` passaria pelo
+primeiro e a lista de origens não estaria provada.
 
 ### 3. Push a cada bloco fechado, não acumulado
 
