@@ -2,160 +2,279 @@
 
 # Ninna — contexto do projeto
 
-App de acompanhamento de rotina de bebê pra mães de primeira viagem, com motor de
-personalização (calcula padrão de sono/mamada por bebê específico, não médias
-genéricas). Concorrente de referência: Blumy.
+App de acompanhamento de rotina de bebê para mães de primeira viagem. Concorrente
+de referência: **Blumy** — PT-BR nativo, R$24,90/mês, 50 mil downloads desde
+10/2025.
 
-## ⚠️ O projeto está em beta fechado de 21 dias — leia `BETA.md` primeiro
+## A tese, que é o produto inteiro
 
-`BETA.md` tem **precedência sobre este arquivo** enquanto o beta durar. Ele trava
-o escopo, e o escopo travado é a principal defesa do prazo.
+> **Tudo que a Ninna diz sai dos registros daquele bebê.**
+> A comparação é da Liz com a Liz, nunca da Liz com a média.
 
-Em particular, o que está listado abaixo em "Próximos passos sugeridos" **não é
-mais a fila de trabalho** — os 14 tipos de registro restantes estão explicitamente
-fora do beta. Ideia nova vai pra seção "Depois do beta" do `BETA.md`, não pro
-código.
+O concorrente fala estatística populacional com o nome do bebê colado por cima —
+"bebês nessa idade costumam dormir X". Soa personalizado e não é, e a mãe percebe
+porque o número não bate com a filha dela.
+
+Isso não é uma aspiração: é o que o código faz e o que os testes defendem. Antes
+de escrever qualquer frase que a mãe leia, o teste é sempre o mesmo:
+
+> A frase fala do bebê dela, ou fala de uma média com o nome dela colado?
+
+**A única exceção, e ela é parte da regra, não ressalva:** referência clínica
+**rotulada** é permitida — a curva da OMS tracejada atrás da linha do bebê, como
+na caderneta. Ela é *desenhada, nunca narrada*; sempre atribuída à fonte; a Ninna
+não deriva conclusão dela (nada de percentil em texto, nem *abaixo*, *acima*,
+*esperado*, *adequado*); e vale só onde a referência já faz parte do cuidado
+formal — crescimento e vacina, nunca sono ou mamada. Detalhe em `PRODUTO.md` §0.
+
+## ⚠️ A fonte de escopo é o `PRODUTO.md`, não o `BETA.md`
+
+O beta fechado de 21 dias **acabou como desenho**. O mercado validou a categoria
+e o piloto deixou de ser validação de demanda.
+
+- **`PRODUTO.md`** — fonte de escopo vigente. A fila de trabalho está no §7.
+- **`BETA.md`** — histórico. Perdeu precedência, mas **as regras travadas dele
+  continuam valendo**: tom de voz, copy de saúde, silêncio honesto, e os §11.x
+  como procedimento permanente (rodar `teste-rls-delete.mjs` depois de qualquer
+  mexida em policy, por exemplo).
+
+Ordem atual, resumida: PWA inteira primeiro, canal nativo por último. Cobrança
+por Stripe direto na web — sem taxa de loja e sem revisão.
+
+## Três regras que emergiram, e valem para qualquer sessão
+
+Cada uma custou um incidente real. Estão aqui para não custar de novo.
+
+### 1. Configuração de painel se confere pelo servidor, nunca pela tela
+
+Com as duas caixinhas marcadas no painel do Supabase, o servidor devolveu
+`external.email: false` e `mailer_autoconfirm: false` — nada tinha sido salvo.
+Sair da página sem clicar em **Save** descarta sem avisar. No projeto anterior o
+mesmo item passou batido três vezes.
+
+Antes de dar qualquer configuração de painel como feita:
+
+```
+curl.exe -s "https://<ref>.supabase.co/auth/v1/settings" -H "apikey: <anon>"
+```
+
+Vale para tudo que mora no painel e não no repositório: allow-list de redirect,
+SMTP, secrets (`npx supabase secrets list`), migrations (consulta de conferência).
+
+### 2. Teste que não falha quando o código quebra não é teste
+
+Asserção **negativa** passa vazia quando a premissa some. Aconteceu duas vezes:
+
+- o `teste-copy-telas` varreu 111 trechos achando que varria as telas — o
+  extrator engolia código no ramo do JSX, e a violação real estava dentro do que
+  ele pulava;
+- o `teste-assistente` deu ok em "não avalia gravidade" e "não responde
+  conhecimento geral" enquanto a função devolvia **a frase de erro** nas três
+  perguntas. Nenhum texto proibido aparece numa mensagem de erro.
+
+Duas consequências práticas, e as duas já estão no código:
+
+- **toda varredura se prova antes de varrer** — casos que ela TEM que reprovar e
+  casos que ela não pode confundir (`provarExtrator`, `DEVE_REPROVAR`,
+  `DEVE_PASSAR`);
+- **toda asserção sobre conteúdo confirma primeiro que houve conteúdo**
+  (`respondeuDeVerdade` no `teste-assistente.mjs`).
+
+### 3. Push a cada bloco fechado, não acumulado
+
+Dez commits ficaram parados localmente durante a migração. O sintoma apareceu
+como "a aba nova não apareceu no app" — e o diagnóstico começou pelo lado errado
+(build, cache) porque ninguém suspeita do óbvio.
+
+`git push` faz parte de fechar um bloco, junto com `tsc`, os testes e o
+`expo export`.
 
 ## Onde está a fonte da verdade
 
-- Design system completo: `src/theme/tokens.ts` (cores, tipografia, espaçamento —
-  já traduzido do documento de design em Markdown)
-- Fontes da marca: Fredoka (títulos) e Nunito Sans (corpo), já em `assets/fonts/`
-  como instâncias estáticas (Regular/Medium/SemiBold/Bold)
+- **Design system:** `src/theme/tokens.ts`
+- **Fontes:** Fredoka (títulos) e Nunito Sans (corpo), em `assets/fonts/`
+- **Escopo e cronograma:** `PRODUTO.md`
+- **Procedimentos de banco e painel:** `BETA.md` §11.x
+- **Pacote da embaixadora:** `docs/embaixadora/`
 
 ## Decisões já tomadas — não reabrir sem necessidade
 
-- 20 tipos de registro (não 18 — contagem corrigida): Amamentação, Mamadeira,
+- **20 tipos de registro** (6 prontos, 14 pendentes): Amamentação, Mamadeira,
   Fralda, Sono, Banho, Comida, Hidratação, Extração, Medicação, Vitamina,
   Sintoma, Humor, Peso, Altura, Circunferência, Atividade, Passeio, Leitura,
   Vacina, Habilidade
 - Paleta de vigilância (coral/superfície escura) é EXCLUSIVA do card de
-  monitoramento e alertas — nunca usar em botão comum ou onboarding
-- Ícone da Ninna na tab bar é do MESMO tamanho que os outros itens — nunca
-  botão flutuante elevado com position absolute (bug já corrigido antes)
-- Stripe puro não serve pra assinatura dentro do app iOS — usar RevenueCat
+  monitoramento e alertas — nunca em botão comum ou onboarding
+- A aba Ninna é item **igual aos outros** na tab bar — mesmo tamanho, mesma
+  linha. Nunca botão flutuante elevado com `position: absolute` (bug já
+  corrigido antes)
+- **Cobrança:** Stripe direto na PWA (~4,4%, sem revisão de loja). RevenueCat
+  continua sendo a resposta certa **para venda dentro do app iOS**, que é o
+  último bloco — quando o nativo entrar, ele herda a assinatura da web em vez de
+  reabri-la (padrão Netflix/Spotify)
 - Tom de voz: acolhedor, nunca clínico, nunca compara bebês, nunca usa culpa
 
 ## Status atual
 
-Setup + navegação prontos. Autenticação por e-mail/senha completa e testada.
+**Em produção:** `ninna-sigma.vercel.app`, PWA instalável, falando com o projeto
+Supabase `hzjcimgutccsfrxuuhrl` em **sa-east-1 (São Paulo)**.
 
-Schema SQL em `supabase/migrations/001_schema_inicial.sql`: 5 tabelas de
-registro (feeding_records — cobre amamentação E mamadeira via coluna `type` —,
-sleep_records, diaper_records, mood_records, symptom_records) + babies +
-baby_patterns (ainda vazio; motor de personalização é fase futura). RLS em
-todas as tabelas — acesso restrito ao dono via join com babies.
+### O motor e a copy — o núcleo da tese
 
-**Cadastro do bebê pronto.** O app já escreve na tabela `babies`:
+- `src/lib/padroes.ts` — três métricas sobre *este* bebê: intervalo entre
+  mamadas, duração e horário médio da soneca. Média **circular** (23h e 1h dão
+  0h, não meio-dia), soneca separada de noite (início entre 19h e 6h = noite), e
+  hora local sempre, com fuso por parâmetro. Três estados de confiança:
+  `suficiente`, `insuficiente` e `nao_se_aplica` — este último é métrica que a
+  conta acerta e que **não descreve nada** (sonecas às 9h, 13h e 16h30 têm média
+  em meio-dia e meia, hora em que o bebê não dorme). Ela sai de cena em silêncio,
+  sem virar frase de aprendizado.
+- `src/lib/copyInsight.ts` — número vira frase. Cobre o card **e** as respostas
+  do assistente (recall, contagem, comparação). Sem adjetivo avaliativo, sem
+  gênero, sem linguagem de painel. A faixa de confiança muda o *hedge*, não o
+  conteúdo.
 
-- `app/(onboarding)/cadastro-bebe.tsx` — nome, nascimento, sexo (opcional),
-  prematuridade + semanas, peso/altura ao nascer (opcionais)
-- `src/contexts/BabyContext.tsx` — bebê ativo, carga por sessão, cadastro;
-  fica DENTRO do AuthProvider e limpa o estado no logout
-- `src/lib/babies.ts`, `src/lib/idade.ts`, `src/types/database.ts`,
-  `src/components/ChipGroup.tsx`
-- `app/(tabs)/index.tsx` lê o bebê real (nome, idade, idade corrigida)
+### O assistente ancorado
 
-Roteamento em 3 vias no `app/_layout.tsx`: sem sessão → `(auth)`; com sessão e
-sem bebê → `(onboarding)`; com os dois → `(tabs)`.
+Não é chat sobre bebês: é **linguagem natural sobre os registros dela**. A
+pergunta vira consulta; o motor devolve número; a frase sai do `copyInsight.ts`.
+O modelo faz **uma** coisa — escolher a consulta.
 
-Verificado: `tsc --noEmit` e `npx expo export --platform web` passam. O insert
-com RLS manda `user_id` explícito, que a policy `with check` de `babies` exige.
+- `src/lib/consultas.ts` — a superfície: 7 consultas em 6 famílias, cada uma
+  declarando no manifesto `SUPERFICIE` o que responde, o que exige e o que faz
+  sem dado. `interpretar()` é a fronteira: o que não couber exatamente na união
+  de tipos não vira consulta. `gramaticaParaModelo()` gera prompt e schema daqui,
+  para gramática e superfície não divergirem.
+- `src/lib/ancoragem.ts` — prova que a frase não inventou magnitude: gera as
+  formas em que cada número pode aparecer escrito, remove todas do texto, e
+  reprova se sobrar algarismo ou palavra de número. Valida **magnitude, não
+  rótulo**.
+- `supabase/functions/assistente/index.ts` — Edge Function. A chave da API mora
+  lá, nunca no bundle; os registros são lidos com o **JWT dela**, então a RLS
+  vale dentro da função; e o teto diário é escrito com `service_role`, sem policy
+  de insert, para o cliente não zerar o próprio contador.
+- `app/(tabs)/ninna.tsx` — a tela. A conversa **não é guardada**, e isso é
+  arquitetura: o servidor manda ao modelo só a pergunta, nunca o histórico.
 
-**6 registros centrais prontos** (Amamentar, Mamadeira, Fralda, Sono, Humor,
-Sintoma):
+**A barreira de saúde é estrutural, não exortativa.** "38,5 e não mama, o que eu
+faço?" não vira consulta porque **não existe** `avaliarGravidade()`. A pergunta
+cai em `fora_de_escopo` e recebe texto fixo. Verificado ponta a ponta contra o
+modelo real, e o `teste-assistente.mjs` confere isso a cada rodada.
 
-- `app/registro/[tipo].tsx` — rota única com os 4 formulários, apresentada como
-  modal (`presentation: 'modal'` no Stack raiz). Registrar é ação de segundos:
-  entra por cima da Home e sai no gesto de arrastar pra baixo
-- `src/lib/registros.ts` — escrita nas 5 tabelas + `listarRegistrosRecentes`,
-  que normaliza feeding/sleep/diaper/mood/symptom numa lista só. Sem `user_id`
-  no insert: nessas tabelas a RLS é `for all using (...)` via join com `babies`.
-  Também guarda o vocabulário fechado (`HUMORES`, `MOTIVOS_HUMOR`, `SINTOMAS`,
-  `INTENSIDADES`): a mãe toca rótulo PT-BR, o banco recebe slug
-- `src/lib/horario.ts` — máscara `HH:MM` e formatação de duração/momento
-- `src/hooks/useRegistrosRecentes.ts` — `useFocusEffect` recarrega a lista
-  quando o modal fecha (é o que faz o registro aparecer na Home)
-- `src/hooks/useAgoraTick.ts` — relógio local de 30s, criado só quando há sono
-  aberto; é o que faz "Dormindo há 40 min" andar sem recarregar a lista
-- Sono grava em andamento (`ended_at` null) e a Home oferece "Encerrar";
-  `iniciarSono` recusa abrir um segundo sono com outro ainda correndo
-- Home limitada a 480px de largura, centralizada, com os 6 atalhos em grid de
-  3 por linha (`flexWrap`) — sem isso a web esticava tudo de ponta a ponta
+Modelo: `claude-opus-5`, `effort: low`, pensamento ligado. `fallbacks` **não** é
+usado de propósito — recusa aqui é o desfecho desejado, e rotear para outro
+modelo seria procurar quem responda o que a Ninna decidiu não responder.
 
-**Seletor de bebê pronto**, com o bebê ativo persistido:
+### Os 6 registros, o seletor de bebê e a autenticação
 
-- `app/bebes/index.tsx` — lista da conta (avatar, nome, idade), ativo marcado,
-  e "Cadastrar outro bebê" no fim. Rota modal, mesmo padrão do registro
-- `app/bebes/novo.tsx` — reusa `(onboarding)/cadastro-bebe` via prop
-  `contexto="adicional"`. Precisa estar FORA do grupo `(onboarding)`: o
-  RootNavigator devolve pras tabs quem entra lá já tendo bebê ativo
-- O header da Home só vira tocável a partir de 2 bebês — com um só não há
-  chevron nem alvo de toque
-- `src/lib/preferencias.ts` — AsyncStorage do bebê ativo (`ninna.bebeAtivo`).
-  Nenhuma função joga exceção: preferência é conforto, não derruba tela
-- `BabyContext` resolve lista e preferência no mesmo `Promise.all` e só larga
-  `loading` depois das duas — a mãe não pode ver o nome de um filho piscar e
-  trocar pelo do outro. Id salvo que não existe mais cai no `data[0]` e a
-  chave é limpa, sem erro na tela. `signOut` limpa a chave
+- `app/registro/[tipo].tsx` — rota única, modal. Registrar é ação de segundos
+- `src/lib/registros.ts` — escrita nas 5 tabelas, listagem normalizada, e o
+  vocabulário fechado (`HUMORES`, `MOTIVOS_HUMOR`, `SINTOMAS`, `INTENSIDADES`):
+  a mãe toca rótulo PT-BR, o banco recebe slug
+- `app/bebes/` — seletor com bebê ativo persistido em AsyncStorage
+- `(auth)` completo, incluindo reset de senha
+- Roteamento em 3 vias no `app/_layout.tsx`: sem sessão → `(auth)`; com sessão e
+  sem bebê → `(onboarding)`; com os dois → `(tabs)`
 
-## Convenções que nasceram nessa fase
+### Banco
 
-- Data de nascimento é campo com máscara `DD/MM/AAAA`, não date picker nativo —
-  `@react-native-community/datetimepicker` quebraria o `expo export --platform
-  web`, que é como o projeto valida build
-- `sex` é nullable: nunca usar artigo de gênero em texto sobre o bebê
-  ("a rotina de Liz", nunca "d{a/o} Liz")
-- `src/types/database.ts` é escrito à mão (CLI do Supabase não configurado) —
-  ao mexer numa migration, atualizar o tipo junto
-- Horário também é máscara (`HH:MM`), mesma razão da data. Hora que ainda não
-  chegou é lida como ontem — a mãe registra a mamada das 23:50 às 00:10
-- **Rótulo de estado do bebê é SUBSTANTIVO, nunca adjetivo flexionado**:
-  "Agitação", nunca "agitado(a)"; "Incômodo", nunca "irritada". Mesma raiz da
-  regra do `sex` nullable — o app não sabe o gênero e não deve escolher um.
-  Vale pra humor e pra qualquer estado futuro (fome, dor, disposição)
+Três migrations, todas aplicadas e conferidas no projeto de São Paulo:
+
+- `001` — 7 tabelas com RLS
+- `002` — cascata de exclusão. **8 chaves** em `CASCADE` (as 7 dela mais a da
+  `003`). É o que faz a promessa de exclusão do termo LGPD ser executável
+- `003` — `assistant_usage`, o teto diário do assistente
+
+## Os testes, e o que cada um defende
+
+Todos puros, rodando no Node sem banco — exceto os três últimos:
+
+- `teste-padroes.ts` — o motor, incluindo 3 mutações que **têm** que quebrar
+- `teste-copy-insight.ts` — toda frase possível do card contra 9 proibições
+- `teste-copy-telas.ts` — varredura de **gênero** em toda a copy do app
+- `teste-linguagem-media.ts` — varredura da **tese**: conteúdo populacional e
+  julgamento sobre referência. É o risco N8, a deriva
+- `teste-consultas.ts` — superfície, ancoragem, narração e gramática
+- `teste-horario.ts`, `teste-paginacao.ts`
+- `teste-rls-delete.mjs` — contra o banco real. Prova que A não apaga registro de
+  B. **Obrigatório depois de qualquer mexida em policy**
+- `teste-motor-banco.ts` — o motor contra a massa semeada
+- `teste-assistente.mjs` — ponta a ponta contra a Edge Function e o modelo.
+  **Custa dinheiro** (3 chamadas por rodada) e escreve em produção
+
+`scripts/varredura.ts` é o extrator compartilhado das duas varreduras de copy —
+duas cópias divergiriam na primeira correção que só uma recebesse.
+
+## Convenções que valem para escrever código aqui
+
+- **Módulo puro roda em três lugares**: app, Node dos testes e Deno da Edge
+  Function. Por isso `consultas.ts` declara a união de tipos por conta própria em
+  vez de importar de `registros.ts` — o empacotador do Supabase segue
+  `import type` **antes** de apagá-lo, e subiu o `registros.ts` inteiro (com
+  Supabase e AsyncStorage) para produção, com aviso em vez de erro. A trava
+  contra deriva mora em `registros.ts`, que é o lado que pode importar os dois
+- **Import de runtime dentro de `src/lib` leva extensão `.ts`** — Node e Deno
+  exigem; o Metro aceita. `allowImportingTsExtensions` já está ligado
+- Data e horário são **máscara** (`DD/MM/AAAA`, `HH:MM`), não picker nativo — o
+  `@react-native-community/datetimepicker` quebra o `expo export --platform web`,
+  que é como este projeto valida build
+- `sex` é nullable: **nunca** artigo de gênero antes do nome ("a rotina de Liz",
+  jamais "d{a/o} Liz"), nunca pronome sobre o bebê
+- **Rótulo de estado é SUBSTANTIVO, nunca adjetivo flexionado**: "Agitação",
+  nunca "agitado(a)". Mesma raiz da regra do `sex`
 - **Coluna sem check não é convite a texto livre**: `symptom` aceita qualquer
-  string no banco, mas o app só grava slug da lista `SINTOMAS`. Descrição da
-  mãe vai em `notes`, com `symptom = 'other'`. Dado agregável é requisito do
-  motor de personalização — sem isso não dá pra cruzar sintoma com padrão
-- Slug aposentado da lista de chips continua com rótulo em
-  `SINTOMAS_APOSENTADOS` (caso de `irritability`, que virou humor): o banco não
-  é reescrito, então registro antigo tem que seguir legível
+  string no banco, mas o app só grava slug de `SINTOMAS`. Dado agregável é
+  requisito do motor
+- Slug aposentado continua com rótulo em `SINTOMAS_APOSENTADOS` — o banco não é
+  reescrito, e registro antigo tem que seguir legível
+- `src/types/database.ts` é escrito à mão — ao mexer numa migration, atualizar o
+  tipo junto
+- Função de `src/lib` **nunca joga exceção**: erro vira frase pronta para a mãe.
+  A alternativa é tela vermelha às 3h da manhã
+- Largura máxima de 480px, centralizada, em toda tela — sem isso a web estica de
+  ponta a ponta
 
 ## Copy de saúde — regras travadas
 
-Ao salvar QUALQUER sintoma, o app mostra uma linha e devolve a decisão pra mãe.
-Texto atual em `app/registro/[tipo].tsx` (tela de confirmação):
+Ao salvar QUALQUER sintoma, o app mostra uma linha e devolve a decisão para a
+mãe. Texto em `app/registro/[tipo].tsx`:
 
 > Anotado. Se você estiver preocupada com isso, confie no seu instinto e fale
 > com o pediatra — o Ninna acompanha, mas quem examina é ele.
 
-O que essa copy **nunca** faz — vale pra qualquer texto de saúde que venha depois:
+A recusa do assistente, em `src/lib/consultas.ts`, faz a mesma promessa:
+
+> Não consigo te ajudar com isso — eu só sei o que você registrou. Se você
+> estiver preocupada, confie no seu instinto e fala com o pediatra.
+
+**As duas precisam continuar dizendo a mesma coisa.** Divergir entre elas é como
+uma promessa se perde.
+
+O que essa copy **nunca** faz — vale para qualquer texto de saúde futuro:
 
 - Nunca avalia gravidade e nunca sugere urgência ("procure agora", "corra")
 - Nunca lista sinal de alarme, nunca cita temperatura, número ou faixa
 - Nunca diz "provavelmente não é nada" nem "isso é normal"
 - Não diagnostica, não tranquiliza e não alarma: registra, e quem decide é a mãe
 
-## Próximos passos sugeridos
+## Próximos passos
 
-1. Motor de personalização (Edge Function calculando baby_patterns) — é o que
-   troca o texto placeholder do card "A ROTINA DE {NOME}" por padrão de verdade
-2. Os 14 tipos de registro restantes — a partir daí `registro/[tipo].tsx`
-   pede quebra por tipo, a cadeia condicional não escala até 20
-3. Editar e apagar registro (hoje só dá pra criar, e encerrar sono)
+**A fila está no `PRODUTO.md` §7.** Em resumo: cobrança por Stripe → painel de
+afiliadas → refatorar registro (schema-driven) → os 14 tipos → notificações →
+previsões → canal nativo.
 
 ## Dívidas conhecidas
 
-- `typography.caption` em `tokens.ts` pede Medium (500), mas
-  `NunitoSans-Medium.ttf` não está em `assets/fonts/` — está em Regular como
-  paliativo. Corrigir de verdade = adicionar o arquivo da fonte.
+- **§11.2 / D3b — o e-mail.** Domínio `ninnaappbr.com.br` pedido no registro.br,
+  aguardando pagamento; Resend sem domínio; SMTP não configurado. É o único item
+  com relógio de terceiro, e o risco R2 (reset de senha em spam) segue aberto
+- `typography.caption` pede Medium (500), mas `NunitoSans-Medium.ttf` não está em
+  `assets/fonts/` — está em Regular como paliativo
 - `tokens.ts` cita `src/theme/fonts.ts`, que não existe (fontes carregam no
   `app/_layout.tsx`)
-- ~~Escritas nunca exercitadas contra o Supabase real~~ — **resolvido**.
-  Amamentação, mamadeira, fralda e sono foram salvos e voltaram na lista, e o
-  botão Encerrar fechou um sono aberto. Isso cobre os três caminhos de RLS:
-  `insert` e `select` pelas policies `for all using (...)` via join com
-  `babies`, e `update` (que reaproveita o mesmo `using` como `with check`).
-  Humor e sintoma usam a policy idêntica, então herdam a confirmação —
-  mas ainda não foram salvos de verdade nenhuma vez
+- `registro/[tipo].tsx` e `registros.ts` não escalam até 20 tipos — a refatoração
+  para schema é o bloco 2 do §7, e ela bloqueia os 14 tipos
+- Editar registro ainda não existe (dá para criar, encerrar sono e apagar)
+- Contas de teste vivem no banco de produção: `teste-rls-a/b@ninna-teste.dev`,
+  `teste-assistente@ninna-teste.dev` e o bebê `TESTE-ASSISTENTE`. São
+  reaproveitadas entre rodadas, de propósito
