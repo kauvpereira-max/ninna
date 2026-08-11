@@ -42,6 +42,21 @@ export default function TabsLayout() {
           tabBarIcon: ({ color, size }) => <Ionicons name="list" size={size} color={color} />,
         }}
       />
+      {/* A Ninna entra como item igual aos outros — mesmo tamanho, mesma linha.
+          Nunca botão flutuante elevado com position absolute: já foi corrigido
+          uma vez e continua valendo (CLAUDE.md).
+
+          Terceira posição, e não segunda: entra sem empurrar Rotina de lugar,
+          e continua a um toque. */}
+      <Tabs.Screen
+        name="ninna"
+        options={{
+          title: 'Ninna',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="chatbubble-ellipses" size={size} color={color} />
+          ),
+        }}
+      />
       <Tabs.Screen
         name="mais"
         options={{
