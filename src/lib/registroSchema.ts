@@ -199,6 +199,27 @@ export type CampoSchema =
       digitos: number;
       placeholder: string;
       erroFaixa: string;
+      /**
+       * Casas decimais que a mãe pode digitar. Ausente ou 0 = inteiro puro.
+       *
+       * ------------------------------------------------------------------
+       * POR QUE ISTO EXISTE — o crescimento, e só ele
+       *
+       * Peso é 4,350 kg. Altura é 52,5 cm. Perímetro cefálico é 38,2 cm. Até o
+       * bloco 3 nenhum campo tinha casa decimal, e a máscara da tela fazia
+       * `texto.replace(/\D/g, '')` — todo caractere não dígito descartado,
+       * inclusive a vírgula. Estava certo: minutos e ml são inteiros.
+       *
+       * A alternativa era perguntar em grama e milímetro, o que custa zero de
+       * código e produz "Altura em milímetros: 525" — copy que nenhuma mãe
+       * escreve e que ela teria que converter de cabeça, com o bebê no colo.
+       *
+       * O BANCO CONTINUA INTEIRO. `escala` já fazia essa conversão para o sono
+       * (minutos → segundos); aqui ela faz cm → mm. "52,5" com `escala: 10`
+       * chega como `525`, que é o que a coluna gerada indexa, soma e checa. O
+       * decimal existe na tela e some antes do banco.
+       */
+      decimais?: number;
     })
   | (CampoBase & { entrada: 'texto'; max: number; placeholder: string; linhas: boolean });
 
@@ -409,6 +430,78 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
 };
 
 // ============================================================
+// NÚMERO — a tradução entre o que a mãe digita e o que a coluna guarda
+// ============================================================
+
+/**
+ * O separador decimal é a VÍRGULA, porque o app é PT-BR nativo.
+ *
+ * Na entrada o ponto também é aceito: teclado de iPhone em inglês oferece ponto,
+ * e recusar o que ela acabou de digitar por causa disso seria atrito puro. Na
+ * saída é sempre vírgula — é o que ela escreveria.
+ */
+const SEPARADOR = ',';
+
+type CampoNumero = Extract<CampoSchema, { entrada: 'numero' }>;
+
+/**
+ * Texto da tela → número na unidade do CAMPO (minutos, cm, ml).
+ *
+ * `null` quando não dá para ler. Não lança: função de schema que joga exceção
+ * vira tela vermelha às 3h da manhã.
+ */
+export function numeroDoCampo(texto: string, campo: CampoNumero): number | null {
+  const limpo = texto.trim().replace(',', '.');
+  if (limpo === '' || !/^\d+(\.\d+)?$/.test(limpo)) return null;
+  const valor = Number(limpo);
+  return Number.isFinite(valor) ? valor : null;
+}
+
+/**
+ * Número na unidade do campo → inteiro na unidade da COLUNA.
+ *
+ * O `Math.round` não é zelo: `4,35 * 1000` em ponto flutuante dá
+ * `4350.000000000001`, e isso chegaria ao `dados` como decimal. A coluna gerada
+ * faz `(dados->>'chave')::int`, que recusa isso com erro de cast (22P02) — a
+ * mensagem mais feia que este banco sabe produzir, num caminho que a mãe alcança
+ * digitando um peso perfeitamente normal.
+ *
+ * Para os campos inteiros que já existiam nada muda: `12 * 60` é 720 com ou sem
+ * arredondamento.
+ */
+export function paraAColuna(valorDoCampo: number, campo: CampoNumero): number {
+  return Math.round(valorDoCampo * campo.escala);
+}
+
+/** Inteiro da coluna → texto da tela, com vírgula e as casas que o campo pede. */
+export function textoDoCampo(valorDaColuna: number, campo: CampoNumero): string {
+  const naUnidadeDoCampo = valorDaColuna / campo.escala;
+  if (!campo.decimais) return String(Math.round(naUnidadeDoCampo));
+  return naUnidadeDoCampo.toFixed(campo.decimais).replace('.', SEPARADOR);
+}
+
+/**
+ * A máscara, enquanto ela digita.
+ *
+ * Mora aqui, e não na tela, pela mesma razão que a validação mora aqui: a tela e
+ * a gravação precisam concordar sobre o que é um número válido. Máscara que
+ * aceita o que a validação recusa é campo que reprova o que ele deixou escrever.
+ *
+ * Sem `decimais`, o comportamento é o de antes — só dígitos, cortado no limite.
+ */
+export function mascaraNumero(texto: string, campo: CampoNumero): string {
+  if (!campo.decimais) return texto.replace(/\D/g, '').slice(0, campo.digitos);
+
+  // Um separador só, e o primeiro que ela digitou é o que vale.
+  const normalizado = texto.replace(/\./g, SEPARADOR).replace(/[^\d,]/g, '');
+  const [inteiro, ...resto] = normalizado.split(SEPARADOR);
+  const cortado = inteiro.slice(0, campo.digitos);
+
+  if (resto.length === 0) return cortado;
+  return `${cortado}${SEPARADOR}${resto.join('').slice(0, campo.decimais)}`;
+}
+
+// ============================================================
 // O CAMPO, JÁ RESOLVIDO PELO ESTADO ATUAL
 // ============================================================
 
@@ -463,8 +556,11 @@ export function validarRegistro(
     }
 
     if (campo.entrada === 'numero') {
-      const numero = Number(valor);
-      if (!Number.isFinite(numero) || numero < campo.min || numero > campo.max) {
+      // `numeroDoCampo` e não `Number`: é ela que sabe ler a vírgula, e é a mesma
+      // que a gravação usa. Duas leituras diferentes do mesmo texto aprovariam
+      // aqui um valor que o `linhaParaBanco` não consegue montar.
+      const numero = numeroDoCampo(valor, campo);
+      if (numero === null || numero < campo.min || numero > campo.max) {
         erros[campo.chave] = campo.erroFaixa;
       }
     }
@@ -525,7 +621,15 @@ export function linhaParaBanco(
       continue;
     }
 
-    const pronto = campo.entrada === 'numero' ? Number(valor) * campo.escala : valor;
+    let pronto: string | number = valor;
+    if (campo.entrada === 'numero') {
+      const numero = numeroDoCampo(valor, campo);
+      // Já validado pela tela. Não conseguindo ler, o campo NÃO é escrito — que
+      // é o mesmo destino do campo vazio, e nunca um `NaN` dentro do jsonb.
+      if (numero === null) continue;
+      pronto = paraAColuna(numero, campo);
+    }
+
     if (ehColuna) linha[campo.coluna] = pronto;
     else dados[campo.coluna] = pronto;
   }
@@ -811,9 +915,7 @@ export function valoresDaLinha(
     }
 
     valores[campo.chave] =
-      campo.entrada === 'numero'
-        ? String(Math.round(Number(valor) / campo.escala))
-        : String(valor);
+      campo.entrada === 'numero' ? textoDoCampo(Number(valor), campo) : String(valor);
   }
 
   return valores;

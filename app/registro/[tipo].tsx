@@ -27,6 +27,7 @@ import {
 import {
   SCHEMAS,
   ehTipoRegistro,
+  mascaraNumero,
   resolverCampo,
   validarRegistro,
   type CampoSchema,
@@ -247,11 +248,14 @@ export default function RegistroScreen() {
           key={campo.chave}
           label={campo.rotulo}
           value={valor}
-          onChangeText={(texto) =>
-            definir(campo.chave, texto.replace(/\D/g, '').slice(0, campo.digitos))
-          }
+          // A máscara mora no schema, não aqui: ela e a validação precisam
+          // concordar sobre o que é um número válido. Máscara que aceita o que a
+          // validação recusa é campo que reprova o que ele deixou escrever.
+          onChangeText={(texto) => definir(campo.chave, mascaraNumero(texto, campo))}
           placeholder={campo.placeholder}
-          keyboardType="number-pad"
+          // `decimal-pad` traz o separador; `number-pad` não tem, e num campo com
+          // casas decimais ela não teria como digitar a vírgula.
+          keyboardType={campo.decimais ? 'decimal-pad' : 'number-pad'}
           error={erro}
         />
       );

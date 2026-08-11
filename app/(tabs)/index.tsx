@@ -14,7 +14,7 @@ import { encerrarSono, resumirSonoEmAndamento } from '../../src/lib/registros';
 import { formatarIdade, formatarIdadeCorrigida } from '../../src/lib/idade';
 import { formatarMomento } from '../../src/lib/horario';
 import { ItemRegistro } from '../../src/components/ItemRegistro';
-import { CATEGORIAS } from '../../src/theme/categorias';
+import { CATEGORIAS_DA_HOME } from '../../src/theme/categorias';
 import { colors, spacing, radius, typography, elevation } from '../../src/theme/tokens';
 
 export default function HojeScreen() {
@@ -108,7 +108,7 @@ export default function HojeScreen() {
 
         <Text style={styles.sectionLabel}>REGISTRAR</Text>
         <View style={styles.grid}>
-          {CATEGORIAS.map((c) => (
+          {CATEGORIAS_DA_HOME.map((c) => (
             <Pressable
               key={c.key}
               onPress={() => router.push(`/registro/${c.key}`)}

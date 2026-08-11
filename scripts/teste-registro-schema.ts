@@ -21,11 +21,16 @@ import {
   LADOS,
   MOTIVOS_HUMOR,
   linhaParaBanco,
+  mascaraNumero,
+  numeroDoCampo,
+  paraAColuna,
+  textoDoCampo,
   resolverCampo,
   rotularValor,
   tipoDaLinha,
   validarRegistro,
   valoresDaLinha,
+  type CampoSchema,
   type TipoRegistro,
   type ValoresRegistro,
 } from '../src/lib/registroSchema.ts';
@@ -607,6 +612,147 @@ checar(
 checar(
   'a hora vem de fora, do instante do registro',
   valoresDaLinha('fralda', linhaDoBanco({ content: 'pee' }), '05:40').hora === '05:40'
+);
+
+console.log('\n— o campo decimal, que o crescimento vai usar —\n');
+
+/**
+ * Nenhum tipo declara `decimais` ainda — Peso, Altura e Circunferência chegam no
+ * bloco 3. Os campos aqui são sintéticos de propósito: a máquina do decimal
+ * precisa estar provada ANTES de o primeiro tipo depender dela, senão o teste
+ * dela nasce junto com o bug dela.
+ */
+const ALTURA: CampoSchema = {
+  entrada: 'numero',
+  chave: 'altura',
+  coluna: 'altura_mm',
+  rotulo: 'Altura (cm)',
+  obrigatorio: true,
+  min: 20,
+  max: 120,
+  // cm na tela, milímetro na coluna: inteiro, indexável e checável.
+  escala: 10,
+  decimais: 1,
+  digitos: 3,
+  placeholder: 'ex.: 52,5',
+  erroFaixa: 'Altura em cm, de 20 a 120.',
+};
+
+const PESO: CampoSchema = {
+  ...ALTURA,
+  chave: 'peso',
+  coluna: 'peso_g',
+  rotulo: 'Peso (kg)',
+  min: 0.5,
+  max: 30,
+  // kg na tela, grama na coluna.
+  escala: 1000,
+  decimais: 3,
+  digitos: 2,
+  placeholder: 'ex.: 4,350',
+  erroFaixa: 'Peso em kg, de 0,5 a 30.',
+} as CampoSchema;
+
+const campoNumero = (c: CampoSchema) => c as Extract<CampoSchema, { entrada: 'numero' }>;
+
+checar('a vírgula é lida', numeroDoCampo('52,5', campoNumero(ALTURA)) === 52.5);
+checar(
+  'e o ponto também, porque o teclado em inglês oferece ponto',
+  numeroDoCampo('52.5', campoNumero(ALTURA)) === 52.5
+);
+checar('texto que não é número devolve null', numeroDoCampo('ab', campoNumero(ALTURA)) === null);
+checar('vazio devolve null, não zero', numeroDoCampo('', campoNumero(ALTURA)) === null);
+checar(
+  'e nada de exceção: função de schema que joga vira tela vermelha às 3h',
+  numeroDoCampo('52,,5', campoNumero(ALTURA)) === null
+);
+
+/**
+ * A ASSERÇÃO QUE CARREGA O PESO desta seção.
+ *
+ * `1.005 * 1000` em ponto flutuante dá `1004.9999999999999`. Sem arredondar,
+ * esse número entra no `dados`, e a coluna gerada faz `(dados->>'peso_g')::int`
+ * — que recusa com erro de cast, a mensagem mais feia que este banco sabe
+ * produzir, num caminho que a mãe alcança digitando um peso normal.
+ *
+ * O valor não é escolhido a esmo: varrendo a faixa do campo, **360 pesos em
+ * grama entre 0,5 kg e 30 kg** produzem esse erro. Não é um caso de borda
+ * exótico, é 1 em 80 — e 1,005 kg é peso de prematuro, exatamente a mãe que mais
+ * pesa o bebê.
+ *
+ * O laço abaixo é o controle, e ele é o que torna a asserção honesta: sem
+ * mostrar que a multiplicação crua REALMENTE erra, a asserção passaria também
+ * num mundo onde o problema não existe, e ninguém saberia por que o `Math.round`
+ * está ali. O primeiro valor que eu tinha escolhido à mão (`4,35`) multiplica
+ * exato — o teste teria "provado" um problema inexistente.
+ */
+const quebramNaMultiplicacao: number[] = [];
+for (let g = 500; g <= 30_000; g++) {
+  if (!Number.isInteger((g / 1000) * 1000)) quebramNaMultiplicacao.push(g);
+}
+
+checar(
+  'kg com três casas vira grama inteiro',
+  paraAColuna(1.005, campoNumero(PESO)) === 1005,
+  `${paraAColuna(1.005, campoNumero(PESO))}`
+);
+checar(
+  'e o controle: a multiplicação crua erra em pesos reais',
+  quebramNaMultiplicacao.length > 0 && !Number.isInteger(1.005 * 1000),
+  `${quebramNaMultiplicacao.length} pesos entre 0,5 e 30 kg erram — ` +
+    `1,005 vira ${1.005 * 1000}, e é isso que iria para o jsonb`
+);
+checar(
+  'e nenhum deles sobrevive ao paraAColuna',
+  quebramNaMultiplicacao.every((g) => paraAColuna(g / 1000, campoNumero(PESO)) === g),
+  'a varredura inteira, não uma amostra'
+);
+checar(
+  'campo inteiro não muda de comportamento',
+  paraAColuna(12, campoNumero(SCHEMAS.amamentar.campos[2])) === 720,
+  '12 minutos continuam sendo 720 segundos'
+);
+
+checar('milímetro volta como cm com vírgula', textoDoCampo(525, campoNumero(ALTURA)) === '52,5');
+checar('grama volta como kg', textoDoCampo(4350, campoNumero(PESO)) === '4,350');
+checar(
+  'campo sem decimais volta inteiro, como antes',
+  textoDoCampo(720, campoNumero(SCHEMAS.amamentar.campos[2])) === '12'
+);
+
+console.log('\n— e a máscara aceita exatamente o que a validação aprova —\n');
+
+checar('a máscara deixa digitar a vírgula', mascaraNumero('52,5', campoNumero(ALTURA)) === '52,5');
+checar('o ponto vira vírgula na hora', mascaraNumero('52.5', campoNumero(ALTURA)) === '52,5');
+checar(
+  'a segunda vírgula não trava o campo — o corte por casas continua valendo',
+  mascaraNumero('52,5,7', campoNumero(ALTURA)) === '52,5',
+  'o que veio depois da primeira vírgula é decimal, e o campo tem uma casa'
+);
+checar(
+  'as casas decimais são cortadas no limite do campo',
+  mascaraNumero('52,567', campoNumero(ALTURA)) === '52,5'
+);
+checar('letra não entra', mascaraNumero('52a,5', campoNumero(ALTURA)) === '52,5');
+checar(
+  'campo sem decimais continua recusando a vírgula',
+  mascaraNumero('12,5', campoNumero(SCHEMAS.amamentar.campos[2])) === '125'
+);
+
+/**
+ * O par que evita o pior estado possível de um formulário: a máscara deixa
+ * escrever e a validação reprova. A mãe vê o campo aceitar o que ela digitou e
+ * ser recusado por isso, sem entender qual das duas coisas está errada.
+ */
+const comAltura: Record<string, CampoSchema[]> = { fake: [ALTURA] };
+void comAltura;
+checar(
+  'o que a máscara produz, a leitura entende',
+  numeroDoCampo(mascaraNumero('52,567', campoNumero(ALTURA)), campoNumero(ALTURA)) === 52.5
+);
+checar(
+  'e o ida-e-volta do decimal fecha',
+  textoDoCampo(paraAColuna(52.5, campoNumero(ALTURA)), campoNumero(ALTURA)) === '52,5'
 );
 
 console.log('\n— e o horário editado fica no dia do registro —\n');

@@ -23,6 +23,27 @@ custos e riscos muito diferentes, e o §3.4 os trata como um.
 
 ---
 
+## ✅ Os cinco pré-requisitos — feitos em 11/08/2026
+
+As cinco decisões foram tomadas e os cinco itens estão no código. O que mudou em
+relação ao que está escrito abaixo:
+
+| # | O que ficou |
+|---|---|
+| 1 | O gerador emite `supabase/restricoes/registros.sql` — idempotente, `drop constraint if exists` + `add constraint`. A `005` está congelada como história, e o teste passou a defender as duas com naturezas opostas |
+| 2 | `CATEGORIA_POR_TIPO` virou literal exaustivo. Tipo novo sem cor e sem ícone **não compila** |
+| 3 | O gerador **falha alto** na colisão de coluna gerada, com os dois tipos nomeados na mensagem. Provado nos dois sentidos: reprova faixas diferentes, e não reprova compartilhamento legítimo |
+| 4 | `decimais` no campo numérico, com máscara, leitura e escrita no schema. `paraAColuna` arredonda — **360 pesos entre 0,5 e 30 kg** erram na multiplicação crua |
+| 5 | `ATALHOS_DA_HOME` separado de `TODOS_OS_TIPOS`. Seleção fixa, como decidido: mãe cansada precisa que o botão esteja onde estava ontem |
+
+A tela "Mais tipos" ainda não existe — ela nasce quando houver tipo fora dos
+atalhos, para não nascer vazia.
+
+O texto abaixo é o diagnóstico original, mantido porque é ele que explica **por
+que** cada item existe.
+
+---
+
 ## Os cinco pré-requisitos, e por que eles vêm antes do tipo nº 1
 
 Nenhum é grande. Todos são do tipo que, se ficarem para depois, aparecem no

@@ -1,29 +1,57 @@
 /**
- * Gera o SQL da tabela `registros` A PARTIR do `registroSchema.ts`.
+ * Gera as RESTRIÇÕES da tabela `registros` A PARTIR do `registroSchema.ts`.
+ *
+ *   npx tsx scripts/gerar-registros-sql.ts > supabase/restricoes/registros.sql
  *
  * ------------------------------------------------------------------
  * POR QUE GERADO, E NÃO ESCRITO À MÃO
  *
- * A opção B (tabela de eventos) tem um custo real: o banco perde os `check` de
- * coluna, porque o valor passa a morar dentro de um `jsonb`. A resposta é que o
- * check não se perde — ele vira `check` de tabela, condicionado ao tipo:
+ * A tabela de eventos tem um custo real: o banco perde os `check` de coluna,
+ * porque o valor passa a morar dentro de um `jsonb`. A resposta é que o check
+ * não se perde — ele vira `check` de tabela, condicionado ao tipo:
  *
  *     check (tipo <> 'fralda' or dados->>'content' in ('pee','poop','both'))
  *
- * Testado no Postgres do projeto em 11/08/2026, numa sandbox descartada depois:
- * valor fora do vocabulário é recusado com 23514, campo obrigatório ausente
- * também, e coluna gerada a partir do jsonb aceita `check` de faixa.
+ * Só que isso reintroduziria o problema que o bloco 2 matou: o vocabulário
+ * declarado em DOIS lugares, TypeScript e SQL, divergindo na primeira correção
+ * que só um receber. Por isso o SQL sai daqui, como o `gramaticaParaModelo()`
+ * gera o prompt do assistente a partir da superfície de consulta.
  *
- * Só que isso reintroduz o problema que o bloco 2 acabou de matar: o vocabulário
- * declarado em DOIS lugares — no TypeScript e no SQL — divergindo na primeira
- * correção que só um receber.
+ * ------------------------------------------------------------------
+ * POR QUE ELE DEIXOU DE EMITIR `create table` — 11/08/2026
  *
- * Por isso o SQL é gerado daqui, como o `gramaticaParaModelo()` gera o prompt do
- * assistente a partir da superfície de consulta. O `teste-registros-sql.ts`
- * confere que a migration no repositório é exatamente o que este gerador produz
- * hoje — mexer no vocabulário sem regerar quebra o teste.
+ * Ele emitia a `005` inteira, e isso funcionou exatamente uma vez.
  *
- *   npx tsx scripts/gerar-registros-sql.ts > supabase/migrations/005_registros.sql
+ * A `005` já foi aplicada. Somar um tipo muda o `check (tipo in (…))` e
+ * acrescenta os checks de vocabulário dele — e aí o arquivo gerado passa a ser
+ * um `create table` de uma tabela que existe. Não há caminho do arquivo novo até
+ * o banco, e o teste reprova sem ter o que oferecer como conserto.
+ *
+ * Migration que só sabe criar do zero serve uma vez. Então este gerador passou a
+ * emitir o ESTADO DESEJADO das restrições, de forma idempotente:
+ *
+ *     alter table registros drop constraint if exists X;
+ *     alter table registros add  constraint X check (…);
+ *
+ * Roda quantas vezes for preciso e sempre leva o banco ao que o `SCHEMAS` diz. A
+ * `005` fica congelada como história — ela criou a tabela, e isso não muda mais.
+ *
+ * O custo aceito: `migrations/` deixa de contar a história das restrições. Quem
+ * quiser saber o vocabulário de hoje lê o arquivo gerado, não a sequência.
+ *
+ * ------------------------------------------------------------------
+ * O QUE ISTO NÃO ALCANÇA, E PRECISA DE MIGRATION À MÃO
+ *
+ * 1. **Mudar a expressão de uma coluna gerada que já existe.** O
+ *    `add column if not exists` pula em silêncio quando a coluna está lá — ele
+ *    não compara a expressão. Trocar a fórmula de `duration_seconds` exige um
+ *    `drop column` + `add column`, que reescreve a tabela e é decisão consciente.
+ *
+ * 2. **Apagar restrição que saiu do schema.** Este arquivo derruba e recria o
+ *    que o schema declara HOJE; uma constraint removida do TypeScript continua
+ *    no banco, invisível. Por isso a conferência do rodapé lista o que existe no
+ *    banco e não foi gerado aqui — leftover não some sozinho, mas para de ser
+ *    silencioso.
  */
 
 import {
@@ -31,14 +59,13 @@ import {
   SCHEMAS,
   TIPOS_REGISTRO,
   type CampoSchema,
-  type TipoRegistro,
+  type SchemaRegistro,
 } from '../src/lib/registroSchema.ts';
 
 // `COLUNAS_REAIS` — o que vira coluna de verdade em vez de chave no `dados` —
 // mora no `registroSchema.ts`, e não aqui. Ela decide duas coisas ao mesmo
 // tempo: o que este gerador transforma em `check`, e onde o `linhaParaBanco`
-// escreve o valor. Duas listas divergiriam na primeira coluna nova, e a
-// divergência apareceria como campo que o app grava e o banco não confere.
+// escreve o valor. Duas listas divergiriam na primeira coluna nova.
 
 const aspas = (valor: string) => `'${valor.replace(/'/g, "''")}'`;
 
@@ -47,8 +74,10 @@ function chaveNoJson(campo: CampoSchema): string | null {
   return campo.coluna;
 }
 
+type Restricao = { nome: string; corpo: string };
+
 /** O vocabulário fechado de um campo de escolha, como `check` condicionado ao tipo. */
-function checkDeVocabulario(tipo: TipoRegistro, campo: CampoSchema): string | null {
+function checkDeVocabulario(tipo: string, campo: CampoSchema): Restricao | null {
   if (campo.entrada !== 'escolha') return null;
   const chave = chaveNoJson(campo);
   if (!chave) return null;
@@ -58,15 +87,14 @@ function checkDeVocabulario(tipo: TipoRegistro, campo: CampoSchema): string | nu
 
   // Campo opcional aceita ausência; o que nenhum dos dois aceita é valor de fora.
   const ausencia = campo.obrigatorio ? '' : `${leitura} is null or `;
-  return (
-    `  constraint vocab_${tipo}_${chave} check (\n` +
-    `    tipo <> ${aspas(tipo)} or ${ausencia}${leitura} in (${valores})\n` +
-    `  )`
-  );
+  return {
+    nome: `vocab_${tipo}_${chave}`,
+    corpo: `tipo <> ${aspas(tipo)} or ${ausencia}${leitura} in (${valores})`,
+  };
 }
 
 /** Campo obrigatório do schema vira exigência de chave presente no `dados`. */
-function checkDeObrigatorio(tipo: TipoRegistro, campo: CampoSchema): string | null {
+function checkDeObrigatorio(tipo: string, campo: CampoSchema): Restricao | null {
   // `quando` deixa o campo obrigatório só em certas combinações — isso é regra de
   // formulário, não invariante da linha, e forçá-la aqui recusaria registro
   // antigo legítimo. Fica com o app, que é quem conhece o contexto.
@@ -74,21 +102,22 @@ function checkDeObrigatorio(tipo: TipoRegistro, campo: CampoSchema): string | nu
   const chave = chaveNoJson(campo);
   if (!chave) return null;
 
-  return (
-    `  constraint exige_${tipo}_${chave} check (\n` +
-    `    tipo <> ${aspas(tipo)} or dados ? ${aspas(chave)}\n` +
-    `  )`
-  );
+  return {
+    nome: `exige_${tipo}_${chave}`,
+    corpo: `tipo <> ${aspas(tipo)} or dados ? ${aspas(chave)}`,
+  };
 }
 
 /**
  * Os campos numéricos viram coluna GERADA, não check dentro do jsonb.
  *
- * Duas razões, e a segunda é a que decide: o check de faixa fica legível, e a
- * coluna passa a ser um inteiro de verdade — indexável, agregável em SQL, e
- * visível para quem abre o SQL Editor às pressas. É o campo que o motor soma.
+ * Duas razões, e a segunda decide: o check de faixa fica legível, e a coluna
+ * passa a ser um inteiro de verdade — indexável, agregável em SQL, e visível
+ * para quem abre o SQL Editor às pressas. É o campo que o motor soma.
  */
-function colunaGerada(campo: CampoSchema): { coluna: string; check: string } | null {
+type ColunaGerada = { chave: string; ddl: string; faixa: Restricao; declaradaPor: string };
+
+function colunaGerada(tipo: string, campo: CampoSchema): ColunaGerada | null {
   if (campo.entrada !== 'numero') return null;
   const chave = chaveNoJson(campo);
   if (!chave) return null;
@@ -96,119 +125,186 @@ function colunaGerada(campo: CampoSchema): { coluna: string; check: string } | n
   const naUnidadeDaColuna = (valor: number) => valor * campo.escala;
 
   return {
-    coluna: `  ${chave} int generated always as ((dados->>${aspas(chave)})::int) stored`,
-    check:
-      `  constraint faixa_${chave} check (\n` +
-      `    ${chave} is null or ${chave} between ${naUnidadeDaColuna(campo.min)} ` +
-      `and ${naUnidadeDaColuna(campo.max)}\n` +
-      `  )`,
+    chave,
+    declaradaPor: tipo,
+    ddl: `${chave} int generated always as ((dados->>${aspas(chave)})::int) stored`,
+    faixa: {
+      nome: `faixa_${chave}`,
+      corpo: `${chave} is null or ${chave} between ${naUnidadeDaColuna(campo.min)} and ${naUnidadeDaColuna(campo.max)}`,
+    },
   };
 }
 
 // ------------------------------------------------------------------
+// Coleta
+// ------------------------------------------------------------------
 
-const geradas = new Map<string, { coluna: string; check: string }>();
-const restricoes: string[] = [];
+export function montarSql(
+  schemas: Record<string, SchemaRegistro>,
+  tipos: string[]
+): string {
+const geradas = new Map<string, ColunaGerada>();
+const restricoes: Restricao[] = [];
 
-for (const tipo of TIPOS_REGISTRO) {
-  for (const campo of SCHEMAS[tipo].campos) {
+for (const tipo of tipos) {
+  for (const campo of schemas[tipo].campos) {
     const vocab = checkDeVocabulario(tipo, campo);
     if (vocab) restricoes.push(vocab);
 
     const exige = checkDeObrigatorio(tipo, campo);
     if (exige) restricoes.push(exige);
 
-    const gerada = colunaGerada(campo);
-    // Mesma chave em tipos diferentes é a mesma coluna — `amount_ml` só existe
-    // na mamadeira hoje, mas `duration_seconds` já nasce compartilhável.
-    if (gerada) geradas.set(gerada.coluna, gerada);
+    const gerada = colunaGerada(tipo, campo);
+    if (!gerada) continue;
+
+    /**
+     * COLISÃO DE COLUNA COMPARTILHADA — falha alto, e este `throw` é novo.
+     *
+     * Mesma chave em tipos diferentes é a MESMA coluna no banco: `amount_ml`
+     * hoje só existe na mamadeira, mas `duration_seconds` já nasceu
+     * compartilhável, e o bloco dos 14 tipos traz Hidratação e Extração, que
+     * também querem ml — com faixas próprias.
+     *
+     * Antes disto, a coleta era um `Map` cuja chave era a DDL da coluna. A DDL
+     * não contém a faixa, então dois tipos com faixas diferentes se
+     * sobrescreviam: **o último iterado vencia, sem aviso**, e qual era o último
+     * dependia da ordem do `TIPOS_REGISTRO`. O banco passaria a recusar um valor
+     * legítimo, ou a aceitar um absurdo, e nada apontaria para cá.
+     *
+     * Não dá para resolver sozinho: unir as faixas perde rigor, e escolher uma
+     * delas é escolher por quem escreve. As saídas são de produto — chaves
+     * distintas (`amount_ml` e `volume_ml`), ou faixa condicionada ao tipo. As
+     * duas exigem decisão, e é por isso que aqui só cabe parar.
+     */
+    const jaExiste = geradas.get(gerada.chave);
+    if (jaExiste && jaExiste.faixa.corpo !== gerada.faixa.corpo) {
+      throw new Error(
+        `Colisão na coluna gerada '${gerada.chave}':\n` +
+          `  ${jaExiste.declaradaPor} declara  ${jaExiste.faixa.corpo}\n` +
+          `  ${gerada.declaradaPor} declara  ${gerada.faixa.corpo}\n\n` +
+          `Mesma chave é a mesma coluna no banco, e uma coluna tem uma faixa só.\n` +
+          `Saídas: usar chaves distintas, ou condicionar a faixa ao tipo.\n` +
+          `Escolher em silêncio seria deixar o banco recusar registro legítimo.`
+      );
+    }
+    if (!jaExiste) geradas.set(gerada.chave, gerada);
   }
 }
 
-const tiposValidos = TIPOS_REGISTRO.map((t) => aspas(t)).join(', ');
-const colunasGeradas = [...geradas.values()];
+const colunas = [...geradas.values()];
+const tiposValidos = tipos.map((t) => aspas(t)).join(', ');
 
-console.log(`-- Ninna — migration 005: a tabela de eventos
+/**
+ * O check do `tipo` ganhou nome. Na `005` ele é inline e sem nome, então o
+ * Postgres o batizou de `registros_tipo_check` — o padrão `<tabela>_<coluna>_check`.
+ * Este arquivo derruba os dois: o nome automático da criação e o nome próprio,
+ * para poder recriá-lo sabendo como ele se chama.
+ */
+const CHECK_DO_TIPO: Restricao = {
+  nome: 'tipo_conhecido',
+  corpo: `tipo in (${tiposValidos})`,
+};
+
+const todas = [CHECK_DO_TIPO, ...colunas.map((c) => c.faixa), ...restricoes];
+
+const alterar = (r: Restricao) =>
+  `alter table registros drop constraint if exists ${r.nome};\n` +
+  `alter table registros add  constraint ${r.nome} check (\n  ${r.corpo}\n);`;
+
+return `-- Ninna — restrições de \`registros\`, geradas do registroSchema.ts
 --
 -- ⚠️ ARQUIVO GERADO. Não edite à mão.
---    npx tsx scripts/gerar-registros-sql.ts > supabase/migrations/005_registros.sql
+--    npx tsx scripts/gerar-registros-sql.ts > supabase/restricoes/registros.sql
 --    O teste-registros-sql.ts reprova se este arquivo divergir do schema.
 --
--- Decisão e alternativas: docs/decisao-tabela-de-registros.md
+-- ------------------------------------------------------------------
+-- É SEGURO RODAR QUANTAS VEZES FOR PRECISO
 --
--- POR QUE UMA TABELA E NÃO DEZENOVE
+-- Cada restrição é derrubada e recriada, e cada coluna gerada entra com
+-- \`if not exists\`. O arquivo descreve o ESTADO DESEJADO, não um passo — rodá-lo
+-- num banco que já está certo não muda nada.
 --
--- Com uma tabela por tipo, esquecer o RLS numa das 19 não quebra nada visível: a
--- tabela fica legível e gravável por qualquer usuária autenticada, e o app da
--- dona funciona igual. Aqui existe uma policy só, e não há como esquecê-la.
+-- É isso que faz somar um tipo de registro ser UMA edição: mexe no
+-- \`registroSchema.ts\`, regera este arquivo, roda no SQL Editor.
 --
--- O QUE SUBSTITUI OS CHECK DE COLUNA
+-- A criação da tabela mora na \`005_registros.sql\`, que está congelada. Ela
+-- aconteceu uma vez e não volta a acontecer.
 --
--- Eles não se perdem: viram check de tabela condicionados ao tipo, e são gerados
--- a partir do mesmo vocabulário que o app usa. O que o Postgres garantia, ele
--- continua garantindo — a diferença é que a regra passou a ter uma origem só.
+-- ------------------------------------------------------------------
+-- ⚠️ DUAS COISAS QUE ELE NÃO FAZ
+--
+-- 1. Não muda a expressão de coluna gerada que já existe: \`add column if not
+--    exists\` pula em silêncio sem comparar a fórmula. Trocar a fórmula é
+--    migration à mão, com \`drop column\`, e reescreve a tabela.
+--
+-- 2. Não apaga restrição que saiu do schema. A conferência do rodapé lista o que
+--    está no banco e não foi gerado aqui — leftover não some sozinho, mas para
+--    de ser invisível.
 
-create table registros (
-  id uuid primary key default gen_random_uuid(),
-  baby_id uuid references babies on delete cascade not null,
+-- ============================================================
+-- COLUNAS GERADAS
+-- ============================================================
+--
+-- O número sai do \`dados\` e vira inteiro de verdade: indexável, somável em SQL,
+-- e com faixa checável. É o campo que o motor lê.
 
-  -- O tipo é coluna de verdade, com check: é por ele que tudo se filtra, e é o
-  -- único campo cuja integridade não pode depender do app.
-  tipo text not null check (tipo in (${tiposValidos})),
+${colunas.map((c) => `alter table registros add column if not exists ${c.ddl};`).join('\n')}
 
-  -- Ancora o registro na linha do tempo. Substitui started_at/recorded_at.
-  ocorrido_em timestamptz not null,
+-- ============================================================
+-- O TIPO
+-- ============================================================
+--
+-- A única coluna cuja integridade não pode depender do app: é por ela que tudo
+-- se filtra. O \`drop\` do nome automático limpa o check inline da 005.
 
-  -- Fim do evento, quando ele tem duração. Não é o sono puxando a colcha:
-  -- Extração, Atividade, Passeio e Leitura também têm começo e fim.
-  terminou_em timestamptz,
+alter table registros drop constraint if exists registros_tipo_check;
+${alterar(CHECK_DO_TIPO)}
 
-  -- O que varia por tipo. Vocabulário fechado, garantido pelos check abaixo.
-  dados jsonb not null default '{}',
+-- ============================================================
+-- FAIXAS NUMÉRICAS
+-- ============================================================
 
-  -- Texto livre da mãe. Coluna, e não chave no jsonb: não tem vocabulário para
-  -- checar e é consultado por presença.
-  notes text,
+${colunas.map((c) => alterar(c.faixa)).join('\n\n')}
 
-  created_at timestamptz default now(),
+-- ============================================================
+-- VOCABULÁRIO E CAMPOS OBRIGATÓRIOS, POR TIPO
+-- ============================================================
+--
+-- O que o Postgres garantia com \`check\` de coluna ele continua garantindo. A
+-- diferença é que a regra passou a ter uma origem só.
 
-${colunasGeradas.map((g) => g.coluna).join(',\n')},
-
-${[...colunasGeradas.map((g) => g.check), ...restricoes].join(',\n\n')}
-);
-
-alter table registros enable row level security;
-
--- Uma policy, uma tabela. O modo de falha silencioso da opção A não existe aqui.
-create policy "acesso via posse do bebê"
-  on registros for all using (
-    exists (select 1 from babies where babies.id = registros.baby_id and babies.user_id = auth.uid())
-  );
-
--- A lista unificada: uma consulta, ordenação e cursor no banco. Deixa de ser
--- merge de k listas no cliente porque deixa de haver k listas.
-create index idx_registros_baby_tempo on registros (baby_id, ocorrido_em desc);
-
--- A mesma lista filtrada por tipo, e as leituras do motor.
-create index idx_registros_baby_tipo_tempo on registros (baby_id, tipo, ocorrido_em desc);
-
--- Sono em aberto: a Home procura por isto a cada carga.
-create index idx_registros_em_aberto on registros (baby_id)
-  where terminou_em is null;
-
-comment on table registros is
-  'Eventos de rotina do bebê. Uma linha por registro, o que varia por tipo mora em dados.';
+${restricoes.map(alterar).join('\n\n')}
 
 -- ============================================================
 -- CONFERÊNCIA — rodar depois
 -- ============================================================
 --
--- Esperado: rls_ligada = true, policies = 1, indices = 4 (3 + a chave primária),
--- e restricoes = o número de check gerados acima.
+-- 1 · As restrições esperadas estão todas lá?
+--     Esperado: ${todas.length} linhas, nenhuma com faltando = true.
 --
--- select
---   (select relrowsecurity from pg_class where relname = 'registros') as rls_ligada,
---   (select count(*) from pg_policy where polrelid = 'registros'::regclass) as policies,
---   (select count(*) from pg_indexes where tablename = 'registros') as indices,
---   (select count(*) from pg_constraint where conrelid = 'registros'::regclass
---      and contype = 'c') as restricoes;`);
+-- select nome, not exists (
+--          select 1 from pg_constraint
+--          where conrelid = 'registros'::regclass and conname = nome
+--        ) as faltando
+-- from unnest(array[${todas.map((r) => aspas(r.nome)).join(', ')}]) as nome
+-- order by faltando desc, nome;
+--
+-- 2 · Sobrou alguma que o schema não declara mais?
+--     Esperado: nenhuma linha. Cada uma que aparecer é regra que o TypeScript
+--     esqueceu e o banco continua aplicando — ver o aviso do cabeçalho.
+--
+-- select conname
+-- from pg_constraint
+-- where conrelid = 'registros'::regclass
+--   and contype = 'c'
+--   and conname <> all (array[${todas.map((r) => aspas(r.nome)).join(', ')}]);`;
+}
+
+/**
+ * A casca. `montarSql` é exportada e pura para o teste poder chamá-la com um
+ * schema SINTÉTICO — é assim que a colisão de coluna se prova: montando dois
+ * tipos que a provocam e exigindo que ela estoure. Guarda que não é exercitada
+ * é guarda que ninguém sabe se funciona.
+ */
+const ehEntrada = process.argv[1]?.replace(/\\/g, '/').endsWith('scripts/gerar-registros-sql.ts');
+if (ehEntrada) console.log(montarSql(SCHEMAS, TIPOS_REGISTRO));
