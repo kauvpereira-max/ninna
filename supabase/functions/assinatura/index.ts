@@ -28,6 +28,7 @@
 import Stripe from 'npm:stripe@22.4.0';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { headersCors, respostaDePreflight } from '../_shared/cors.ts';
+import { lerAmbiente } from '../_shared/ambiente.ts';
 
 // ------------------------------------------------------------------
 // Configuração
@@ -45,8 +46,8 @@ import { headersCors, respostaDePreflight } from '../_shared/cors.ts';
 type Plano = 'mensal' | 'anual';
 
 const PRECOS: Record<Plano, string | undefined> = {
-  mensal: Deno.env.get('STRIPE_PRICE_MENSAL'),
-  anual: Deno.env.get('STRIPE_PRICE_ANUAL'),
+  mensal: lerAmbiente('STRIPE_PRICE_MENSAL'),
+  anual: lerAmbiente('STRIPE_PRICE_ANUAL'),
 };
 
 /** Sete dias, como previsto no brand deck. O custo disso está no PRODUTO.md §5. */
@@ -79,10 +80,10 @@ async function tratar(req: Request): Promise<Response> {
   const autorizacao = req.headers.get('Authorization') ?? '';
   if (!autorizacao.startsWith('Bearer ')) return json({ erro: 'sem sessão' }, 401);
 
-  const url = Deno.env.get('SUPABASE_URL');
-  const anon = Deno.env.get('SUPABASE_ANON_KEY');
-  const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  const chaveStripe = Deno.env.get('STRIPE_API_KEY');
+  const url = lerAmbiente('SUPABASE_URL');
+  const anon = lerAmbiente('SUPABASE_ANON_KEY');
+  const service = lerAmbiente('SUPABASE_SERVICE_ROLE_KEY');
+  const chaveStripe = lerAmbiente('STRIPE_API_KEY');
   if (!url || !anon || !service || !chaveStripe) {
     console.error('[assinatura] faltando variável de ambiente');
     return json({ erro: ERRO }, 500);

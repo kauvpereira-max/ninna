@@ -33,6 +33,7 @@
 import Anthropic from 'npm:@anthropic-ai/sdk@0.68.0';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { headersCors, respostaDePreflight } from '../_shared/cors.ts';
+import { lerAmbiente } from '../_shared/ambiente.ts';
 
 import {
   gramaticaParaModelo,
@@ -217,10 +218,10 @@ async function tratar(req: Request): Promise<Response> {
   const autorizacao = req.headers.get('Authorization') ?? '';
   if (!autorizacao.startsWith('Bearer ')) return json({ erro: 'sem sessão' }, 401);
 
-  const url = Deno.env.get('SUPABASE_URL');
-  const anon = Deno.env.get('SUPABASE_ANON_KEY');
-  const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  const chaveDaApi = Deno.env.get('ANTHROPIC_API_KEY');
+  const url = lerAmbiente('SUPABASE_URL');
+  const anon = lerAmbiente('SUPABASE_ANON_KEY');
+  const service = lerAmbiente('SUPABASE_SERVICE_ROLE_KEY');
+  const chaveDaApi = lerAmbiente('ANTHROPIC_API_KEY');
   if (!url || !anon || !service || !chaveDaApi) {
     console.error('[assistente] faltando variável de ambiente');
     return json({ resposta: RESPOSTA_ERRO }, 500);

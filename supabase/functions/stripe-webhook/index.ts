@@ -30,6 +30,7 @@
 
 import Stripe from 'npm:stripe@22.4.0';
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { lerAmbiente } from '../_shared/ambiente.ts';
 
 /**
  * Os eventos que importam.
@@ -50,10 +51,10 @@ const EVENTOS = new Set([
 Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return new Response('método não suportado', { status: 405 });
 
-  const chaveStripe = Deno.env.get('STRIPE_API_KEY');
-  const segredoWebhook = Deno.env.get('STRIPE_WEBHOOK_SECRET');
-  const url = Deno.env.get('SUPABASE_URL');
-  const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  const chaveStripe = lerAmbiente('STRIPE_API_KEY');
+  const segredoWebhook = lerAmbiente('STRIPE_WEBHOOK_SECRET');
+  const url = lerAmbiente('SUPABASE_URL');
+  const service = lerAmbiente('SUPABASE_SERVICE_ROLE_KEY');
   if (!chaveStripe || !segredoWebhook || !url || !service) {
     console.error('[webhook] faltando variável de ambiente');
     // 500 e não 400: a Stripe reentrega em 5xx, e é isso que se quer enquanto o
