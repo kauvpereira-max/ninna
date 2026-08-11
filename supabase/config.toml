@@ -1,0 +1,28 @@
+# Configuração das Edge Functions.
+#
+# Este arquivo existe por causa de UMA linha — o `verify_jwt = false` do webhook.
+#
+# Por padrão o gateway do Supabase exige um JWT válido antes de a função rodar.
+# Isso é o certo para tudo que a mãe chama: a `assistente` e a `assinatura` só
+# funcionam com a sessão dela, e a RLS depende disso.
+#
+# O webhook da Stripe é o oposto: quem chama é a Stripe, que não tem — e não
+# deveria ter — sessão nenhuma no Supabase. Com a verificação ligada, todo evento
+# levaria 401 no portão e a assinatura de ninguém seria atualizada. O sintoma
+# seria o pior possível: o pagamento acontece, o dinheiro entra, e o app continua
+# dizendo que ela não assinou.
+#
+# Isso NÃO deixa o endpoint aberto. A autenticação dele é a assinatura
+# criptográfica da Stripe, verificada com o `STRIPE_WEBHOOK_SECRET` na primeira
+# linha da função. Um POST sem assinatura válida é recusado ali.
+
+project_id = "hzjcimgutccsfrxuuhrl"
+
+[functions.assistente]
+verify_jwt = true
+
+[functions.assinatura]
+verify_jwt = true
+
+[functions.stripe-webhook]
+verify_jwt = false

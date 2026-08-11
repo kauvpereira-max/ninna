@@ -43,6 +43,7 @@ import {
 } from '../../../src/lib/consultas.ts';
 import { narrar } from '../../../src/lib/copyInsight.ts';
 import { validarAncoragem } from '../../../src/lib/ancoragem.ts';
+import { temAcesso, type StatusAssinatura } from '../../../src/lib/acesso.ts';
 
 // ------------------------------------------------------------------
 // Configuração
@@ -54,6 +55,17 @@ import { validarAncoragem } from '../../../src/lib/ancoragem.ts';
  */
 const LIMITE_DIARIO = 30;
 
+/**
+ * Durante os 7 dias grátis o custo do assistente é real e a receita é zero.
+ *
+ * No teto normal, um teste levado ao máximo custa ~R$4,65 — quase um mês inteiro
+ * da margem do plano anual (PRODUTO.md §5). Com 10 por dia o pior caso cai para
+ * ~R$1,55, e dez perguntas por dia continua generoso para quem está conhecendo.
+ *
+ * Não é desconfiança de quem testa: é o teto existir onde o custo existe.
+ */
+const LIMITE_DIARIO_EM_TESTE = 10;
+
 /** Janela de registros que a superfície pode precisar — 15 dias + folga. */
 const DIAS_DE_HISTORICO = 17;
 
@@ -62,6 +74,17 @@ const FUSO_DO_MERCADO = 'America/Sao_Paulo';
 const RESPOSTA_LIMITE =
   'Por hoje já conversamos bastante — amanhã eu volto a responder. Seus registros ' +
   'continuam aqui, e a Rotina mostra tudo que você anotou.';
+
+/**
+ * A recusa por falta de assinatura.
+ *
+ * Diz o que ela CONTINUA tendo, e nessa ordem: registrar e ver a rotina seguem
+ * grátis, e é isso que constrói o histórico que dá valor ao assistente. Uma
+ * recusa que só diz "assine" transforma um limite em porta na cara.
+ */
+const RESPOSTA_SEM_ASSINATURA =
+  'O assistente faz parte do plano da Ninna. Seus registros e o que já sei sobre a rotina ' +
+  'continuam aqui, sem prazo — quando quiser conversar comigo, é só assinar na aba Mais.';
 
 const RESPOSTA_ERRO =
   'Não consegui responder agora. Tenta de novo em instantes — seus registros estão salvos.';
@@ -230,6 +253,26 @@ Deno.serve(async (req: Request) => {
   const comoServico = createClient(url, service);
   const dia = diaDoMercado(agora);
 
+  // --- O portão. A leitura mora em src/lib/acesso.ts, que é onde a fronteira
+  // --- entre grátis e pago está escrita e testada.
+  const { data: linhaAssinatura } = await comoServico
+    .from('assinaturas')
+    .select('status, valida_ate')
+    .eq('user_id', usuaria.id)
+    .maybeSingle();
+
+  const assinatura = {
+    status: (linhaAssinatura?.status as StatusAssinatura | undefined) ?? 'nenhuma',
+    validaAte: (linhaAssinatura?.valida_ate as string | null | undefined) ?? null,
+  };
+
+  if (!temAcesso('assistente', assinatura, agora)) {
+    // Sem cobrar o teto: pergunta que não foi respondida não consome cota.
+    return json({ resposta: RESPOSTA_SEM_ASSINATURA, restantes: 0, semAssinatura: true });
+  }
+
+  const limiteDeHoje = assinatura.status === 'trialing' ? LIMITE_DIARIO_EM_TESTE : LIMITE_DIARIO;
+
   const { data: usoAtual } = await comoServico
     .from('assistant_usage')
     .select('perguntas')
@@ -238,7 +281,7 @@ Deno.serve(async (req: Request) => {
     .maybeSingle();
 
   const jaFeitas = (usoAtual?.perguntas as number | undefined) ?? 0;
-  if (jaFeitas >= LIMITE_DIARIO) {
+  if (jaFeitas >= limiteDeHoje) {
     return json({ resposta: RESPOSTA_LIMITE, restantes: 0, limite: true });
   }
 
@@ -254,7 +297,7 @@ Deno.serve(async (req: Request) => {
     if ('fora' in consulta) {
       return json({
         resposta: consulta.fora === 'saude' ? RESPOSTA_SAUDE : RESPOSTA_DESCONHECIDA,
-        restantes: LIMITE_DIARIO - jaFeitas - 1,
+        restantes: limiteDeHoje - jaFeitas - 1,
       });
     }
 
@@ -285,14 +328,14 @@ Deno.serve(async (req: Request) => {
             .map((p) => p.trecho)
             .join(', ')}`
         );
-        return json({ resposta: RESPOSTA_ERRO, restantes: LIMITE_DIARIO - jaFeitas - 1 });
+        return json({ resposta: RESPOSTA_ERRO, restantes: limiteDeHoje - jaFeitas - 1 });
       }
     }
 
-    return json({ resposta: frase, restantes: LIMITE_DIARIO - jaFeitas - 1 });
+    return json({ resposta: frase, restantes: limiteDeHoje - jaFeitas - 1 });
   } catch (erro) {
     // A mensagem de erro nunca vaza pra mãe: ela pode conter nome de tabela.
     console.error('[assistente]', erro instanceof Error ? erro.message : erro);
-    return json({ resposta: RESPOSTA_ERRO, restantes: LIMITE_DIARIO - jaFeitas - 1 });
+    return json({ resposta: RESPOSTA_ERRO, restantes: limiteDeHoje - jaFeitas - 1 });
   }
 });
