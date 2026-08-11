@@ -34,6 +34,7 @@
  */
 
 import type { Humor, Intensidade, LadoSeio, TipoLeite } from '../types/database';
+import { formatarDuracaoMin, formatarMomento, minutosEntre } from './horario.ts';
 
 /** Os atalhos da Home. Vale também como parâmetro da rota /registro/[tipo]. */
 export type TipoRegistro = 'amamentar' | 'mamadeira' | 'fralda' | 'sono' | 'humor' | 'sintoma';
@@ -556,3 +557,184 @@ export type ValorLado = LadoSeio;
 export type ValorLeite = TipoLeite;
 export type ValorHumor = Humor;
 export type ValorIntensidade = Intensidade;
+
+// ============================================================
+// LEITURA — como o tipo se conta para a mãe
+// ============================================================
+
+/**
+ * O resumo e o detalhe também moram no schema, e são FUNÇÃO por tipo, não
+ * template declarativo.
+ *
+ * A tentação era descrever "resumo = campo A · campo B" numa mini-linguagem.
+ * Não descreve: mamadeira junta com " de ", sono não lê coluna nenhuma e sim
+ * calcula duração, e sintoma "Outro" troca o rótulo pelo texto que a mãe
+ * escreveu. Uma linguagem que cobrisse os seis seria mais difícil de aprender do
+ * que os seis, e cada tipo novo tentaria caber nela em vez de dizer a verdade.
+ *
+ * O que o bloco 2 promete não é "sem função por tipo" — é **um lugar por tipo**.
+ * Aqui o tipo inteiro cabe numa entrada: o que ele pergunta, onde grava, e como
+ * se conta.
+ */
+
+/** A linha crua do banco. Cada schema sabe ler as próprias colunas. */
+export type LinhaRegistro = Record<string, unknown>;
+
+/** Uma linha do registro aberto: "Lado" / "Peito esquerdo". */
+export type CampoDetalhe = { rotulo: string; valor: string };
+
+const texto = (linha: LinhaRegistro, coluna: string): string | null => {
+  const valor = linha[coluna];
+  return typeof valor === 'string' && valor.trim() ? valor : null;
+};
+
+const numero = (linha: LinhaRegistro, coluna: string): number | null => {
+  const valor = linha[coluna];
+  return typeof valor === 'number' ? valor : null;
+};
+
+/** Descarta o que não tem valor: campo vazio não vira linha em branco na tela. */
+const listar = (pares: [string, string | null][]): CampoDetalhe[] =>
+  pares
+    .filter(([, valor]) => Boolean(valor))
+    .map(([rotulo, valor]) => ({ rotulo, valor: valor as string }));
+
+/**
+ * Texto do sono ainda aberto. A Home recalcula isso num tick local, então é aqui
+ * que mora a regra — abaixo de 2 minutos não vale falar em duração, o sono mal
+ * começou.
+ */
+export function resumirSonoEmAndamento(startedAt: string, agora: Date = new Date()): string {
+  const minutos = minutosEntre(startedAt, agora);
+  if (minutos < 2) return 'Dormindo agora';
+  return `Dormindo há ${formatarDuracaoMin(minutos)}`;
+}
+
+const minutosDe = (segundos: number | null) =>
+  segundos ? formatarDuracaoMin(Math.round(segundos / 60)) : null;
+
+/** Em "Outro" a descrição da mãe está em `notes` — é ela que diz alguma coisa. */
+function nomeDoSintoma(linha: LinhaRegistro): string {
+  const bruto = texto(linha, 'symptom');
+  const nota = texto(linha, 'notes');
+  if (bruto === SINTOMA_OUTRO && nota) return nota.trim();
+  return rotularValor([...SINTOMAS, ...SINTOMAS_APOSENTADOS], bruto) ?? bruto ?? '';
+}
+
+type LeituraDoTipo = {
+  /** Frase curta da lista, ex.: "Peito esquerdo · 12 min". */
+  resumir: (linha: LinhaRegistro, agora: Date) => string;
+  /** As linhas da tela de detalhe, já rotuladas em PT-BR. */
+  detalhar: (linha: LinhaRegistro, agora: Date) => CampoDetalhe[];
+  /** Só o sono sem `ended_at` — a Home oferece encerrar. */
+  emAndamento?: (linha: LinhaRegistro) => boolean;
+};
+
+export const LEITURA: Record<TipoRegistro, LeituraDoTipo> = {
+  amamentar: {
+    resumir: (l) => {
+      const lado = rotularValor(LADOS, texto(l, 'side')) ?? 'Peito';
+      const duracao = minutosDe(numero(l, 'duration_seconds'));
+      return duracao ? `${lado} · ${duracao}` : lado;
+    },
+    detalhar: (l, agora) =>
+      listar([
+        ['Lado', rotularValor(LADOS, texto(l, 'side'))],
+        ['Duração', minutosDe(numero(l, 'duration_seconds'))],
+        ['Início', formatarMomento(texto(l, 'started_at') ?? '', agora)],
+      ]),
+  },
+
+  mamadeira: {
+    resumir: (l) => {
+      const leite = rotularValor(LEITES, texto(l, 'bottle_type'));
+      const sufixo = leite ? ` de ${leite}` : '';
+      const ml = numero(l, 'amount_ml');
+      return ml ? `${ml} ml${sufixo}` : `Mamadeira${sufixo}`;
+    },
+    detalhar: (l, agora) => {
+      const ml = numero(l, 'amount_ml');
+      return listar([
+        ['Quantidade', ml ? `${ml} ml` : null],
+        ['Tipo de leite', rotularValor(LEITES, texto(l, 'bottle_type'))],
+        ['Início', formatarMomento(texto(l, 'started_at') ?? '', agora)],
+      ]);
+    },
+  },
+
+  fralda: {
+    resumir: (l) => rotularValor(CONTEUDOS_FRALDA, texto(l, 'content')) ?? '',
+    detalhar: (l, agora) =>
+      listar([
+        ['Conteúdo', rotularValor(CONTEUDOS_FRALDA, texto(l, 'content'))],
+        ['Quando', formatarMomento(texto(l, 'recorded_at') ?? '', agora)],
+      ]),
+  },
+
+  sono: {
+    resumir: (l, agora) => {
+      const inicio = texto(l, 'started_at') ?? '';
+      const fim = texto(l, 'ended_at');
+      if (!fim) return resumirSonoEmAndamento(inicio, agora);
+      return `${formatarDuracaoMin(minutosEntre(inicio, fim))} de sono`;
+    },
+    detalhar: (l, agora) => {
+      const inicio = texto(l, 'started_at') ?? '';
+      const fim = texto(l, 'ended_at');
+      return listar([
+        ['Começou', formatarMomento(inicio, agora)],
+        ['Terminou', fim ? formatarMomento(fim, agora) : 'ainda dormindo'],
+        [fim ? 'Duração' : 'Até agora', formatarDuracaoMin(minutosEntre(inicio, fim ?? agora))],
+      ]);
+    },
+    emAndamento: (l) => texto(l, 'ended_at') === null,
+  },
+
+  humor: {
+    resumir: (l) => {
+      const bruto = texto(l, 'mood');
+      const humor = rotularValor(HUMORES, bruto) ?? bruto ?? '';
+      const motivo = rotularValor(MOTIVOS_HUMOR, texto(l, 'probable_reason'));
+      if (!motivo) return humor;
+      // 'unknown' vira "motivo não identificado", não "por Não sei".
+      if (texto(l, 'probable_reason') === 'unknown') return `${humor} · motivo não identificado`;
+      return `${humor} · ${motivo.toLowerCase()}`;
+    },
+    detalhar: (l, agora) => {
+      const bruto = texto(l, 'mood');
+      return listar([
+        ['Estado', rotularValor(HUMORES, bruto) ?? bruto],
+        ['Motivo provável', rotularValor(MOTIVOS_HUMOR, texto(l, 'probable_reason'))],
+        ['Quando', formatarMomento(texto(l, 'recorded_at') ?? '', agora)],
+      ]);
+    },
+  },
+
+  sintoma: {
+    resumir: (l) => {
+      const nome = nomeDoSintoma(l);
+      const intensidade = rotularValor(INTENSIDADES, texto(l, 'intensity'));
+      return intensidade ? `${nome} · ${intensidade.toLowerCase()}` : nome;
+    },
+    detalhar: (l, agora) => {
+      const bruto = texto(l, 'symptom');
+      return listar([
+        // No detalhe o rótulo é o do vocabulário, mesmo em "Outro": a descrição
+        // que a mãe escreveu aparece inteira logo abaixo, no campo de observação.
+        ['Sintoma', rotularValor([...SINTOMAS, ...SINTOMAS_APOSENTADOS], bruto) ?? bruto],
+        ['Intensidade', rotularValor(INTENSIDADES, texto(l, 'intensity'))],
+        ['Quando', formatarMomento(texto(l, 'recorded_at') ?? '', agora)],
+      ]);
+    },
+  },
+};
+
+/** As tabelas distintas. A lista é consultada por TABELA, não por tipo. */
+export const TABELAS_DE_REGISTRO: string[] = [
+  ...new Set(TIPOS_REGISTRO.map((tipo) => SCHEMAS[tipo].tabela)),
+];
+
+/** Os tipos que gravam nesta tabela — dois, no caso de `feeding_records`. */
+export function tiposDaTabela(tabela: string): TipoRegistro[] {
+  return TIPOS_REGISTRO.filter((tipo) => SCHEMAS[tipo].tabela === tabela);
+}

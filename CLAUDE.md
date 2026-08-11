@@ -118,6 +118,17 @@ como "a aba nova não apareceu no app" — e o diagnóstico começou pelo lado e
 `git push` faz parte de fechar um bloco, junto com `tsc`, os testes e o
 `expo export`.
 
+**E os três são um conjunto — nenhum substitui outro.** Um commit rodou os
+testes e o deploy, pulou o `tsc`, e o tipo quebrado só apareceu **dois commits
+depois**, num contexto que não tinha nada a ver. Cada um enxerga o que os outros
+não enxergam:
+
+- `tsc` — o que não compila em lugar nenhum;
+- os testes — o que compila e responde a coisa errada;
+- `expo export` — o que compila, responde certo, e não empacota.
+
+"Os testes passaram" não é fechar bloco. Os três, sempre, e depois o push.
+
 ## Onde está a fonte da verdade
 
 - **Design system:** `src/theme/tokens.ts`

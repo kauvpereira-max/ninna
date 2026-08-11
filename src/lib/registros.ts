@@ -19,30 +19,20 @@ import {
   SINTOMAS,
   SINTOMAS_APOSENTADOS,
   TIPOS_REGISTRO,
+  LEITURA,
+  TABELAS_DE_REGISTRO,
   linhaParaBanco,
   rotularValor,
+  tipoDaLinha,
+  tiposDaTabela,
+  type CampoDetalhe,
+  type LinhaRegistro,
   type TipoRegistro,
   type ValoresRegistro,
 } from './registroSchema.ts';
 
 export type { CursorRegistro } from './paginacao';
-import type {
-  ConteudoFralda,
-  DiaperRecord,
-  FeedingRecord,
-  Humor,
-  Intensidade,
-  LadoSeio,
-  MoodRecord,
-  NovaAmamentacao,
-  NovaFralda,
-  NovaMamadeira,
-  NovoHumor,
-  NovoSintoma,
-  SleepRecord,
-  SymptomRecord,
-  TipoLeite,
-} from '../types/database';
+import type { SleepRecord } from '../types/database';
 
 // Mesmo formato de retorno de src/lib/babies.ts: erro nunca sobe como exceção,
 // vem como frase pronta pra mostrar pra mãe.
@@ -64,6 +54,8 @@ export {
   SINTOMAS,
   INTENSIDADES,
   SINTOMA_OUTRO,
+  resumirSonoEmAndamento,
+  type CampoDetalhe,
   type TipoRegistro,
 } from './registroSchema.ts';
 
@@ -253,58 +245,9 @@ export async function apagarRegistro(
 // LEITURA
 // ============================================================
 
-function resumirAlimentacao(r: FeedingRecord): string {
-  if (r.type === 'bottle') {
-    const leite = r.bottle_type ? ` de ${rotularValor(LEITES, r.bottle_type)}` : '';
-    return r.amount_ml ? `${r.amount_ml} ml${leite}` : `Mamadeira${leite}`;
-  }
-
-  const lado = (r.side ? rotularValor(LADOS, r.side) : null) ?? 'Peito';
-  if (!r.duration_seconds) return lado;
-  return `${lado} · ${formatarDuracaoMin(Math.round(r.duration_seconds / 60))}`;
-}
-
 /**
- * Texto do sono ainda aberto. A Home recalcula isso num tick local, então é aqui que
- * mora a regra — abaixo de 2 minutos não vale falar em duração, o sono mal começou.
- */
-export function resumirSonoEmAndamento(startedAt: string, agora: Date = new Date()): string {
-  const minutos = minutosEntre(startedAt, agora);
-  if (minutos < 2) return 'Dormindo agora';
-  return `Dormindo há ${formatarDuracaoMin(minutos)}`;
-}
-
-function resumirSono(r: SleepRecord, agora: Date): string {
-  if (!r.ended_at) return resumirSonoEmAndamento(r.started_at, agora);
-  return `${formatarDuracaoMin(minutosEntre(r.started_at, r.ended_at))} de sono`;
-}
-
-function resumirHumor(r: MoodRecord): string {
-  const humor = rotularValor(HUMORES, r.mood) ?? r.mood;
-  const motivo = rotularValor(MOTIVOS_HUMOR, r.probable_reason);
-  if (!motivo) return humor;
-  // 'unknown' vira "motivo não identificado", não "por Não sei".
-  if (r.probable_reason === 'unknown') return `${humor} · motivo não identificado`;
-  return `${humor} · ${motivo.toLowerCase()}`;
-}
-
-function resumirSintoma(r: SymptomRecord): string {
-  // Em 'other' a descrição da mãe está em notes — é ela que diz alguma coisa na lista.
-  const nome =
-    r.symptom === 'other' && r.notes?.trim()
-      ? r.notes.trim()
-      : rotularValor([...SINTOMAS, ...SINTOMAS_APOSENTADOS], r.symptom) ?? r.symptom;
-  const intensidade = rotularValor(INTENSIDADES, r.intensity);
-  if (!intensidade) return nome;
-  return `${nome} · ${intensidade.toLowerCase()}`;
-}
-
-/** Uma linha do registro aberto: "Lado" / "Peito esquerdo". */
-export type CampoDetalhe = { rotulo: string; valor: string };
-
-/**
- * Registro aberto na tela de detalhe. Os `campos` já vêm rotulados em PT-BR daqui:
- * a tela não conhece slug nenhum, e o vocabulário continua morando num lugar só.
+ * Registro aberto na tela de detalhe. Os `campos` já vêm rotulados em PT-BR do
+ * schema: a tela não conhece slug nenhum, e o vocabulário mora num lugar só.
  */
 export type DetalheRegistro = {
   id: string;
@@ -316,58 +259,16 @@ export type DetalheRegistro = {
   notas: string | null;
 };
 
-function camposDe(tipo: TipoRegistro, linha: any, agora: Date): CampoDetalhe[] {
-  const campos: CampoDetalhe[] = [];
-  const push = (rotulo: string, valor: string | null | undefined) => {
-    if (valor) campos.push({ rotulo, valor });
+/** O que a lista e o detalhe têm em comum: uma linha crua vira registro do app. */
+function normalizar(tipo: TipoRegistro, linha: LinhaRegistro, agora: Date): RegistroRecente {
+  const leitura = LEITURA[tipo];
+  return {
+    id: String(linha.id),
+    tipo,
+    ocorridoEm: String(linha[SCHEMAS[tipo].colunaTempo]),
+    resumo: leitura.resumir(linha, agora),
+    emAndamento: leitura.emAndamento?.(linha) ?? false,
   };
-
-  if (tipo === 'amamentar') {
-    const r = linha as FeedingRecord;
-    push('Lado', r.side ? rotularValor(LADOS, r.side) : null);
-    push(
-      'Duração',
-      r.duration_seconds ? formatarDuracaoMin(Math.round(r.duration_seconds / 60)) : null
-    );
-    push('Início', formatarMomento(r.started_at, agora));
-  } else if (tipo === 'mamadeira') {
-    const r = linha as FeedingRecord;
-    push('Quantidade', r.amount_ml ? `${r.amount_ml} ml` : null);
-    push('Tipo de leite', r.bottle_type ? rotularValor(LEITES, r.bottle_type) : null);
-    push('Início', formatarMomento(r.started_at, agora));
-  } else if (tipo === 'sono') {
-    const r = linha as SleepRecord;
-    push('Começou', formatarMomento(r.started_at, agora));
-    if (r.ended_at) {
-      push('Terminou', formatarMomento(r.ended_at, agora));
-      push('Duração', formatarDuracaoMin(minutosEntre(r.started_at, r.ended_at)));
-    } else {
-      push('Terminou', 'ainda dormindo');
-      push('Até agora', formatarDuracaoMin(minutosEntre(r.started_at, agora)));
-    }
-  } else if (tipo === 'fralda') {
-    const r = linha as DiaperRecord;
-    push('Conteúdo', (rotularValor(CONTEUDOS_FRALDA, r.content) ?? r.content));
-    push('Quando', formatarMomento(r.recorded_at, agora));
-  } else if (tipo === 'humor') {
-    const r = linha as MoodRecord;
-    push('Estado', rotularValor(HUMORES, r.mood) ?? r.mood);
-    // 'unknown' vira frase, não "Não sei" pendurado num rótulo de motivo.
-    push(
-      'Motivo provável',
-      r.probable_reason === 'unknown'
-        ? 'não identificado'
-        : rotularValor(MOTIVOS_HUMOR, r.probable_reason)
-    );
-    push('Quando', formatarMomento(r.recorded_at, agora));
-  } else if (tipo === 'sintoma') {
-    const r = linha as SymptomRecord;
-    push('Sintoma', rotularValor([...SINTOMAS, ...SINTOMAS_APOSENTADOS], r.symptom) ?? r.symptom);
-    push('Intensidade', rotularValor(INTENSIDADES, r.intensity));
-    push('Quando', formatarMomento(r.recorded_at, agora));
-  }
-
-  return campos;
 }
 
 /**
@@ -394,29 +295,15 @@ export async function buscarRegistro(
   }
   if (!data) return { data: null, error: null };
 
-  const emAndamento = tipo === 'sono' && (data as SleepRecord).ended_at === null;
-
-  const resumo =
-    tipo === 'sono'
-      ? resumirSono(data as SleepRecord, agora)
-      : tipo === 'fralda'
-        ? (rotularValor(CONTEUDOS_FRALDA, (data as DiaperRecord).content) ?? (data as DiaperRecord).content)
-        : tipo === 'humor'
-          ? resumirHumor(data as MoodRecord)
-          : tipo === 'sintoma'
-            ? resumirSintoma(data as SymptomRecord)
-            : resumirAlimentacao(data as FeedingRecord);
+  const linha = data as LinhaRegistro;
+  const notas = linha.notes;
 
   return {
     data: {
-      id: data.id,
-      tipo,
-      ocorridoEm: data[COLUNA_TEMPO(tipo)],
-      resumo,
-      emAndamento,
-      campos: camposDe(tipo, data, agora),
+      ...normalizar(tipo, linha, agora),
+      campos: LEITURA[tipo].detalhar(linha, agora),
       // Sono é a única tabela sem coluna `notes`.
-      notas: typeof data.notes === 'string' && data.notes.trim() ? data.notes.trim() : null,
+      notas: typeof notas === 'string' && notas.trim() ? notas.trim() : null,
     },
     error: null,
   };
@@ -488,35 +375,10 @@ export async function listarParaPadroes(
   };
 }
 
-/** Quais tabelas precisam ser consultadas pra atender os tipos pedidos. */
-function tabelasPara(tipos: TipoRegistro[] | null | undefined): {
-  alimentacao: 'ambos' | 'breast' | 'bottle' | null;
-  sono: boolean;
-  fralda: boolean;
-  humor: boolean;
-  sintoma: boolean;
-} {
-  const todos = !tipos || tipos.length === 0;
-  const tem = (t: TipoRegistro) => todos || tipos!.includes(t);
-
-  const peito = tem('amamentar');
-  const mamadeira = tem('mamadeira');
-
-  return {
-    // Uma tabela só pros dois. Pedindo só um deles, o filtro vai na coluna `type` —
-    // sem isso "carregar mais" de amamentação traria mamadeira junto.
-    alimentacao: peito && mamadeira ? 'ambos' : peito ? 'breast' : mamadeira ? 'bottle' : null,
-    sono: tem('sono'),
-    fralda: tem('fralda'),
-    humor: tem('humor'),
-    sintoma: tem('sintoma'),
-  };
-}
-
 /**
  * Uma página da lista unificada, da mais recente pra mais antiga.
  *
- * COMO A PAGINAÇÃO FUNCIONA COM 5 TABELAS
+ * COMO A PAGINAÇÃO FUNCIONA COM VÁRIAS TABELAS
  *
  * Cada tabela devolve suas `limite + 1` linhas mais recentes que ainda estão
  * atrás do cursor. A união dessas fatias contém, com certeza, as `limite` linhas
@@ -524,7 +386,7 @@ function tabelasPara(tipos: TipoRegistro[] | null | undefined): {
  * a i-ésima linha do resultado global não pode estar além da i-ésima posição de
  * nenhuma tabela isolada.
  *
- * Por isso não dá pra paginar cada tabela por conta própria: cinco cursores
+ * Por isso não dá pra paginar cada tabela por conta própria: cursores
  * independentes andam em velocidades diferentes e "carregar mais" traria janelas
  * de tempo desalinhadas por tipo — a mãe veria sono de terça ao lado de mamada de
  * domingo.
@@ -537,6 +399,13 @@ function tabelasPara(tipos: TipoRegistro[] | null | undefined): {
  * some com um pedaço da lista, não com a lista inteira. `data` e `error` são
  * independentes de propósito: lista vazia e falha de rede são estados diferentes,
  * e a tela precisa dizer coisas diferentes pra cada um.
+ *
+ * A LISTA É POR TABELA, NÃO POR TIPO
+ *
+ * Antes havia uma consulta escrita à mão para cada uma das 5 tabelas, e somar um
+ * tipo somava um bloco aqui. Agora as tabelas saem do schema, e o tipo de cada
+ * linha volta por `tipoDaLinha` — quem grava numa tabela compartilhada se
+ * distingue pela coluna fixa, que é a mesma que o insert usou.
  */
 export async function listarRegistros(
   babyId: string,
@@ -544,83 +413,70 @@ export async function listarRegistros(
 ): Promise<Resultado<PaginaRegistros>> {
   const { desde = null, limite = 8, cursor = null, tipos = null, agora = new Date() } = opcoes;
 
-  const alvo = tabelasPara(tipos);
+  const pedidos = !tipos || tipos.length === 0 ? TIPOS_REGISTRO : tipos;
   const teto = limite + 1;
 
-  // Uma consulta por tabela, todas com a mesma janela e o mesmo cursor.
-  function consultar(tabela: string, coluna: 'started_at' | 'recorded_at') {
+  const buscas = TABELAS_DE_REGISTRO.map(async (tabela) => {
+    const naTabela = tiposDaTabela(tabela);
+    const querAqui = naTabela.filter((tipo) => pedidos.includes(tipo));
+    if (querAqui.length === 0) return { data: null, error: null };
+
+    // Tipos que dividem tabela também dividem a coluna de tempo — o schema é
+    // conferido nisso pelo teste, então a primeira serve para todos.
+    const coluna = SCHEMAS[naTabela[0]].colunaTempo;
+
     let q = supabase.from(tabela).select('*').eq('baby_id', babyId);
     if (desde) q = q.gte(coluna, desde.toISOString());
     // `lte` e não `lt`: o cursor pode ter empatado no instante com outra linha, e
     // essas empatadas precisam vir pra serem desempatadas por id aqui no cliente.
     if (cursor) q = q.lte(coluna, cursor.ocorridoEm);
+
+    // Sem filtro quando a tabela inteira foi pedida. Pedindo só um dos tipos que
+    // moram nela, o filtro vai na coluna fixa — sem isso, "carregar mais" de
+    // amamentação traria mamadeira junto.
+    if (querAqui.length < naTabela.length) {
+      const [colunaFixa, valores] = filtroFixo(querAqui);
+      if (colunaFixa) q = q.in(colunaFixa, valores);
+    }
+
     return q.order(coluna, { ascending: false }).limit(teto);
-  }
+  });
 
-  const vazio = { data: null, error: null } as const;
+  const respostas = await Promise.all(buscas);
 
-  const [alimentacao, sono, fralda, humor, sintoma] = await Promise.all([
-    alvo.alimentacao
-      ? (() => {
-          const q = consultar('feeding_records', 'started_at');
-          return alvo.alimentacao === 'ambos'
-            ? q
-            : q.eq('type', alvo.alimentacao === 'breast' ? 'breast' : 'bottle');
-        })()
-      : vazio,
-    alvo.sono ? consultar('sleep_records', 'started_at') : vazio,
-    alvo.fralda ? consultar('diaper_records', 'recorded_at') : vazio,
-    alvo.humor ? consultar('mood_records', 'recorded_at') : vazio,
-    alvo.sintoma ? consultar('symptom_records', 'recorded_at') : vazio,
-  ]);
-
-  const falhas = [alimentacao.error, sono.error, fralda.error, humor.error, sintoma.error].filter(
-    Boolean
-  );
+  const falhas = respostas.map((r) => r.error).filter(Boolean);
   falhas.forEach((erro) => console.warn('[registros] falha ao listar:', erro?.message));
 
-  const candidatos: RegistroRecente[] = [
-    ...((alimentacao.data ?? []) as FeedingRecord[]).map((r) => ({
-      id: r.id,
-      tipo: (r.type === 'bottle' ? 'mamadeira' : 'amamentar') as TipoRegistro,
-      ocorridoEm: r.started_at,
-      resumo: resumirAlimentacao(r),
-      emAndamento: false,
-    })),
-    ...((sono.data ?? []) as SleepRecord[]).map((r) => ({
-      id: r.id,
-      tipo: 'sono' as TipoRegistro,
-      ocorridoEm: r.started_at,
-      resumo: resumirSono(r, agora),
-      emAndamento: r.ended_at === null,
-    })),
-    ...((fralda.data ?? []) as DiaperRecord[]).map((r) => ({
-      id: r.id,
-      tipo: 'fralda' as TipoRegistro,
-      ocorridoEm: r.recorded_at,
-      resumo: (rotularValor(CONTEUDOS_FRALDA, r.content) ?? r.content),
-      emAndamento: false,
-    })),
-    ...((humor.data ?? []) as MoodRecord[]).map((r) => ({
-      id: r.id,
-      tipo: 'humor' as TipoRegistro,
-      ocorridoEm: r.recorded_at,
-      resumo: resumirHumor(r),
-      emAndamento: false,
-    })),
-    ...((sintoma.data ?? []) as SymptomRecord[]).map((r) => ({
-      id: r.id,
-      tipo: 'sintoma' as TipoRegistro,
-      ocorridoEm: r.recorded_at,
-      resumo: resumirSintoma(r),
-      emAndamento: false,
-    })),
-  ];
+  const candidatos: RegistroRecente[] = [];
+  respostas.forEach((resposta, i) => {
+    const tabela = TABELAS_DE_REGISTRO[i];
+    for (const linha of (resposta.data ?? []) as LinhaRegistro[]) {
+      const tipo = tipoDaLinha(tabela, linha);
+      // Linha de um tipo que o app não conhece mais não derruba a lista: ela
+      // simplesmente não aparece, e o resto continua.
+      if (tipo) candidatos.push(normalizar(tipo, linha, agora));
+    }
+  });
 
   return {
     data: paginar(candidatos, limite, cursor),
     error: falhas.length > 0 ? ERRO_LISTAR : null,
   };
+}
+
+/**
+ * A coluna fixa que separa tipos de uma mesma tabela, e os valores pedidos.
+ *
+ * Devolve `[null, []]` quando os tipos não se distinguem por uma coluna só —
+ * hoje não acontece, e o dia que acontecer é melhor não filtrar do que filtrar
+ * errado: lista com item a mais é visível, lista com item a menos não.
+ */
+function filtroFixo(tipos: TipoRegistro[]): [string | null, string[]] {
+  const colunas = new Set(tipos.flatMap((t) => Object.keys(SCHEMAS[t].fixas ?? {})));
+  if (colunas.size !== 1) return [null, []];
+
+  const coluna = [...colunas][0];
+  return [coluna, tipos.map((t) => SCHEMAS[t].fixas![coluna])];
 }
 
 /**
