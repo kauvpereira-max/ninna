@@ -200,7 +200,7 @@ npx supabase functions deploy assistente --use-api
 - `node scripts/semear-registros.mjs` — refaz a massa de teste.
 - Salvar humor e sintoma pelo app, que é a pendência antiga do `CLAUDE.md`.
 
-### 8. Apagar o projeto antigo
+### 8. Apagar o projeto antigo — ✅ FEITO EM 11/08/2026
 
 **Não deixe para depois.** O projeto antigo continua com uma cópia dos dados de
 teste em outro país, e a promessa de exclusão do termo é sobre "todos os
@@ -209,7 +209,12 @@ dado seja só seu.
 
 Painel do projeto antigo → Settings → General → Delete project.
 
-Faça **depois** de o passo 7 passar, não antes.
+Feito em 11/08/2026 via `npx supabase projects delete vzgwyakjopdmudhdefgy`,
+depois de o passo 7 passar. A tela de SMTP dele estava vazia — foi conferida
+antes, porque era a última chance de descobrir se o Resend chegara a ser
+configurado algum dia. Estava: nunca foi.
+
+Restam dois projetos: `Ninnabr` (sa-east-1) e `interdemo` (pausado).
 
 ### 9. Ajustar os documentos
 

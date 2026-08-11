@@ -1265,21 +1265,38 @@ por hora. Estourado o limite, o erro que aparece é `email rate limit exceeded` 
 que não se parece em nada com a causa real. É o risco R2 se manifestando antes
 mesmo do piloto.
 
-### 11.2 SMTP próprio via Resend — ⚠️ estado não confirmado desde o D1
+### 11.2 SMTP próprio via Resend — 🕐 EM CURSO desde 11/08/2026
 
-**Bloco P0-bis: a primeira ação é descobrir em que pé isto está.** "Aguardando
-propagação" foi escrito no D1 e nunca reconfirmado — pode estar verificado, pode
-não ter domínio comprado ainda. É a única latência longa que resta, e ela não
-encurta com esforço: por isso sobe para o início da fila (§7.4), muito antes do
-código que depende dela.
+**Estado apurado em 11/08/2026, e ele era pior do que "não confirmado":**
 
-Domínio próprio da Ninna, **não** `@interdemo.com.br`: e-mail de reset chegando
-com o domínio de outro produto é exatamente o que o Gmail e a mãe leem como
-suspeito.
+- Resend: **"No domains yet"** — a conta existia sem nenhum domínio.
+- registro.br: só `INTERDEMO.COM.BR`. **Nunca houve domínio da Ninna.**
+- Portanto nada verificado, e o "aguardando propagação" escrito no D1 descrevia
+  uma espera que nunca começou.
 
-Ordem: verificar o domínio no Resend (SPF + DKIM) → gerar API key → `Project
-Settings > Authentication > SMTP Settings` no Supabase → remetente
-`ninna@<domínio>` com nome de exibição "Ninna".
+**Domínio pedido: `ninnaappbr.com.br`**, aguardando pagamento (o registro.br o
+mostra em `waiting_publication`). ⚠️ Pedido não pago é liberado de volta —
+pagar é o que segura o nome.
+
+`ninna.com.br` estava registrado por terceiro, com validade até 06/2027.
+
+**O provisório com `interdemo.com.br` foi proposto e retirado.** A ideia era
+testar o encanamento sem esperar DNS — mas, com o Resend sem domínio nenhum, o
+Interdemo exigiria exatamente o mesmo trabalho de DNS. Não economizava espera e
+gerava configuração dobrada. E ele nunca poderia ser o remetente da E1 de
+qualquer forma: reset de senha da Ninna chegando de `@interdemo.com.br` é o
+padrão que o Gmail e a mãe leem como golpe.
+
+Ordem: registrar o domínio → adicionar no Resend → colar SPF e DKIM na zona do
+registro.br → **Verify** → gerar API key (*Sending access*) → `Project Settings >
+Authentication > SMTP Settings` no projeto `hzjcimgutccsfrxuuhrl`, host
+`smtp.resend.com`, porta 465, usuário `resend`, senha = a API key, remetente
+`ninna@ninnaappbr.com.br`, nome de exibição "Ninna".
+
+**Atalho que NÃO fecha o aceite:** o Resend entrega por `onboarding@resend.dev`
+sem domínio nenhum, mas só para o e-mail dono da conta. Serve para provar que a
+credencial SMTP do Supabase está certa; não serve para o D3b, que exige
+justamente o terceiro.
 
 **Critério de aceite (item 2 da checklist §8):** disparar um reset para um Gmail
 que não é o do fundador e confirmar que chegou **na caixa de entrada, não em
