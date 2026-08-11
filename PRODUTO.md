@@ -552,18 +552,50 @@ O Blumy ancora em **R$24,90/mês com desconto anual**. Ancoragem de concorrente
 estabelecido é um teto prático: acima disso, cada real precisa ser justificado
 contra um app que a mãe já conhece.
 
-Recomendo **igualar, não competir por preço** — R$24,90/mês, com anual em torno
-de R$199 (~R$16,60/mês). A diferenciação da Ninna é o que ela diz, não o que
-custa; entrar mais barato sinaliza produto menor e ainda estraga a margem que
-paga o assistente.
+### ✅ Preço decidido em 11/08/2026
 
-**Margem por assinante mensal, a R$24,90:**
+**R$24,90/mês e R$149,90/ano.** O anual veio do brand deck original, com 7 dias
+grátis previstos.
 
-⚠️ **Atualizado em 11/08/2026:** a tabela abaixo foi escrita quando o canal era
-loja. Cobrando pela PWA (§6), a linha da loja vira Stripe — ~4,4% em vez de 15%,
-ou R$1,10 em vez de R$3,74. A margem mensal sobe de 60% para ~73%, e o plano
-anual deixa de ser apertado. A tabela fica como está para registrar o caso da
-loja, que volta a valer se um dia a venda acontecer dentro do app.
+**Margem por assinante, cobrando por Stripe na PWA** (4,39% = 3,99% + 0,4% de
+recorrência, mais R$0,39 fixos por cobrança):
+
+| Item | Mensal (R$24,90) | Anual (R$149,90/12) |
+|---|---:|---:|
+| Receita bruta | R$ 24,90 | R$ 12,49 |
+| Stripe | −R$ 1,48 | −R$ 0,58 |
+| Assistente — Desenho B, Opus 5 | −R$ 5,30 | −R$ 5,30 |
+| Infra fixa diluída | −R$ 1,00 | −R$ 1,00 |
+| **Margem** | **R$ 17,12 (69%)** | **R$ 5,61 (45%)** |
+
+No anual a cobrança é uma só por ano, então o R$0,39 fixo dilui — é por isso que
+a linha da Stripe cai tanto.
+
+### ⚠️ O anual é 50% de desconto, e isso torna 45% o CASO BASE
+
+R$149,90 equivalem a R$12,49/mês contra R$24,90. **Meio preço**, não os 15–20%
+que um desconto anual costuma ser.
+
+Consequência direta: o anual é a escolha racional para quase qualquer mãe que
+pretenda usar o app por mais de dois meses. Então a margem que importa para
+planejar **não é a de 69%** — é a de **45%**.
+
+**O planejamento usa R$5,61 por assinante por mês.** Qualquer conta de ponto de
+equilíbrio, de custo de aquisição ou de quanto a Ninna aguenta gastar sai daí, e
+não do número do plano mensal.
+
+**Decisão em aberto, registrada de propósito:** um anual de **R$239** (~20% de
+desconto, R$19,92/mês) daria **~58% de margem**, ou R$11,50/assinante/mês —
+**mais que o dobro**. O preço de R$149,90 foi escolhido conscientemente, e a
+alternativa fica escrita aqui para que a escolha continue sendo uma escolha, e
+não algo que ninguém lembra de ter decidido. Revisitar quando houver dado de
+conversão real.
+
+---
+
+**A tabela abaixo é histórica:** ela registra o caso da LOJA (15% em vez de
+Stripe), que volta a valer se um dia a venda acontecer dentro do app iOS. Os
+números de receita são os do anual antigo, de R$199.
 
 | Item | Mensal | Anual (R$199/12) |
 |---|---:|---:|
@@ -579,9 +611,11 @@ detalhe de engenharia: **a escolha entre A e B decide se o plano anual fecha.**
 
 Três coisas que decorrem disso e precisam estar no plano desde o dia 1:
 
-1. **Limite diário de mensagens.** Sem teto, uma usuária pesada custa mais que a
-   assinatura. Com teto generoso (20–30/dia) quase ninguém encosta nele, e o
-   pior caso deixa de ser ilimitado;
+1. **Limite diário de mensagens — 30/dia no plano pago, 10/dia durante o teste
+   grátis.** Sem teto, uma usuária pesada custa mais que a assinatura. E o teste
+   grátis precisa do seu próprio: no teto de 30, sete dias levados ao máximo
+   custam ~R$4,65, que é quase um mês inteiro da margem anual. Com 10 cai para
+   ~R$1,55, e segue generoso para quem está conhecendo;
 2. **A infra fixa só dilui com escala.** Supabase Pro são US$25/mês fixos —
    R$135. Com 10 assinantes isso é R$13,50 cada e a margem some. **O ponto de
    equilíbrio fica em torno de 20–30 assinantes**, e antes disso o produto opera
@@ -590,11 +624,11 @@ Três coisas que decorrem disso e precisam estar no plano desde o dia 1:
 3. **A loja cobra 15% enquanto você faturar menos de US$1M/ano** — acima disso,
    30%. Longe daqui, mas a conta muda.
 
-**O que eu não sei e você precisa decidir:** se existe camada gratuita. Registro
-grátis com assistente pago é o desenho que melhor casa com a tese — a mãe
-registra por semanas, o histórico dela cresce, e o assistente fica mais valioso
-exatamente quando ela tem dado suficiente para ele brilhar. Mas isso é decisão de
-negócio e eu não tenho como avaliá-la sozinho.
+**A camada gratuita foi decidida em 11/08/2026, e é o desenho acima:** registrar,
+ver a rotina e ler o insight são grátis; o assistente é pago. Paga o que custa —
+ele é o único recurso com custo marginal por usuária. E grátis o que constrói o
+histórico, que é o que faz o assistente valer alguma coisa quando ela chegar
+nele. A fronteira mora em `src/lib/acesso.ts`, numa linha só.
 
 ---
 

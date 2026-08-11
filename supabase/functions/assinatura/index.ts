@@ -32,13 +32,21 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 // Configuração
 // ------------------------------------------------------------------
 
-/** Os dois preços do produto Ninna. Não são segredo — identificam, não autorizam. */
-const PRECOS = {
-  mensal: 'price_1U3FxhPcpMk0DJ4dM6n5UuBZ',
-  anual: 'price_1U3G52PcpMk0DJ4dQeJ0g5hH',
-} as const;
+/**
+ * Os dois preços do produto Ninna, por variável de ambiente.
+ *
+ * Eles não são segredo — identificam, não autorizam — mas MUDAM entre teste e
+ * produção: modo live tem outros IDs. Escritos no código, virar o modo seria um
+ * commit, e virada de modo não pode depender de deploy de código.
+ *
+ * Configurados como secrets, ao lado da STRIPE_API_KEY.
+ */
+type Plano = 'mensal' | 'anual';
 
-type Plano = keyof typeof PRECOS;
+const PRECOS: Record<Plano, string | undefined> = {
+  mensal: Deno.env.get('STRIPE_PRICE_MENSAL'),
+  anual: Deno.env.get('STRIPE_PRICE_ANUAL'),
+};
 
 /** Sete dias, como previsto no brand deck. O custo disso está no PRODUTO.md §5. */
 const DIAS_DE_TESTE = 7;
@@ -141,6 +149,11 @@ Deno.serve(async (req: Request) => {
       if (plano !== 'mensal' && plano !== 'anual') {
         return json({ erro: 'plano inválido' }, 400);
       }
+      const priceId = PRECOS[plano];
+      if (!priceId) {
+        console.error(`[assinatura] falta STRIPE_PRICE_${plano.toUpperCase()}`);
+        return json({ erro: ERRO }, 500);
+      }
 
       const checkout = await stripe.checkout.sessions.create({
         mode: 'subscription',
@@ -148,7 +161,7 @@ Deno.serve(async (req: Request) => {
         // `payment_method_types` fica FORA de propósito: com ele, a Stripe deixa
         // de escolher dinamicamente os meios habilitados no painel, e travar em
         // cartão hoje impediria o Pix de entrar amanhã sem mexer em código.
-        line_items: [{ price: PRECOS[plano], quantity: 1 }],
+        line_items: [{ price: priceId, quantity: 1 }],
         subscription_data: {
           trial_period_days: DIAS_DE_TESTE,
           metadata: { supabase_user_id: usuaria.id },

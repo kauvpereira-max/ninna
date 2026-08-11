@@ -27,6 +27,31 @@ bloqueado pelo autoconfirm — o preflight exige "Confirm email" desligado em
 Ordem prática: ~~roda o `002`~~ → **envia o termo → E1 entra**. O §11.4 não impede
 a entrega, mas impede declarar o P7 fechado.
 
+## A embaixadora não paga — e a cortesia é pela Stripe
+
+O assistente é recurso pago (PRODUTO.md §5). A embaixadora precisa usá-lo
+justamente para avaliá-lo, então ela entra com **assinatura cortesia**.
+
+**Pela Stripe, nunca por exceção no código.** Um `if` que libera certas contas
+cria um segundo caminho que ninguém testa — e o que ela usaria deixaria de ser o
+que uma assinante usa, que é exatamente o que o piloto precisa observar.
+
+Como fazer, no painel da Stripe:
+
+1. **Products → Coupons → New**: 100% de desconto, duração *Forever*, nome
+   `embaixadora`.
+2. Peça a ela para assinar normalmente pelo app, escolhendo o plano.
+3. No Checkout ela aplica o cupom — ou, mais simples, você cria a assinatura por
+   ela em **Customers → (ela) → Create subscription**, com o cupom aplicado.
+
+O caminho dela no app fica idêntico ao de uma assinante pagante: mesmo portão,
+mesmo teto diário, mesmo Portal do Cliente para cancelar.
+
+⚠️ **Ao encerrar a participação**, a cortesia é cancelada na Stripe — e isso vem
+ANTES de apagar a conta, pela mesma razão do procedimento de exclusão
+(`004_assinaturas.sql`): apagada a usuária, some o `stripe_customer_id` e fica
+mais difícil achar o que cancelar.
+
 ## Campos a preencher
 
 Estão marcados em `[MAIÚSCULAS ENTRE COLCHETES]` dentro dos arquivos:

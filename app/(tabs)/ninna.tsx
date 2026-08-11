@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useBaby } from '../../src/contexts/BabyContext';
 import { perguntar } from '../../src/lib/assistente';
 import { colors, spacing, radius, typography } from '../../src/theme/tokens';
@@ -46,15 +47,17 @@ type Fala = { de: 'mae' | 'ninna'; texto: string };
 
 export default function NinnaScreen() {
   const { bebeAtivo } = useBaby();
+  const router = useRouter();
   const [falas, setFalas] = useState<Fala[]>([]);
   const [rascunho, setRascunho] = useState('');
   const [pensando, setPensando] = useState(false);
   const [semCota, setSemCota] = useState(false);
+  const [semPlano, setSemPlano] = useState(false);
   const scroll = useRef<ScrollView>(null);
 
   async function enviar(texto: string) {
     const pergunta = texto.trim();
-    if (!pergunta || pensando || semCota || !bebeAtivo) return;
+    if (!pergunta || pensando || semCota || semPlano || !bebeAtivo) return;
 
     setFalas((atuais) => [...atuais, { de: 'mae', texto: pergunta }]);
     setRascunho('');
@@ -65,6 +68,7 @@ export default function NinnaScreen() {
     setFalas((atuais) => [...atuais, { de: 'ninna', texto: resposta.texto }]);
     setPensando(false);
     if (resposta.limite) setSemCota(true);
+    if (resposta.semAssinatura) setSemPlano(true);
   }
 
   return (
@@ -126,7 +130,19 @@ export default function NinnaScreen() {
           ) : null}
         </ScrollView>
 
-        {semCota ? (
+        {semPlano ? (
+          // Recusa que oferece o caminho. Um beco sem saída aqui é a mãe
+          // fechando o app sem entender que o resto continua dela.
+          <View style={styles.rodapeLimite}>
+            <Pressable
+              onPress={() => router.push('/assinatura')}
+              accessibilityRole="button"
+              style={styles.verPlano}
+            >
+              <Text style={styles.verPlanoTexto}>Ver o plano da Ninna</Text>
+            </Pressable>
+          </View>
+        ) : semCota ? (
           // Sem campo de digitar: oferecer um campo que não responde é pior que
           // não oferecer. O teto volta amanhã, e a frase já diz isso.
           <View style={styles.rodapeLimite}>
@@ -244,4 +260,12 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   limiteTexto: { ...typography.body, color: colors.neutro500, flex: 1 },
+  verPlano: {
+    flex: 1,
+    backgroundColor: colors.rosa500,
+    borderRadius: radius.full,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+  },
+  verPlanoTexto: { ...typography.label, fontSize: 15, color: colors.neutro0 },
 });

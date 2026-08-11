@@ -18,6 +18,8 @@ export type RespostaDoAssistente = {
   restantes: number | null;
   /** `true` quando o teto diário foi atingido — a tela some com o campo. */
   limite: boolean;
+  /** `true` quando falta assinatura — a tela oferece o caminho pro plano. */
+  semAssinatura: boolean;
 };
 
 const ERRO_REDE =
@@ -39,19 +41,20 @@ export async function perguntar(
 
     if (error) {
       console.warn('[assistente] falha na chamada:', error.message);
-      return { texto: ERRO_REDE, restantes: null, limite: false };
+      return { texto: ERRO_REDE, restantes: null, limite: false, semAssinatura: false };
     }
 
-    const corpo = data as { resposta?: unknown; restantes?: unknown; limite?: unknown };
+    const corpo = data as { resposta?: unknown; restantes?: unknown; limite?: unknown; semAssinatura?: unknown };
     const texto = typeof corpo?.resposta === 'string' ? corpo.resposta : ERRO_REDE;
 
     return {
       texto,
       restantes: typeof corpo?.restantes === 'number' ? corpo.restantes : null,
       limite: corpo?.limite === true,
+      semAssinatura: (corpo as { semAssinatura?: unknown })?.semAssinatura === true,
     };
   } catch (erro) {
     console.warn('[assistente] exceção:', erro);
-    return { texto: ERRO_REDE, restantes: null, limite: false };
+    return { texto: ERRO_REDE, restantes: null, limite: false, semAssinatura: false };
   }
 }

@@ -31,6 +31,13 @@ export default function MaisScreen() {
 
         <View style={styles.lista}>
           <Item
+            icone="sparkles-outline"
+            label="Plano da Ninna"
+            descricao="Assinatura, cartão e faturas"
+            onPress={() => router.push('/assinatura')}
+          />
+
+          <Item
             icone="heart-outline"
             label="Sobre a Ninna"
             descricao="O que fica guardado, e como apagar tudo"
