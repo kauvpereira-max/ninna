@@ -90,6 +90,39 @@ console.log(`fuso:    ${fuso}`);
 console.log(`conta:   ${env.SEMEAR_EMAIL}`);
 console.log(`bebê:    ${bebe.name} (${bebe.id})\n`);
 
+/**
+ * A marca da linha que este teste cria, e a varredura que a limpa ANTES de tudo.
+ *
+ * O sono em andamento da seção 4 é apagado num `finally`, e `finally` só roda se
+ * o processo chegar até lá. Em 11/08/2026 o teste irmão (`teste-lista-banco.ts`)
+ * teve a saída canalizada para `head`, morreu de SIGPIPE no meio, e deixou 4
+ * linhas para trás — que reapareceram como órfãs na conferência de uma migração,
+ * parecendo registro apagado pela mãe.
+ *
+ * Aqui a sobra seria pior que lixo: um sono ABERTO no bebê semeado entra na
+ * conta de horário de soneca, e as asserções desta rodada passariam a comparar o
+ * motor contra uma massa que o gerador não produziu. O teste mentiria em silêncio.
+ *
+ * `notes` não é campo do sono no schema do app — mas é coluna de `registros`, e
+ * nada impede marcá-la aqui. É a âncora que torna a limpeza idempotente.
+ */
+const MARCA_ABERTO = 'ABERTO-TESTE-MOTOR';
+
+const sobras = await cliente
+  .from('registros')
+  .delete()
+  .eq('baby_id', bebe.id)
+  .eq('notes', MARCA_ABERTO)
+  .select('id');
+
+if (sobras.error) {
+  console.error(`Não consegui varrer sobras de execuções anteriores: ${sobras.error.message}`);
+  process.exit(1);
+}
+if (sobras.data.length > 0) {
+  console.log(`varridas ${sobras.data.length} linha(s) deixadas por uma execução anterior\n`);
+}
+
 const desde = new Date(agora.getTime() - JANELA_DIAS * 24 * 60 * 60_000).toISOString();
 
 /**
@@ -315,6 +348,7 @@ try {
       ocorrido_em: inicioAberto,
       terminou_em: null,
       dados: {},
+      notes: MARCA_ABERTO,
     })
     .select('id, ocorrido_em, terminou_em')
     .single();

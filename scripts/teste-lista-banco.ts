@@ -123,6 +123,36 @@ const INSTANTE_EMPATADO = new Date(Date.now() - 90 * 60_000).toISOString();
 const QUANTOS_EMPATADOS = 4;
 const MARCA_EMPATE = 'EMPATE-TESTE-LISTA';
 
+/**
+ * A limpeza do começo, e ela é a que importa.
+ *
+ * O `finally` lá embaixo só roda se o processo chegar até lá — e em 11/08/2026 ele
+ * não chegou: a saída do teste foi canalizada para `head`, o pipe fechou, o Node
+ * morreu de SIGPIPE no meio do laço, e as 4 linhas ficaram no banco. Elas
+ * apareceram depois como órfãs na conferência do repasse, no meio de uma
+ * migração, parecendo registro apagado pela mãe.
+ *
+ * Limpeza que depende do processo sobreviver não é limpeza; é intenção. Esta
+ * varre por marca ANTES de criar as novas, então qualquer morte — SIGPIPE,
+ * Ctrl-C, queda de rede, exceção fora do `try` — se resolve sozinha na execução
+ * seguinte. O `finally` continua lá porque limpar na hora ainda é melhor do que
+ * limpar depois: os dois juntos cobrem o que nenhum cobre sozinho.
+ */
+const sobras = await cliente
+  .from('registros')
+  .delete()
+  .eq('baby_id', babyId)
+  .eq('notes', MARCA_EMPATE)
+  .select('id');
+
+if (sobras.error) {
+  console.error(`Não consegui varrer sobras de execuções anteriores: ${sobras.error.message}`);
+  process.exit(1);
+}
+if (sobras.data.length > 0) {
+  console.log(`varridas ${sobras.data.length} linha(s) de empate deixadas por uma execução anterior`);
+}
+
 const empatados = await cliente
   .from('registros')
   .insert(
