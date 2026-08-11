@@ -46,29 +46,75 @@ const PLANOS = [
   },
 ];
 
+/**
+ * Trinta segundos de insistência, de dois em dois.
+ *
+ * O webhook normal chega em um ou dois; a janela é larga para caber reentrega
+ * da Stripe, que é o caso lento e legítimo. Passou disso, a tela fala.
+ */
+const INTERVALO_MS = 2000;
+const MAX_TENTATIVAS = 15;
+
 export default function AssinaturaScreen() {
   const router = useRouter();
   const { estado } = useLocalSearchParams<{ estado?: string }>();
   const [assinatura, setAssinatura] = useState<Assinatura | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [demorou, setDemorou] = useState(false);
 
+  /**
+   * Lê o estado — e insiste enquanto ela está esperando o webhook.
+   *
+   * Ler uma vez só não bastava, e o motivo é de corrida: o Checkout devolve a
+   * mãe para cá em menos tempo do que a Stripe leva para entregar o evento. Na
+   * volta de 11/08/2026 a diferença foi de menos de dois segundos — a página
+   * carregou, leu "ainda não", e ficou em "confirmando" para sempre.
+   *
+   * "Para sempre" porque na web isto é carga fria de página: o foco nunca muda
+   * de novo, então `useFocusEffect` não dispara segunda vez. Esperar não
+   * resolvia nada, e a linha certa já estava no banco.
+   *
+   * A insistência é limitada de propósito. Se em `MAX_TENTATIVAS` não entrou,
+   * alguma coisa está errada de verdade, e ficar girando esconde isso da mãe —
+   * ela merece uma frase, não uma bolinha eterna.
+   */
   useFocusEffect(
     useCallback(() => {
       let vivo = true;
-      estadoDaAssinatura().then((a) => {
-        if (vivo) setAssinatura(a);
-      });
+      let tentativas = 0;
+      let relogio: ReturnType<typeof setTimeout> | undefined;
+
+      async function ler() {
+        const atual = await estadoDaAssinatura();
+        if (!vivo) return;
+        setAssinatura(atual);
+
+        // Só insiste quem acabou de voltar do Checkout. Nas outras entradas na
+        // tela, uma leitura é a resposta inteira.
+        const esperando = estado === 'pronto' && !assinaturaValida(atual);
+        if (!esperando) return;
+
+        if (tentativas < MAX_TENTATIVAS) {
+          tentativas += 1;
+          relogio = setTimeout(ler, INTERVALO_MS);
+        } else {
+          setDemorou(true);
+        }
+      }
+
+      ler();
       return () => {
         vivo = false;
+        if (relogio) clearTimeout(relogio);
       };
-    }, [])
+    }, [estado])
   );
 
   const valida = assinatura ? assinaturaValida(assinatura) : false;
   const emTeste = assinatura?.status === 'trialing';
   // Voltou da Stripe dizendo que terminou, mas o webhook ainda não gravou.
-  const confirmando = estado === 'pronto' && assinatura !== null && !valida;
+  const confirmando = estado === 'pronto' && assinatura !== null && !valida && !demorou;
 
   async function escolher(plano: 'mensal' | 'anual') {
     setErro(null);
@@ -125,6 +171,15 @@ export default function AssinaturaScreen() {
             <ActivityIndicator size="small" color={colors.rosa500} />
             <Text style={styles.avisoTexto}>
               Estou confirmando o pagamento. Isso leva alguns segundos — pode fechar e voltar.
+            </Text>
+          </View>
+        ) : null}
+
+        {demorou && !valida ? (
+          <View style={styles.aviso}>
+            <Text style={styles.avisoTexto}>
+              A confirmação ainda não chegou. Se o pagamento saiu, a assinatura entra sozinha —
+              pode fechar e voltar daqui a pouco.
             </Text>
           </View>
         ) : null}
