@@ -1,5 +1,11 @@
 -- Ninna — reversão do passo 4 da migração para `registros`
 --
+-- ⏳ VENCE EM 25/08/2026, ou no dia em que o primeiro tipo novo entrar em
+--    producao — o que vier primeiro. Depois disso este arquivo NAO e um caminho
+--    valido: as cinco consultas rodam com sucesso e deixam para tras, em
+--    silencio, todo registro de tipo que nao tem tabela antiga.
+--    No vencimento, apagar ou renomear para reversao-vencida-em-25-08-2026/.
+--
 -- ⚠️ ESTE ARQUIVO EXISTE PARA NÃO SER ESCRITO NA HORA.
 --    Consulta improvisada no momento em que algo deu errado é a pior hora de
 --    escrever SQL: pressa, medo de perder dado, e ninguém para revisar.

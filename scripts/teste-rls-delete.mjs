@@ -32,7 +32,7 @@
 // invalidaria o teste inteiro (ver guarda abaixo). As duas contas ficam, sempre
 // as mesmas, identificáveis pelo e-mail.
 
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 
 // ------------------------------------------------------------------
@@ -214,13 +214,32 @@ async function criarBebeDescartavel(cliente, userId, rotulo) {
   return data.id;
 }
 
-const TABELAS_DE_REGISTRO = [
-  'feeding_records',
-  'sleep_records',
-  'diaper_records',
-  'mood_records',
-  'symptom_records',
-];
+/**
+ * As tabelas que guardam dado de bebê, LIDAS DAS MIGRATIONS.
+ *
+ * Antes era lista escrita à mão, e o problema disso não é manutenção — é que uma
+ * lista manual erra junto com a migration que a esqueceu. Quem cria a tabela sem
+ * RLS é a mesma pessoa que esquece de acrescentá-la aqui, no mesmo dia, com a
+ * mesma pressa. O teste ficaria verde sobre uma tabela aberta.
+ *
+ * Derivando do repositório, tabela nova com `baby_id` entra sozinha na varredura,
+ * e a cobertura vira uma asserção em vez de um hábito.
+ */
+function tabelasComBabyId() {
+  const dir = 'supabase/migrations';
+  const achadas = new Set();
+  for (const arquivo of readdirSync(dir).filter((f) => f.endsWith('.sql'))) {
+    const sql = readFileSync(`${dir}/${arquivo}`, 'utf8');
+    const criacoes = /create table (?:if not exists )?(\w+)\s*\(([\s\S]*?)\n\);/g;
+    let achado;
+    while ((achado = criacoes.exec(sql)) !== null) {
+      if (/\bbaby_id\b/.test(achado[2])) achadas.add(achado[1]);
+    }
+  }
+  return [...achadas];
+}
+
+const TABELAS_DE_REGISTRO = tabelasComBabyId();
 
 /**
  * Apaga registros e depois o bebê, nesta ordem — de propósito.
@@ -265,6 +284,7 @@ const TIPOS = [
       started_at: AGORA,
       notes: `${PREFIXO} amamentar`,
     }),
+    edicao: { notes: `${PREFIXO} invadido` },
   },
   {
     nome: 'mamadeira',
@@ -277,12 +297,15 @@ const TIPOS = [
       started_at: AGORA,
       notes: `${PREFIXO} mamadeira`,
     }),
+    edicao: { notes: `${PREFIXO} invadido` },
   },
   {
     nome: 'sono',
     tabela: 'sleep_records',
     // Sem coluna notes nesta tabela — o vínculo com o teste é o bebê prefixado.
     linha: (babyId) => ({ baby_id: babyId, started_at: AGORA, ended_at: null }),
+    // Sem notes nesta tabela: a invasão possível aqui é encerrar o sono alheio.
+    edicao: { ended_at: AGORA },
   },
   {
     nome: 'fralda',
@@ -293,6 +316,7 @@ const TIPOS = [
       recorded_at: AGORA,
       notes: `${PREFIXO} fralda`,
     }),
+    edicao: { notes: `${PREFIXO} invadido` },
   },
   {
     nome: 'humor',
@@ -303,6 +327,7 @@ const TIPOS = [
       recorded_at: AGORA,
       notes: `${PREFIXO} humor`,
     }),
+    edicao: { notes: `${PREFIXO} invadido` },
   },
   {
     nome: 'sintoma',
@@ -314,6 +339,38 @@ const TIPOS = [
       recorded_at: AGORA,
       notes: `${PREFIXO} sintoma`,
     }),
+    edicao: { notes: `${PREFIXO} invadido` },
+  },
+  {
+    // A tabela de eventos do bloco 3. Provada com ela VAZIA, antes do backfill:
+    // RLS provada com dado dentro é RLS provada tarde demais.
+    //
+    // E aqui a leitura pesa mais que nas outras. Com uma tabela por tipo, um furo
+    // de select exporia um tipo de registro de outra mãe; com tabela única, expõe
+    // o diário inteiro dela.
+    nome: 'registros',
+    tabela: 'registros',
+    linha: (babyId) => ({
+      baby_id: babyId,
+      tipo: 'fralda',
+      ocorrido_em: AGORA,
+      dados: { content: 'pee' },
+      notes: `${PREFIXO} registros`,
+    }),
+    edicao: { notes: `${PREFIXO} invadido` },
+  },
+  {
+    // Cache do motor, não registro — mas guarda dado derivado do bebê, e a
+    // varredura derivada das migrations o encontra. Ficar de fora exigiria uma
+    // lista de exceções, que é a lista manual voltando pela porta dos fundos.
+    nome: 'padroes',
+    tabela: 'baby_patterns',
+    // Chave primária é o próprio bebê: esta tabela não tem coluna `id`. Declarar
+    // a chave no caso é melhor que abrir exceção no laço — o laço não deve
+    // conhecer tabela nenhuma.
+    chave: 'baby_id',
+    linha: (babyId) => ({ baby_id: babyId, confidence_score: 1 }),
+    edicao: { confidence_score: 99 },
   },
 ];
 
@@ -347,29 +404,72 @@ async function main() {
   let bebeB = null;
 
   try {
+    // A varredura só vale se ela alcançar tudo. Tabela nova com `baby_id` que
+    // ninguém acrescentou aos casos é exatamente a que estaria sem RLS.
+    const cobertas = new Set(TIPOS.map((t) => t.tabela));
+    const descobertas = TABELAS_DE_REGISTRO.filter((t) => !cobertas.has(t));
+    registra(
+      'cobertura',
+      `as ${TABELAS_DE_REGISTRO.length} tabelas com baby_id têm caso de teste`,
+      descobertas.length === 0,
+      descobertas.length > 0 ? `sem caso: ${descobertas.join(', ')}` : ''
+    );
+
     bebeA = await criarBebeDescartavel(a.cliente, a.userId, 'A');
     bebeB = await criarBebeDescartavel(b.cliente, b.userId, 'B');
 
     for (const tipo of TIPOS) {
+      const chave = tipo.chave ?? 'id';
       // B cria o registro.
       const criado = await b.cliente
         .from(tipo.tabela)
         .insert(tipo.linha(bebeB))
-        .select('id')
+        .select(chave)
         .single();
       if (criado.error) {
         registra(tipo.nome, 'preparação', false, `B não conseguiu criar: ${criado.error.message}`);
         continue;
       }
-      const id = criado.data.id;
+      const id = criado.data[chave];
 
-      // 1. NEGATIVO — A tenta apagar o registro de B.
+      // 1. NEGATIVO — A tenta LER o registro de B.
+      //
+      // Primeiro da lista porque é o furo mais grave: apagar destrói uma linha,
+      // ler expõe a rotina de um bebê para um estranho. Com tabela única, expõe
+      // o diário inteiro.
+      //
+      // Sem erro aqui também: a RLS filtra, e a resposta é uma lista vazia com
+      // sucesso. Quem responde é a contagem, não a ausência de erro.
+      const leitura = await a.cliente.from(tipo.tabela).select(chave).eq(chave, id);
+      const linhasLidasPorA = (leitura.data ?? []).length;
+      registra(
+        tipo.nome,
+        'A não LÊ registro de B',
+        linhasLidasPorA === 0,
+        linhasLidasPorA > 0 ? `A leu ${linhasLidasPorA} linha(s) de B` : ''
+      );
+
+      // 2. NEGATIVO — A tenta EDITAR o registro de B.
+      const edicao = await a.cliente
+        .from(tipo.tabela)
+        .update(tipo.edicao)
+        .eq(chave, id)
+        .select(chave);
+      const linhasEditadasPorA = (edicao.data ?? []).length;
+      registra(
+        tipo.nome,
+        'A não EDITA registro de B',
+        linhasEditadasPorA === 0,
+        linhasEditadasPorA > 0 ? `A editou ${linhasEditadasPorA} linha(s) de B` : ''
+      );
+
+      // 3. NEGATIVO — A tenta apagar o registro de B.
       //
       // O PostgREST NÃO devolve erro aqui: a RLS filtra a linha e o delete
       // simplesmente não casa nada. Por isso o teste olha as linhas afetadas
       // (via .select()), não a ausência de erro. É a mesma armadilha que
       // apagarRegistro() trata em src/lib/registros.ts.
-      const tentativa = await a.cliente.from(tipo.tabela).delete().eq('id', id).select('id');
+      const tentativa = await a.cliente.from(tipo.tabela).delete().eq(chave, id).select(chave);
       const linhasApagadasPorA = (tentativa.data ?? []).length;
       registra(
         tipo.nome,
@@ -378,8 +478,8 @@ async function main() {
         linhasApagadasPorA > 0 ? `A apagou ${linhasApagadasPorA} linha(s) de B` : ''
       );
 
-      // 2. PERMANÊNCIA — a linha continua lá, conferida pelos olhos de B.
-      const conferencia = await b.cliente.from(tipo.tabela).select('id').eq('id', id).maybeSingle();
+      // 4. PERMANÊNCIA — a linha continua lá, intacta, conferida pelos olhos de B.
+      const conferencia = await b.cliente.from(tipo.tabela).select(chave).eq(chave, id).maybeSingle();
       registra(
         tipo.nome,
         'registro de B continua no banco',
@@ -387,9 +487,29 @@ async function main() {
         conferencia.data === null ? 'a linha sumiu' : ''
       );
 
-      // 3. POSITIVO — B apaga o próprio registro. Sem isso, uma policy que negasse
-      // tudo passaria nas duas verificações acima.
-      const proprio = await b.cliente.from(tipo.tabela).delete().eq('id', id).select('id');
+      // 5. POSITIVO — B lê, edita e apaga o próprio registro. Sem isto, uma policy
+      // que negasse tudo a todos passaria em todas as verificações acima.
+      const lidoPorB = await b.cliente.from(tipo.tabela).select(chave).eq(chave, id);
+      registra(
+        tipo.nome,
+        'B lê o próprio registro',
+        (lidoPorB.data ?? []).length === 1,
+        (lidoPorB.data ?? []).length !== 1 ? 'B não enxerga o que criou' : ''
+      );
+
+      const editadoPorB = await b.cliente
+        .from(tipo.tabela)
+        .update(tipo.edicao)
+        .eq(chave, id)
+        .select(chave);
+      registra(
+        tipo.nome,
+        'B edita o próprio registro',
+        (editadoPorB.data ?? []).length === 1,
+        editadoPorB.error ? editadoPorB.error.message : ''
+      );
+
+      const proprio = await b.cliente.from(tipo.tabela).delete().eq(chave, id).select(chave);
       const linhasApagadasPorB = (proprio.data ?? []).length;
       registra(
         tipo.nome,
@@ -420,7 +540,10 @@ async function main() {
     return;
   }
 
-  console.log(`RLS de DELETE está correta nos 6 tipos. Dados de teste removidos.`);
+  console.log(
+    `RLS correta em leitura, edição e exclusão — ${TIPOS.length} casos sobre ` +
+      `${TABELAS_DE_REGISTRO.length} tabelas. Dados de teste removidos.`
+  );
   console.log(
     `\nAs duas contas de auth continuam no projeto (apagá-las exigiria service_role,` +
       ` que este script se recusa a usar). São sempre as mesmas:\n` +

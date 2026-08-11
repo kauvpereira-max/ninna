@@ -106,7 +106,13 @@ geradas. **Não toca em nenhuma tabela existente.**
 
 ---
 
-### 2 · Provar a RLS antes de qualquer dado entrar
+### 2 · Provar a RLS antes de qualquer dado entrar — ✅ feito em 11/08/2026
+
+```
+57/57 verificações passaram.
+RLS correta em leitura, edição e exclusão — 8 casos sobre 7 tabelas.
+registros: 0 linhas · nenhum bebê de teste deixado para trás
+```
 
 `teste-rls-delete.mjs` estendido para incluir `registros`, e rodado com a tabela
 **vazia**. A ordem importa: RLS provada com dado dentro é RLS provada tarde
@@ -115,7 +121,22 @@ demais.
 A lista de tabelas do teste passa a ser **derivada**, não escrita à mão — uma
 lista manual erra junto com a migration que a esqueceu.
 
-**Verificar:** a conta A não lê, não edita e não apaga registro da conta B.
+**Verificar:** a conta A não lê, não edita e não apaga registro da conta B — e a
+conta B faz as três no que é dela, senão uma policy que negasse tudo a todos
+passaria em todas as verificações negativas.
+
+Três mudanças que ficaram no teste:
+
+1. **Leitura vem antes de exclusão** na ordem das asserções, porque é o furo mais
+   grave: apagar destrói uma linha, ler expõe a rotina de um bebê para um
+   estranho. Com tabela única, expõe o diário inteiro.
+2. **A lista de tabelas é lida das migrations**, não escrita à mão — e a
+   cobertura virou asserção. Tabela nova com `baby_id` que ninguém acrescentou
+   aos casos reprova o teste, porque é exatamente a que estaria sem RLS.
+3. **`baby_patterns` entrou.** A varredura derivada o encontrou; deixá-lo de fora
+   exigiria uma lista de exceções, que é a lista manual voltando pela porta dos
+   fundos. Ele declara a própria chave primária (`baby_id`, não `id`), e o laço
+   continua sem conhecer tabela nenhuma.
 
 **Reverter:** nada a reverter; nenhum dado foi escrito.
 
@@ -238,6 +259,30 @@ repositório — ele contém dado de mãe.
 | Depois do 3 | `drop table registros` | nada |
 | Depois do 4 | `git revert` + redeploy | nada, **se** o backfill reverso rodar |
 | Depois do 6 | restaurar o dump | o que entrou depois do dump |
+
+---
+
+## ⏳ A reversão do passo 4 vence em **25/08/2026**
+
+Ou no dia em que **o primeiro tipo novo entrar em produção** — o que vier
+primeiro. Depois disso, `supabase/reversao/passo-4-voltar-para-as-tabelas-antigas.sql`
+deixa de ser um caminho válido, e tentar usá-lo é pior que não ter caminho: as
+cinco consultas rodariam com sucesso e deixariam para trás, em silêncio, todo
+registro de tipo que não tem tabela antiga.
+
+**Por que essas duas datas.** Duas semanas cobrem o passo 5 inteiro com folga —
+uso real, uma madrugada, um fim de semana. E o gatilho do primeiro tipo novo é
+o que realmente importa: no instante em que existir um registro de Peso ou
+Vacina, a estrutura antiga deixa de conseguir representar o presente.
+
+**Depois do vencimento o caminho é outro, e é só um:** corrigir para frente.
+Restaurar o dump do passo 6 (se já tiver acontecido) ou consertar o código sobre
+`registros`. Voltar às cinco tabelas deixa de estar na mesa.
+
+**O que fazer no dia 25/08/2026**, e é trabalho de cinco minutos: apagar
+`supabase/reversao/`, ou renomeá-lo para `reversao-vencida-em-25-08-2026/`.
+Arquivo de emergência que não serve mais é pior que arquivo nenhum — ele parece
+uma saída no momento em que ninguém tem calma para ler o cabeçalho.
 
 ---
 
