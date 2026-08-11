@@ -1274,9 +1274,21 @@ mesmo do piloto.
 - Portanto nada verificado, e o "aguardando propagação" escrito no D1 descrevia
   uma espera que nunca começou.
 
-**Domínio pedido: `ninnaappbr.com.br`**, aguardando pagamento (o registro.br o
-mostra em `waiting_publication`). ⚠️ Pedido não pago é liberado de volta —
-pagar é o que segura o nome.
+**Domínio `ninnaappbr.com.br` pago e registrado em 11/08/2026.** Usa o DNS do
+próprio registro.br (`a.auto.dns.br` / `b.auto.dns.br`), então a zona se edita
+lá mesmo; TTL de 15 min.
+
+🕐 **Bloqueado em 11/08: "Domínio em transição, aguarde alguns minutos"** — o
+registro.br trava a edição de zona logo após o registro, com contador de ~2h.
+Não há o que fazer além de esperar. É relógio de terceiro, como o resto deste
+item.
+
+⚠️ **A armadilha da zona, quando destravar:** o campo *Nome* recebe só o que vem
+ANTES do domínio — `resend._domainkey`, não
+`resend._domainkey.ninnaappbr.com.br`. O registro.br acrescenta o domínio
+sozinho, e o nome completo vira `...ninnaappbr.com.br.ninnaappbr.com.br`, que
+não resolve. O Resend fica em *Pending* para sempre sem dizer por quê. Sem ponto
+no fim, e sem aspas no valor do TXT (o registro.br põe as dele).
 
 `ninna.com.br` estava registrado por terceiro, com validade até 06/2027.
 
