@@ -1,6 +1,7 @@
 # Decisão pendente — uma tabela por tipo, ou uma tabela de eventos
 
-**Status:** proposta, aguardando decisão. Bloqueia o bloco 3 (os 14 tipos).
+**Status:** ✅ **DECIDIDO em 11/08/2026 — opção B**, pelo argumento da
+reversibilidade assimétrica. Plano de execução: `docs/plano-migracao-registros.md`.
 **Escrita em:** 11/08/2026, com o `registroSchema.ts` já pronto.
 
 O bloco 2 terminou com o tipo de registro declarado num lugar só. Isso mudou o
@@ -128,6 +129,12 @@ de morar no `dados`.
 
 ### O custo que não tem mitigação boa
 
+> **Corrigido em 11/08/2026, depois de testar no Postgres do projeto.** Esta
+> seção estava mais pessimista que a realidade: o vocabulário **continua**
+> garantido pelo banco, como `check` de tabela condicionado ao tipo, gerado a
+> partir do schema. Ver o plano de migração. O parágrafo abaixo fica como estava
+> escrito, porque era a premissa que a decisão precisava enfrentar.
+
 **O banco perde os `check` de vocabulário.** Hoje `content in ('pee','poop','both')`
 é o Postgres dizendo *isso é impossível*. Em `jsonb`, nada é impossível.
 
@@ -230,3 +237,6 @@ E a janela para pagar barato é agora.
 
 **O que eu faria antes de executar:** um `select count(*)` por tabela, para a
 frase "centenas de linhas" ser um número, e não uma impressão minha.
+
+> **Feito.** São **97 registros**, não centenas — errei por uma ordem de
+> grandeza, e para menos. O argumento do prazo fica mais forte, não mais fraco.
