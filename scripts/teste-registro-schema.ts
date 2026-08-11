@@ -26,10 +26,11 @@ import {
   rotularValor,
   tipoDaLinha,
   validarRegistro,
+  valoresDaLinha,
   type TipoRegistro,
   type ValoresRegistro,
 } from '../src/lib/registroSchema.ts';
-import { horaParaData } from '../src/lib/horario.ts';
+import { horaNoDia, horaParaData } from '../src/lib/horario.ts';
 
 let falhas = 0;
 
@@ -418,6 +419,90 @@ checar(
     return tipos.length === 1 || tipos.every((t) => Object.keys(SCHEMAS[t].fixas ?? {}).length > 0);
   }),
   'sem ela não dá pra saber de que tipo é a linha nem filtrar a consulta'
+);
+
+
+console.log('\n— editar: abrir e salvar sem tocar em nada não pode mudar a linha —\n');
+
+/**
+ * A propriedade que separa "editar" de "reescrever com o que o formulário achou
+ * que entendeu". Se o ida-e-volta perde alguma coisa, ela se perde no dia em que
+ * a mãe abre um registro para corrigir um minuto e sai sem os outros campos.
+ */
+const EXEMPLOS: [TipoRegistro, ValoresRegistro][] = [
+  ['amamentar', { hora: HORA_OK, lado: 'both', duracao: '21', observacao: 'sonolenta' }],
+  ['amamentar', { hora: HORA_OK, lado: 'left' }],
+  ['mamadeira', { hora: HORA_OK, quantidade: '90', leite: 'breast_milk' }],
+  ['fralda', { hora: HORA_OK, conteudo: 'poop', observacao: 'bem líquido' }],
+  ['humor', { hora: HORA_OK, humor: 'sleepy', motivo: 'holding' }],
+  ['humor', { hora: HORA_OK, humor: 'calm' }],
+  ['sintoma', { hora: HORA_OK, sintoma: SINTOMA_OUTRO, observacao: 'pele fria' }],
+  ['sintoma', { hora: HORA_OK, sintoma: 'cough', intensidade: 'mild' }],
+  ['sono', { hora: HORA_OK }],
+];
+
+for (const [tipo, valores] of EXEMPLOS) {
+  const linha = linhaParaBanco(tipo, valores, MOMENTO);
+  const devolta = valoresDaLinha(tipo, linha, HORA_OK);
+  const outraVez = linhaParaBanco(tipo, devolta, MOMENTO);
+  iguais(`${tipo}: linha → formulário → linha, sem perder nada`, outraVez, linha);
+}
+
+checar(
+  'número volta na unidade do campo, não na da coluna',
+  valoresDaLinha('amamentar', { side: 'left', duration_seconds: 720 }, HORA_OK).duracao === '12',
+  'o campo pergunta minutos; a coluna guarda segundos'
+);
+checar(
+  'coluna nula vira null no formulário, nunca "null" nem string vazia',
+  valoresDaLinha('humor', { mood: 'calm', probable_reason: null }, HORA_OK).motivo === null
+);
+checar(
+  'a hora vem de fora, do instante do registro',
+  valoresDaLinha('fralda', { content: 'pee' }, '05:40').hora === '05:40'
+);
+
+console.log('\n— e o horário editado fica no dia do registro —\n');
+
+/**
+ * O teste que existe por causa de um perigo, não de um requisito: reusar
+ * `horaParaData` na edição teleportaria para hoje qualquer registro antigo que
+ * a mãe abrisse para corrigir.
+ */
+const DIA_ANTIGO = new Date(2026, 7, 9, 23, 19); // 09/08/2026, 23:19 local
+const AGORA_LOCAL = new Date(2026, 7, 11, 18, 0);
+
+const editada = horaNoDia('23:45', DIA_ANTIGO);
+checar(
+  'editar 23:19 para 23:45 mantém o dia 9',
+  editada !== null &&
+    editada.getDate() === 9 &&
+    editada.getMonth() === 7 &&
+    editada.getHours() === 23 &&
+    editada.getMinutes() === 45,
+  editada ? editada.toString() : 'null'
+);
+
+const noDiaCedo = horaNoDia('06:00', DIA_ANTIGO);
+checar(
+  'e horário anterior ao original também fica no dia 9 — sem rolar pra trás',
+  noDiaCedo !== null && noDiaCedo.getDate() === 9 && noDiaCedo.getHours() === 6
+);
+
+checar(
+  'formato inválido continua reprovando',
+  horaNoDia('25:00', DIA_ANTIGO) === null && horaNoDia('7:00', DIA_ANTIGO) === null
+);
+
+// O controle: sem ele, as asserções acima passariam com as duas funções iguais.
+const comoSeFosseCriar = horaParaData('23:45', AGORA_LOCAL);
+checar(
+  'a função de CRIAR ancora em hoje — é por isso que a edição não pode usá-la',
+  comoSeFosseCriar !== null && comoSeFosseCriar.getDate() === 10,
+  // 23:45 ainda não chegou às 18h, então CRIAR lê como ontem (dia 10) — e o
+  // registro editado é do dia 9. Dois dias diferentes para a mesma string: é
+  // exatamente a distância que a edição teria destruído.
+  comoSeFosseCriar ? `criando daria dia ${comoSeFosseCriar.getDate()}, editando dá 9` : 'null'
 );
 
 console.log('\n— a prova de que este teste sabe reprovar —\n');

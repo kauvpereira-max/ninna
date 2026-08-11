@@ -5,7 +5,7 @@
 // dono vem do baby_id. Mandar user_id quebraria — a coluna nem existe.
 
 import { supabase } from './supabase';
-import { formatarDuracaoMin, formatarMomento, minutosEntre } from './horario';
+import { formatarHora } from './horario';
 import { paginar, type CursorRegistro, type Pagina } from './paginacao';
 import type { TipoEvento } from './consultas';
 import {
@@ -23,6 +23,7 @@ import {
   TABELAS_DE_REGISTRO,
   linhaParaBanco,
   rotularValor,
+  valoresDaLinha,
   tipoDaLinha,
   tiposDaTabela,
   type CampoDetalhe,
@@ -493,4 +494,83 @@ export async function listarRegistrosRecentes(
 ): Promise<Resultado<RegistroRecente[]>> {
   const { data, error } = await listarRegistros(babyId, { limite, agora });
   return { data: data.registros, error };
+}
+
+/**
+ * Abre um registro para edição — os valores do formulário, não a tela de leitura.
+ *
+ * `buscarRegistro` devolve texto já formatado para a mãe ler; aqui é o contrário,
+ * o que se quer é o que ela pode voltar a editar. Duas leituras da mesma linha
+ * com propósitos opostos, e misturar as duas foi o que produziu, em outros
+ * projetos, o formulário que salva o rótulo em vez do slug.
+ *
+ * `ocorridoEm` volta junto porque é ele que ancora o dia: a edição muda o horário
+ * DENTRO do dia do registro, e sem essa referência o "HH:MM" seria lido como hoje.
+ */
+export async function carregarParaEdicao(
+  tipo: TipoRegistro,
+  id: string
+): Promise<Resultado<{ valores: ValoresRegistro; ocorridoEm: string } | null>> {
+  const { data, error } = await supabase
+    .from(TABELA(tipo))
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error) {
+    console.warn(`[registros] falha ao abrir ${tipo} para edição:`, error.message);
+    return { data: null, error: 'Não consegui abrir esse registro agora.' };
+  }
+  if (!data) return { data: null, error: null };
+
+  const linha = data as LinhaRegistro;
+  const ocorridoEm = String(linha[SCHEMAS[tipo].colunaTempo]);
+
+  return {
+    data: {
+      valores: valoresDaLinha(tipo, linha, formatarHora(ocorridoEm)),
+      ocorridoEm,
+    },
+    error: null,
+  };
+}
+
+/**
+ * Salva a edição.
+ *
+ * Escreve as MESMAS colunas que o insert escreveria — inclusive as fixas, que
+ * não mudam de valor e por isso não fazem mal, e inclusive as vazias, que viram
+ * `null`. Um update parcial, só do que a tela julgou alterado, deixaria para trás
+ * o campo que a mãe acabou de esvaziar.
+ *
+ * O que ele NÃO toca: `baby_id`, `id`, e o que não está no schema — `ended_at` de
+ * um sono continua onde estava, e editar o começo de um sono encerrado muda a
+ * duração, que é o que ela pediu ao mudar o começo.
+ */
+export async function atualizarRegistro(
+  tipo: TipoRegistro,
+  id: string,
+  valores: ValoresRegistro,
+  ocorridoEm: string
+): Promise<{ error: string | null }> {
+  const { data, error } = await supabase
+    .from(TABELA(tipo))
+    .update(linhaParaBanco(tipo, valores, ocorridoEm))
+    .eq('id', id)
+    .select('id');
+
+  if (error) {
+    console.warn(`[registros] falha ao editar ${tipo}:`, error.message);
+    return { error: 'Não consegui salvar essa alteração agora. Tenta de novo em instantes.' };
+  }
+
+  // Mesmo cuidado do delete: com a RLS barrando, o PostgREST devolve sucesso e
+  // zero linhas. Sem contar o que saiu, a tela diria "salvo" para um registro
+  // que não mudou.
+  if ((data ?? []).length === 0) {
+    console.warn(`[registros] update de ${tipo} ${id} não casou nenhuma linha`);
+    return { error: 'Esse registro não está mais aqui.' };
+  }
+
+  return { error: null };
 }

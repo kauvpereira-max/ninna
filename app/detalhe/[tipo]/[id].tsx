@@ -162,6 +162,20 @@ export default function DetalheRegistroScreen() {
 
         {erro ? <Text style={styles.erro}>{erro}</Text> : null}
 
+        {/* Editar some enquanto ela confirma o apagar: duas ações concorrentes
+            no mesmo instante é como se toca a errada. */}
+        {confirmando ? null : (
+          <Pressable
+            onPress={() => router.push(`/registro/${registro.tipo}?id=${registro.id}`)}
+            accessibilityRole="button"
+            accessibilityLabel="Editar registro"
+            style={styles.botaoEditar}
+          >
+            <Ionicons name="create-outline" size={16} color={colors.rosa700} />
+            <Text style={styles.botaoEditarLabel}>Editar registro</Text>
+          </Pressable>
+        )}
+
         {/* Confirmação inline, não Alert: o react-native-web não implementa
             Alert.alert com dois botões, e window.confirm bloqueia a página inteira.
             Duas etapas na própria tela funcionam igual na web e no nativo. */}
@@ -260,6 +274,15 @@ const styles = StyleSheet.create({
   },
   notasTexto: { ...typography.body, color: colors.neutro700 },
   erro: { ...typography.caption, color: colors.coral600, marginTop: spacing.lg },
+  botaoEditar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xl,
+    paddingVertical: spacing.sm,
+  },
+  botaoEditarLabel: { ...typography.body, color: colors.rosa700 },
   botaoApagarDiscreto: {
     flexDirection: 'row',
     alignItems: 'center',

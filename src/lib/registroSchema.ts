@@ -738,3 +738,39 @@ export const TABELAS_DE_REGISTRO: string[] = [
 export function tiposDaTabela(tabela: string): TipoRegistro[] {
   return TIPOS_REGISTRO.filter((tipo) => SCHEMAS[tipo].tabela === tabela);
 }
+
+/**
+ * O caminho de volta: linha do banco → valores do formulário.
+ *
+ * É o inverso exato de `linhaParaBanco`, e "exato" aqui é a propriedade que a
+ * edição depende: abrir um registro e salvar sem tocar em nada não pode mudar a
+ * linha. O teste guarda esse ida-e-volta, porque é ele que separa "editar" de
+ * "reescrever com o que o formulário achou que entendeu".
+ *
+ * Número volta dividido pela escala — `duration_seconds` 720 vira "12" no campo
+ * de minutos. Coluna nula vira `null`, nunca "null" nem string vazia.
+ */
+export function valoresDaLinha(
+  tipo: TipoRegistro,
+  linha: LinhaRegistro,
+  hora: string
+): ValoresRegistro {
+  const valores: ValoresRegistro = { hora };
+
+  for (const campo of SCHEMAS[tipo].campos) {
+    if (!campo.coluna) continue;
+
+    const valor = linha[campo.coluna];
+    if (valor === null || valor === undefined) {
+      valores[campo.chave] = null;
+      continue;
+    }
+
+    valores[campo.chave] =
+      campo.entrada === 'numero'
+        ? String(Math.round(Number(valor) / campo.escala))
+        : String(valor);
+  }
+
+  return valores;
+}

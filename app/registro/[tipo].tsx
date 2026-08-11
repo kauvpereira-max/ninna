@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -15,9 +16,14 @@ import { useBaby } from '../../src/contexts/BabyContext';
 import { Button } from '../../src/components/Button';
 import { TextField } from '../../src/components/TextField';
 import { ChipGroup } from '../../src/components/ChipGroup';
-import { aplicarMascaraHora, horaAtual, horaParaData } from '../../src/lib/horario';
+import { aplicarMascaraHora, horaAtual, horaNoDia, horaParaData } from '../../src/lib/horario';
 import { AVISO_AO_SALVAR_SINTOMA } from '../../src/lib/copySaude';
-import { criarRegistro, iniciarSono } from '../../src/lib/registros';
+import {
+  atualizarRegistro,
+  carregarParaEdicao,
+  criarRegistro,
+  iniciarSono,
+} from '../../src/lib/registros';
 import {
   SCHEMAS,
   ehTipoRegistro,
@@ -44,18 +50,51 @@ import { colors, spacing, radius, typography } from '../../src/theme/tokens';
  * A validação é a MESMA função do schema, não uma cópia com as mesmas regras.
  * Uma cópia divergiria no primeiro campo novo, e a mãe veria "opcional"
  * reprovando por obrigatório.
+ *
+ * ------------------------------------------------------------------
+ * CRIAR E EDITAR SÃO A MESMA TELA
+ *
+ * Com `?id=`, ela abre o registro existente e salva por cima. Os campos, a
+ * validação e as colunas são os mesmos — o que muda é o verbo e a âncora do
+ * horário.
+ *
+ * A ÂNCORA É A PARTE PERIGOSA. Registrando, "HH:MM" é hoje (ou ontem, se o
+ * horário ainda não chegou), porque a mãe anota o que acabou de acontecer.
+ * Editando, "HH:MM" é o dia DO REGISTRO — senão abrir uma mamada do dia 9,
+ * mexer nos minutos e salvar teleportaria o registro para hoje, sem aviso e sem
+ * desfazer. Por isso `horaNoDia` existe separada de `horaParaData`.
  */
 
 export default function RegistroScreen() {
-  const { tipo } = useLocalSearchParams<{ tipo: string }>();
+  const { tipo, id } = useLocalSearchParams<{ tipo: string; id?: string }>();
+  const editando = Boolean(id);
   const router = useRouter();
   const { bebeAtivo } = useBaby();
 
   const [valores, setValores] = useState<ValoresRegistro>({ hora: horaAtual() });
+  /** O instante original — em edição, é ele que diz de que dia é o registro. */
+  const [ocorridoEm, setOcorridoEm] = useState<string | null>(null);
+  const [carregando, setCarregando] = useState(Boolean(id));
+  const [sumiu, setSumiu] = useState(false);
   const [erros, setErros] = useState<ErrosRegistro>({});
   const [erroForm, setErroForm] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [sintomaSalvo, setSintomaSalvo] = useState(false);
+
+  const abrir = useCallback(async () => {
+    if (!id || !ehTipoRegistro(tipo)) return;
+    const { data, error } = await carregarParaEdicao(tipo, id);
+    setCarregando(false);
+    if (error) return setErroForm(error);
+    // Apagado noutro aparelho enquanto ela vinha até aqui.
+    if (!data) return setSumiu(true);
+    setValores(data.valores);
+    setOcorridoEm(data.ocorridoEm);
+  }, [id, tipo]);
+
+  useEffect(() => {
+    void abrir();
+  }, [abrir]);
 
   function definir(chave: string, valor: string | null) {
     setValores((atuais) => ({ ...atuais, [chave]: valor }));
@@ -82,6 +121,28 @@ export default function RegistroScreen() {
 
   const schema = SCHEMAS[tipo];
 
+  if (carregando) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={[styles.scroll, styles.centro]}>
+          <ActivityIndicator size="small" color={colors.rosa500} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (sumiu) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.scroll}>
+          <Text style={styles.titulo}>Esse registro não está mais aqui</Text>
+          <Text style={styles.subtitulo}>Pode ter sido apagado noutro aparelho.</Text>
+          <Button label="Voltar" onPress={fechar} style={{ marginTop: spacing.lg }} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   if (sintomaSalvo) {
     return (
       <SafeAreaView style={styles.container}>
@@ -103,20 +164,28 @@ export default function RegistroScreen() {
   async function handleSalvar() {
     if (!ehTipoRegistro(tipo) || !bebeAtivo) return;
 
-    const novosErros = validarRegistro(tipo, valores, (texto) => horaParaData(texto) !== null);
+    // A hora é lida de um jeito para criar e de outro para editar — ver o
+    // cabeçalho. A validação usa a MESMA função que a gravação vai usar, senão
+    // ela aprovaria um horário que a gravação não consegue montar.
+    const dia = ocorridoEm ? new Date(ocorridoEm) : null;
+    const lerHora = (texto: string) => (dia ? horaNoDia(texto, dia) : horaParaData(texto));
+
+    const novosErros = validarRegistro(tipo, valores, (texto) => lerHora(texto) !== null);
     setErros(novosErros);
     setErroForm(null);
     if (Object.keys(novosErros).length > 0) return;
 
-    // Já validada acima — o `as Date` é o que a validação acabou de garantir.
-    const ocorridoEm = (horaParaData(valores.hora ?? '') as Date).toISOString();
+    // Já validado acima — o `as Date` é o que a validação acabou de garantir.
+    const instante = (lerHora(valores.hora ?? '') as Date).toISOString();
 
     setSalvando(true);
-    // Sono é o único que não passa pela escrita genérica: ele fica em aberto, e
-    // a regra de "só um por vez" precisa consultar o banco antes de inserir.
-    const { error } = SCHEMAS[tipo].emAberto
-      ? await iniciarSono(bebeAtivo.id, ocorridoEm)
-      : await criarRegistro(tipo, bebeAtivo.id, valores, ocorridoEm);
+    const { error } = id
+      ? await atualizarRegistro(tipo, id, valores, instante)
+      : // Sono é o único que não passa pela escrita genérica ao nascer: ele fica
+        // em aberto, e a regra de "só um por vez" precisa consultar o banco.
+        SCHEMAS[tipo].emAberto
+        ? await iniciarSono(bebeAtivo.id, instante)
+        : await criarRegistro(tipo, bebeAtivo.id, valores, instante);
     setSalvando(false);
 
     if (error) {
@@ -124,9 +193,11 @@ export default function RegistroScreen() {
       return;
     }
 
-    // Sintoma é o único que não fecha sozinho: a mãe acabou de anotar algo que a
-    // preocupa, e a linha do pediatra precisa de um instante de tela pra ser lida.
-    if (tipo === 'sintoma') {
+    // Sintoma é o único que não fecha sozinho ao NASCER: a mãe acabou de anotar
+    // algo que a preocupa, e a linha do pediatra precisa de um instante de tela
+    // pra ser lida. Editando não: "Anotado." confirmaria um registro que já
+    // existia, e a frase certa para o momento é nenhuma.
+    if (tipo === 'sintoma' && !editando) {
       setSintomaSalvo(true);
       return;
     }
@@ -210,7 +281,9 @@ export default function RegistroScreen() {
           <View style={styles.header}>
             <View style={{ flex: 1 }}>
               <Text style={styles.titulo}>{schema.titulo}</Text>
-              <Text style={styles.subtitulo}>{schema.subtitulo}</Text>
+              <Text style={styles.subtitulo}>
+                {editando ? 'Ajusta o que precisar e salva.' : schema.subtitulo}
+              </Text>
             </View>
             <Pressable
               onPress={fechar}
@@ -228,7 +301,7 @@ export default function RegistroScreen() {
             {erroForm ? <Text style={styles.erroForm}>{erroForm}</Text> : null}
 
             <Button
-              label={schema.acao}
+              label={editando ? 'Salvar alterações' : schema.acao}
               onPress={handleSalvar}
               loading={salvando}
               style={{ marginTop: spacing.sm }}
@@ -262,6 +335,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   form: { marginTop: spacing.xl },
+  centro: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   erroForm: { ...typography.caption, color: colors.coral600, marginBottom: spacing.sm },
   // Superfície calma de propósito: coral aqui viraria alerta, e alarmar não é o papel.
   pediatraCard: {

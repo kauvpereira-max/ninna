@@ -36,6 +36,40 @@ export function horaParaData(hhmm: string, agora: Date = new Date()): Date | nul
   return data;
 }
 
+/**
+ * O mesmo "HH:MM", mas ancorado NUM DIA DADO — é o que a edição usa.
+ *
+ * `horaParaData` ancora em hoje, e isso está certo para registrar: a mãe anota
+ * o que acabou de acontecer. Para EDITAR está errado e é destrutivo — abrir uma
+ * mamada do dia 9, mexer nos minutos e salvar teleportaria o registro para hoje,
+ * sem aviso e sem desfazer.
+ *
+ * Aqui o dia vem do próprio registro, e não há regra de "rolou para ontem":
+ * quando o dia é conhecido, adivinhar seria o erro.
+ *
+ * Consequência assumida: esta função muda o horário DENTRO do dia do registro,
+ * nunca o dia. Mover um registro de dia exigiria um campo de data no schema, e
+ * isso é decisão de outro bloco.
+ */
+export function horaNoDia(hhmm: string, referencia: Date): Date | null {
+  const partes = /^(\d{2}):(\d{2})$/.exec(hhmm);
+  if (!partes) return null;
+
+  const horas = Number(partes[1]);
+  const minutos = Number(partes[2]);
+  if (horas > 23 || minutos > 59) return null;
+
+  return new Date(
+    referencia.getFullYear(),
+    referencia.getMonth(),
+    referencia.getDate(),
+    horas,
+    minutos,
+    0,
+    0
+  );
+}
+
 function mesmoDia(a: Date, b: Date): boolean {
   return (
     a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
