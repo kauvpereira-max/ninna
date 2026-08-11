@@ -404,12 +404,54 @@ checar(
     linhaDoBanco({}, { ocorrido_em: '2026-08-11T17:30:00.000Z', terminou_em: null })
   ) === 'Dormindo há 30 min'
 );
+/**
+ * O contador em andamento conta desde o PRIMEIRO minuto.
+ *
+ * O limiar era de 2 minutos e produzia uma janela de até 2min30s (o tick é de
+ * 30s) em que a Home dizia "Dormindo agora" sem se mover — exatamente enquanto a
+ * mãe espera o bebê pegar no sono, olhando a tela.
+ *
+ * As três asserções abaixo cercam a fronteira nova. A do meio é a que importa:
+ * com o limiar antigo ela devolveria "Dormindo agora" e reprovaria.
+ */
 checar(
-  'sono aberto de menos de 2 minutos não fala em duração',
+  'abaixo de um minuto não há minuto para mostrar',
   resumir(
     'sono',
     linhaDoBanco({}, { ocorrido_em: '2026-08-11T17:59:30.000Z', terminou_em: null })
-  ) === 'Dormindo agora'
+  ) === 'Dormindo agora',
+  '"menos de 1 min" seria mais palavras para dizer o que "Dormindo agora" já diz'
+);
+checar(
+  'no primeiro minuto o contador já anda',
+  resumir(
+    'sono',
+    linhaDoBanco({}, { ocorrido_em: '2026-08-11T17:59:00.000Z', terminou_em: null })
+  ) === 'Dormindo há 1 min',
+  'com o limiar antigo, de 2 min, isto voltaria "Dormindo agora"'
+);
+checar(
+  'e no segundo também',
+  resumir(
+    'sono',
+    linhaDoBanco({}, { ocorrido_em: '2026-08-11T17:58:00.000Z', terminou_em: null })
+  ) === 'Dormindo há 2 min'
+);
+
+/**
+ * O limiar de 2 minutos NÃO existe no sono encerrado — nunca existiu, e a
+ * mudança acima não o moveu para cá. Um sono curto encerrado se conta pelo que
+ * foi.
+ */
+checar(
+  'sono encerrado de 1 minuto se conta como 1 minuto',
+  resumir(
+    'sono',
+    linhaDoBanco(
+      {},
+      { ocorrido_em: '2026-08-11T17:00:00.000Z', terminou_em: '2026-08-11T17:01:00.000Z' }
+    )
+  ) === '1 min de sono'
 );
 checar(
   'humor com motivo vem em minúscula',

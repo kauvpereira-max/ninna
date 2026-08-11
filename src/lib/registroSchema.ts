@@ -633,13 +633,33 @@ const listar = (pares: [string, string | null][]): CampoDetalhe[] =>
     .map(([rotulo, valor]) => ({ rotulo, valor: valor as string }));
 
 /**
- * Texto do sono ainda aberto. A Home recalcula isso num tick local, então é aqui
- * que mora a regra — abaixo de 2 minutos não vale falar em duração, o sono mal
- * começou.
+ * Texto do sono ainda aberto. A Home recalcula isso num tick local de 30s, então
+ * é aqui que mora a regra.
+ *
+ * ------------------------------------------------------------------
+ * CONTA DESDE O PRIMEIRO MINUTO, E ISSO MUDOU EM 11/08/2026
+ *
+ * O limiar era de 2 minutos, com o argumento de que "abaixo de 2 minutos não vale
+ * falar em duração, o sono mal começou". O argumento está certo — para o resumo de
+ * um sono ENCERRADO, onde "1 min de sono" não informa nada. Só que ele nunca
+ * valeu ali: o encerrado é formatado uma função abaixo, sem limiar.
+ *
+ * Aqui a pergunta é outra. O contador em andamento responde "faz quanto tempo que
+ * ela dormiu?", e nessa pergunta o primeiro minuto importa tanto quanto o
+ * décimo — é justamente o minuto em que a mãe está de pé esperando o bebê pegar
+ * no sono, olhando a tela.
+ *
+ * Com o limiar de 2 minutos e o tick de 30s, existia uma janela de até 2min30s em
+ * que a Home dizia "Dormindo agora" e parecia congelada. Tela travada na hora em
+ * que ela está esperando é pior que um número pequeno.
+ *
+ * O `< 1` que ficou não é limiar, é aritmética: abaixo de um minuto não existe
+ * minuto inteiro para mostrar, e `formatarDuracaoMin(0)` diria "menos de 1 min" —
+ * mais palavras para dizer o que "Dormindo agora" já diz melhor.
  */
 export function resumirSonoEmAndamento(startedAt: string, agora: Date = new Date()): string {
   const minutos = minutosEntre(startedAt, agora);
-  if (minutos < 2) return 'Dormindo agora';
+  if (minutos < 1) return 'Dormindo agora';
   return `Dormindo há ${formatarDuracaoMin(minutos)}`;
 }
 

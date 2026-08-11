@@ -341,6 +341,11 @@ previsões → canal nativo.
   `app/_layout.tsx`)
 - As 5 tabelas antigas seguem no banco, vazias de uso mas cheias de dado, até a
   `006`. E `supabase/reversao/` **vence em 25/08/2026** — no dia, apagar
+- **O contador do sono pode não avançar sozinho na PWA instalada.** O limiar de
+  2 min já foi corrigido (conta desde o primeiro minuto), o que encurta a janela
+  de "parece travado". Sobra a hipótese do `setInterval` estrangulado pelo
+  Safari, que nenhum teste de Node alcança — regra 2b. O procedimento de 3
+  minutos que separa as duas está em `docs/teste-manual-tick-do-sono.md`
 - `padroes.ts` ainda chama os campos de entrada de `started_at`/`ended_at`, nomes
   das colunas que a `006` vai apagar. São o contrato do módulo puro, não do
   banco: `listarParaPadroes` e `consultas.ts` traduzem. Renomear é limpeza, e não
