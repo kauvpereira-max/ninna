@@ -54,6 +54,13 @@ Testado contra o banco real, uma consulta por restrição gerada:
 linhas de amanhã, e um registro novo com `side` nulo faria o backfill parar no
 meio.
 
+**Duas colunas concentram o risco real:** `symptom` e `probable_reason` não têm
+`check` na tabela antiga e passam a ter em `registros`. O caso concreto é o slug
+aposentado `irritability` — ele existiu, `SINTOMAS_APOSENTADOS` guarda o rótulo
+dele justamente para registro antigo seguir legível, e o vocabulário gerado da
+005 o recusa. Se ele aparecer no pré-voo, a resposta **não** é apagar a linha: é
+somar o valor ao vocabulário e regerar a migration.
+
 ---
 
 ## O que substitui os `check` de coluna
@@ -142,10 +149,22 @@ Três mudanças que ficaram no teste:
 
 ---
 
-### 3 · Backfill — cinco `insert … select`
+### 3 · Backfill — cinco `insert … select` — ✅ feito em 11/08/2026
 
-Um por tabela, rodados **um de cada vez**, cada um conferido antes do próximo.
-Antes de começar, rodar de novo a consulta de violações do passo 0.
+```
+pré-voo: zero em todas as colunas viola_
+total 97 = soma das cinco 97 · órfãos 0 · nenhuma linha apagada durante a cópia
+amamentar 25 · mamadeira 18 · sono 25 · fralda 24 · humor 4 · sintoma 1
+```
+
+As cinco conferências `b` (o `except` nos dois sentidos) vieram **vazias em
+ambas as direções**, que é a prova de conteúdo — contagem igual com conteúdo
+trocado passaria na conferência `a` e morreria aqui.
+
+**O arquivo:** `supabase/backfill/passo-3-copiar-para-registros.sql`. Um insert
+por tabela, rodados **um de cada vez**, cada um conferido antes do próximo.
+Antes de começar, o pré-voo (bloco 0 do arquivo) roda de novo as violações do
+passo 0.
 
 ```sql
 insert into registros (id, baby_id, tipo, ocorrido_em, terminou_em, dados, notes, created_at)
@@ -157,14 +176,14 @@ select id, baby_id,
          'amount_ml', amount_ml, 'bottle_type', bottle_type)),
        notes, created_at
 from feeding_records
-on conflict (id) do nothing;
+on conflict (id) do update set …;
 ```
 
 **O `id` original vem junto, e é ele que muda o plano inteiro.** Com o mesmo
 `id` dos dois lados, o backfill fica **idempotente**: dá pra rodar de novo, a
-qualquer momento, e ele copia só o que ainda não foi. Isso é o que dispensa
-parar de usar o app (ver abaixo) e é o que torna a reversão do passo 4 uma
-consulta simples em vez de um problema.
+qualquer momento, e ele repassa só o que mudou. Isso é o que dispensa parar de
+usar o app (ver abaixo) e é o que torna a reversão do passo 4 uma consulta
+simples em vez de um problema.
 
 `jsonb_strip_nulls` é o detalhe que faz a coisa funcionar: sem ele, uma
 amamentação carregaria `"amount_ml": null`, e a chave **presente com valor nulo**
@@ -174,10 +193,44 @@ nula são estados diferentes.
 Os outros quatro seguem a mesma forma. `sleep_records` é o único que preenche
 `terminou_em` (de `ended_at`), e o único sem `notes`.
 
+#### `do update`, e não `do nothing` — a correção que o passo 3 trouxe
+
+A versão anterior deste plano dizia `on conflict (id) do nothing`, e isso deixava
+duas coisas para trás em silêncio:
+
+- **o sono encerrado depois da cópia.** Ele foi copiado em aberto; a mãe o
+  encerrou; o `id` não mudou. Com `do nothing`, o repasse não olha para a linha
+  de novo, e depois da virada o app mostraria um sono correndo há dois dias;
+- **o registro editado depois da cópia.** Editar existe desde o bloco 2. Com
+  `do nothing`, a edição fica só na tabela antiga — que ninguém vai ler de novo.
+
+Enquanto o código antigo está no ar, **nada escreve em `registros`**. Então
+reescrever a linha inteira a partir da origem é sempre certo. A regra, numa
+linha, e ela se inverte no dia da virada:
+
+> **`do update` enquanto as tabelas antigas são a fonte da verdade,
+> `do nothing` depois que deixam de ser.**
+
+#### O que nenhum insert alcança: a linha apagada
+
+Copiar de novo recolhe o que entrou e o que mudou; não recolhe o que **saiu**.
+Um registro apagado pela mãe depois da cópia continua em `registros`, e depois da
+virada ela veria voltar um registro que apagou.
+
+O bloco 6 do arquivo cuida disso — primeiro um `select` que olha, depois o
+`delete`. Ele é **proibido depois da virada**, quando todo registro novo é órfão
+das tabelas antigas por definição, e por isso carrega uma rede:
+`created_at <= max(created_at das cinco)`. Registro nascido depois da virada tem
+`created_at` maior que qualquer linha das tabelas antigas, que pararam de
+crescer — então ele fica de fora mesmo se o bloco rodar na hora errada. A rede
+erra para o lado seguro: pode deixar um órfão para trás, nunca apagar registro
+vivo. Órfão que sobra aparece na conferência final.
+
 **Verificar depois de cada um:** `count(*)` em `registros` por `tipo` igual ao
 `count(*)` da origem, e `min/max(ocorrido_em)` iguais aos da coluna de tempo
 original. Um `except` nos dois sentidos entre origem e destino é o que prova
-igualdade de conteúdo, não só de contagem.
+igualdade de conteúdo, não só de contagem — contagem igual com conteúdo trocado
+passaria na primeira conferência.
 
 **Reverter:** `delete from registros;` ou `drop table registros;`
 
@@ -214,18 +267,29 @@ momento em que algo deu errado. Ela é o item 5 do checklist abaixo.
 
 ---
 
-### 4½ · O repasse, imediatamente antes da virada
+### 4½ · Os dois repasses, um de cada lado do deploy
 
-Com o `id` carregado, rodar o backfill de novo copia só o que entrou desde a
-primeira vez:
+A ordem é **repasse, deploy, repasse de novo** — e os dois repasses rodam
+arquivos diferentes, porque a fonte da verdade troca de lado no meio.
 
-```sql
--- as mesmas cinco consultas do passo 3, sem mudar nada
-```
+| Quando | Arquivo | Conflito de `id` |
+|---|---|---|
+| Antes do deploy | `backfill/passo-3-copiar-para-registros.sql` | `do update` — recolhe o que entrou **e** o que mudou |
+| Depois do deploy | `backfill/passo-4-repassar-depois-da-virada.sql` | `do nothing` — só o que entrou na janela |
 
-**Verificar:** `select count(*) from registros` igual à soma das cinco tabelas.
+O segundo não pode ser `do update`: depois da virada, um sono que atravessou o
+deploy e foi encerrado pela mãe tem `terminou_em` em `registros` e `ended_at`
+ainda nulo na tabela antiga, que ninguém mais escreve. `do update` devolveria o
+sono ao estado aberto, desfazendo o que ela acabou de fazer.
 
-É este passo que fecha a janela entre "copiei" e "troquei o código".
+O nome de cada arquivo diz quando ele vale. Foi de propósito: um arquivo só, com
+dois blocos e um aviso no meio, é um arquivo em que se roda o bloco errado.
+
+**Verificar:** `select count(*) from registros` igual à soma das cinco tabelas, e
+a conferência do fim de cada arquivo sem nenhuma linha.
+
+É este par que fecha a janela entre "copiei" e "troquei o código". O desfecho
+esperado do segundo repasse é `INSERT 0 0` cinco vezes.
 
 ---
 
