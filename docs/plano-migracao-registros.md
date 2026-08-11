@@ -238,6 +238,13 @@ passaria na primeira conferência.
 
 ### 4 · Trocar o código, com as tabelas antigas ainda no lugar
 
+**Código escrito e provado em 11/08/2026; falta o deploy.** `tsc` limpo, as 10
+suítes puras verdes, `expo export` empacotando, e as três contra o banco real
+passando sobre as 97 linhas migradas — inclusive o `teste-motor-banco`, que
+achou os mesmos 210 min e 72 min do gabarito lendo `registros`. Isso responde,
+melhor que o `except`, a dúvida do fim deste documento: o motor lê semântica, não
+colunas.
+
 Seis lugares nomeiam tabela hoje:
 
 | Onde | O que muda |
@@ -249,8 +256,22 @@ Seis lugares nomeiam tabela hoje:
 | `scripts/semear-registros.mjs` | semeia nas 5 |
 | `teste-motor-banco.ts`, `teste-assistente.mjs`, `teste-rls-delete.mjs` | idem |
 
-Deploy em bloco: `tsc`, as 12 suítes, `expo export`, push, e as duas Edge
-Functions.
+Foram catorze arquivos, não seis — a conta original esqueceu `paginacao.ts`,
+`database.ts`, `massa-semeada.mjs`, as duas telas e o gerador de SQL.
+
+**E apareceu um teste que faltava.** Metade da paginação desceu para o banco: o
+cursor virou uma condição `or(...)` que o PostgREST interpreta, e Node não tem
+PostgREST. O `teste-paginacao.ts` continuaria verde com a condição SQL errada —
+regra 2b. Daí o `teste-lista-banco.ts`, que pagina o bebê semeado de ponta a
+ponta e prova que nada repete nem some. Ele cria o empate de instante que a massa
+não tem (o gerador sorteia horas fracionárias; a mãe digita HH:MM e empata o
+tempo todo) e o apaga no `finally`.
+
+O `lte` antigo repetia 2 registros nesse cenário. O teste exige que repita, senão
+ele estaria provando uma correção que não corrigiu nada.
+
+Deploy em bloco: `tsc`, as 13 suítes, `expo export`, push, e a Edge Function do
+assistente.
 
 **Verificar no navegador**, o que teste de Node não alcança: lista com resumos,
 filtro por tipo sem vazamento, carregar mais sem repetir nem pular, detalhe dos 6

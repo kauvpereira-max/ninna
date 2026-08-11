@@ -207,8 +207,11 @@ modelo seria procurar quem responda o que a Ninna decidiu não responder.
 
 ### Os 6 registros, o seletor de bebê e a autenticação
 
-- `app/registro/[tipo].tsx` — rota única, modal. Registrar é ação de segundos
-- `src/lib/registros.ts` — escrita nas 5 tabelas, listagem normalizada, e o
+- `app/registro/[tipo].tsx` — rota única, modal, criar e editar (`?id=`).
+  Registrar é ação de segundos
+- `src/lib/registroSchema.ts` — a declaração de cada tipo num lugar só: campos,
+  validação, resumo e detalhe. É dele que sai a migration `005`
+- `src/lib/registros.ts` — escrita e leitura de `registros`, a tabela única, e o
   vocabulário fechado (`HUMORES`, `MOTIVOS_HUMOR`, `SINTOMAS`, `INTENSIDADES`):
   a mãe toca rótulo PT-BR, o banco recebe slug
 - `app/bebes/` — seletor com bebê ativo persistido em AsyncStorage
@@ -218,16 +221,25 @@ modelo seria procurar quem responda o que a Ninna decidiu não responder.
 
 ### Banco
 
-Três migrations, todas aplicadas e conferidas no projeto de São Paulo:
+Cinco migrations, todas aplicadas e conferidas no projeto de São Paulo:
 
 - `001` — 7 tabelas com RLS
 - `002` — cascata de exclusão. **8 chaves** em `CASCADE` (as 7 dela mais a da
   `003`). É o que faz a promessa de exclusão do termo LGPD ser executável
 - `003` — `assistant_usage`, o teto diário do assistente
+- `004` — `assinaturas`
+- `005` — **`registros`**, a tabela de eventos: uma linha por registro, o que
+  varia por tipo mora em `dados` (jsonb). É **gerada** do `registroSchema.ts`
+  por `scripts/gerar-registros-sql.ts` — o vocabulário tem uma origem só
+
+**As 5 tabelas antigas ainda existem, e o app não as toca desde 11/08/2026.** As
+97 linhas foram copiadas para `registros` (passo 3), e o `drop` é uma migration
+própria, `006`, dias depois — nunca no mesmo dia. Plano, reversão e o backfill
+que dá para rodar de novo: `docs/plano-migracao-registros.md`.
 
 ## Os testes, e o que cada um defende
 
-Todos puros, rodando no Node sem banco — exceto os três últimos:
+Todos puros, rodando no Node sem banco — exceto os quatro últimos:
 
 - `teste-padroes.ts` — o motor, incluindo 3 mutações que **têm** que quebrar
 - `teste-copy-insight.ts` — toda frase possível do card contra 9 proibições
@@ -236,10 +248,17 @@ Todos puros, rodando no Node sem banco — exceto os três últimos:
   julgamento sobre referência. É o risco N8, a deriva
 - `teste-copy-saude.ts` — as duas frases de saúde: uma promessa, duas aberturas
 - `teste-consultas.ts` — superfície, ancoragem, narração e gramática
+- `teste-registro-schema.ts` — o que cada tipo pergunta, grava e mostra; e onde
+  cada campo vai parar (coluna de verdade ou chave do `dados`)
+- `teste-registros-sql.ts` — reprova se a `005` divergir do gerador
 - `teste-horario.ts`, `teste-paginacao.ts`
 - `teste-rls-delete.mjs` — contra o banco real. Prova que A não apaga registro de
   B. **Obrigatório depois de qualquer mexida em policy**
 - `teste-motor-banco.ts` — o motor contra a massa semeada
+- `teste-lista-banco.ts` — a lista paginada contra o **PostgREST**, não contra um
+  array. Metade do cursor desceu para o banco no bloco 3, e Node não tem
+  PostgREST: é regra 2b. Cria o empate de instante que a massa não tem e apaga no
+  `finally`
 - `teste-assistente.mjs` — ponta a ponta contra a Edge Function e o modelo.
   **Custa dinheiro** (3 chamadas por rodada) e escreve em produção
 
@@ -320,9 +339,12 @@ previsões → canal nativo.
   `assets/fonts/` — está em Regular como paliativo
 - `tokens.ts` cita `src/theme/fonts.ts`, que não existe (fontes carregam no
   `app/_layout.tsx`)
-- `registro/[tipo].tsx` e `registros.ts` não escalam até 20 tipos — a refatoração
-  para schema é o bloco 2 do §7, e ela bloqueia os 14 tipos
-- Editar registro ainda não existe (dá para criar, encerrar sono e apagar)
+- As 5 tabelas antigas seguem no banco, vazias de uso mas cheias de dado, até a
+  `006`. E `supabase/reversao/` **vence em 25/08/2026** — no dia, apagar
+- `padroes.ts` ainda chama os campos de entrada de `started_at`/`ended_at`, nomes
+  das colunas que a `006` vai apagar. São o contrato do módulo puro, não do
+  banco: `listarParaPadroes` e `consultas.ts` traduzem. Renomear é limpeza, e não
+  se faz limpeza no mesmo commit que troca o banco de lugar
 - Contas de teste vivem no banco de produção: `teste-rls-a/b@ninna-teste.dev`,
   `teste-assistente@ninna-teste.dev` e o bebê `TESTE-ASSISTENTE`. São
   reaproveitadas entre rodadas, de propósito

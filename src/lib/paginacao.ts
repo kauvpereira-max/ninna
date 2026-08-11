@@ -57,6 +57,28 @@ export function depoisDoCursor(item: ItemOrdenavel, cursor: CursorRegistro): boo
 }
 
 /**
+ * A MESMA condição, escrita para o PostgREST.
+ *
+ * Ela mora aqui, colada na versão em JavaScript, porque o bug que importa não é
+ * nenhuma das duas estar errada — é elas discordarem. Separadas em arquivos
+ * diferentes, a correção que só uma recebesse produziria uma lista que repete ou
+ * pula item entre a página 2 e a 3, e isso não se vê olhando a tela.
+ *
+ * Antes do bloco 3 esta função não existia: o banco filtrava por `lte` no
+ * instante e o desempate por id acontecia no cliente, DEPOIS do corte por
+ * `limite + 1`. Com cinco tabelas o volume escondia; com uma, os empatados no
+ * instante do cursor ocupam o teto e a página encolhe — ou termina cedo, dizendo
+ * que acabou. E empate no instante é o caso comum aqui: a máscara HH:MM zera os
+ * segundos de todo registro.
+ */
+export function filtroDoCursor(cursor: CursorRegistro): string {
+  return (
+    `ocorrido_em.lt.${cursor.ocorridoEm},` +
+    `and(ocorrido_em.eq.${cursor.ocorridoEm},id.lt.${cursor.id})`
+  );
+}
+
+/**
  * Recorta uma página dos candidatos vindos das 5 tabelas.
  *
  * `candidatos` deve ter sido buscado com `limite + 1` linhas POR TABELA. A união

@@ -111,60 +111,57 @@ function diaDoMercado(agora: Date): string {
 // Leitura dos registros — com o JWT dela
 // ------------------------------------------------------------------
 
-type Linha = { started_at?: string; recorded_at?: string; ended_at?: string | null };
+type Linha = { tipo: string; ocorrido_em: string; terminou_em: string | null };
 
-const AS_TABELAS: { tabela: string; coluna: 'started_at' | 'recorded_at'; tipo: EventoBruto['tipo'] }[] = [
-  { tabela: 'feeding_records', coluna: 'started_at', tipo: 'amamentar' },
-  { tabela: 'sleep_records', coluna: 'started_at', tipo: 'sono' },
-  { tabela: 'diaper_records', coluna: 'recorded_at', tipo: 'fralda' },
-  { tabela: 'mood_records', coluna: 'recorded_at', tipo: 'humor' },
-  { tabela: 'symptom_records', coluna: 'recorded_at', tipo: 'sintoma' },
-];
+/**
+ * Os tipos que esta função sabe transformar em evento.
+ *
+ * A lista é declarada, e não derivada da tabela: `registros` vai receber os 14
+ * tipos que faltam antes de a superfície de consulta saber o que fazer com eles,
+ * e um Peso chegando aqui como evento desconhecido viraria contagem errada numa
+ * resposta que a mãe lê. Somar tipo à superfície é somar tipo aqui.
+ */
+const TIPOS_CONHECIDOS = new Set<string>([
+  'amamentar',
+  'mamadeira',
+  'fralda',
+  'sono',
+  'humor',
+  'sintoma',
+]);
 
+/**
+ * Uma consulta, e o mapa de tabelas some.
+ *
+ * Havia aqui um segundo desenho do schema — cinco tabelas, qual coluna de tempo
+ * cada uma usa, e a regra de que `type` separa amamentação de mamadeira. Ele
+ * vivia longe do `registros.ts` e teria que ser corrigido junto com ele, o que é
+ * a definição de deriva. Agora o tipo é uma coluna e não há o que mapear.
+ */
 async function lerEventos(
   cliente: ReturnType<typeof createClient>,
   babyId: string,
   desde: Date
 ): Promise<EventoBruto[]> {
-  const iso = desde.toISOString();
+  const { data, error } = await cliente
+    .from('registros')
+    .select('tipo, ocorrido_em, terminou_em')
+    .eq('baby_id', babyId)
+    .gte('ocorrido_em', desde.toISOString())
+    .order('ocorrido_em', { ascending: true });
 
-  const respostas = await Promise.all(
-    AS_TABELAS.map(({ tabela, coluna, tipo }) => {
-      // `type` só existe em feeding_records, onde separa amamentação de
-      // mamadeira — a mesma tabela cobre as duas (ver registros.ts).
-      const colunas =
-        tabela === 'feeding_records'
-          ? 'started_at, type'
-          : tabela === 'sleep_records'
-            ? 'started_at, ended_at'
-            : coluna;
-      return cliente
-        .from(tabela)
-        .select(colunas)
-        .eq('baby_id', babyId)
-        .gte(coluna, iso)
-        .order(coluna, { ascending: true })
-        .then((r) => ({ ...r, tabela, coluna, tipo }));
-    })
-  );
+  if (error) throw new Error(`registros: ${error.message}`);
 
   const eventos: EventoBruto[] = [];
-  for (const r of respostas) {
-    if (r.error) throw new Error(`${r.tabela}: ${r.error.message}`);
-    for (const linha of (r.data ?? []) as (Linha & { type?: string })[]) {
-      const ocorridoEm = r.coluna === 'started_at' ? linha.started_at : linha.recorded_at;
-      if (!ocorridoEm) continue;
-      eventos.push({
-        tipo:
-          r.tabela === 'feeding_records'
-            ? linha.type === 'bottle'
-              ? 'mamadeira'
-              : 'amamentar'
-            : r.tipo,
-        ocorridoEm,
-        fimEm: r.tabela === 'sleep_records' ? (linha.ended_at ?? null) : undefined,
-      });
-    }
+  for (const linha of (data ?? []) as unknown as Linha[]) {
+    if (!linha.ocorrido_em || !TIPOS_CONHECIDOS.has(linha.tipo)) continue;
+    eventos.push({
+      tipo: linha.tipo as EventoBruto['tipo'],
+      ocorridoEm: linha.ocorrido_em,
+      // `fimEm` só faz sentido onde existe fim. Ausente ≠ nulo: nulo é "sono
+      // ainda correndo", e o `duracaoMinutos` da superfície conta com isso.
+      fimEm: linha.tipo === 'sono' ? linha.terminou_em : undefined,
+    });
   }
   return eventos;
 }

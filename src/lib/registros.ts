@@ -1,12 +1,22 @@
-// Acesso às tabelas de registro (feeding_records, sleep_records, diaper_records,
-// mood_records, symptom_records).
-// Diferente de `babies`, aqui não vai user_id no insert: a policy dessas tabelas é
+// Acesso à tabela `registros` — uma linha por registro, para os seis tipos.
+//
+// Diferente de `babies`, aqui não vai user_id no insert: a policy é
 // `for all using (exists ... babies.user_id = auth.uid())`, ou seja, o vínculo com o
 // dono vem do baby_id. Mandar user_id quebraria — a coluna nem existe.
+//
+// ------------------------------------------------------------------
+// O QUE A TABELA ÚNICA MUDOU AQUI
+//
+// Este módulo era, em boa parte, o preço de ter cinco tabelas: a lista era um
+// merge de k listas ordenadas no cliente, o motor lia duas janelas em paralelo e
+// precisava alinhá-las, e cada função começava escolhendo a tabela pelo tipo.
+//
+// Nada disso é decisão de produto — era consequência do schema. Com uma tabela,
+// ordenação, corte e cursor voltam para o banco, que é onde índice existe.
 
 import { supabase } from './supabase';
 import { formatarHora } from './horario';
-import { paginar, type CursorRegistro, type Pagina } from './paginacao';
+import { filtroDoCursor, paginar, type CursorRegistro, type Pagina } from './paginacao';
 import type { TipoEvento } from './consultas';
 import {
   CONTEUDOS_FRALDA,
@@ -15,17 +25,14 @@ import {
   LADOS,
   LEITES,
   MOTIVOS_HUMOR,
-  SCHEMAS,
   SINTOMAS,
   SINTOMAS_APOSENTADOS,
   TIPOS_REGISTRO,
   LEITURA,
-  TABELAS_DE_REGISTRO,
   linhaParaBanco,
   rotularValor,
   valoresDaLinha,
   tipoDaLinha,
-  tiposDaTabela,
   type CampoDetalhe,
   type LinhaRegistro,
   type TipoRegistro,
@@ -33,7 +40,7 @@ import {
 } from './registroSchema.ts';
 
 export type { CursorRegistro } from './paginacao';
-import type { SleepRecord } from '../types/database';
+import type { Registro } from '../types/database';
 
 // Mesmo formato de retorno de src/lib/babies.ts: erro nunca sobe como exceção,
 // vem como frase pronta pra mostrar pra mãe.
@@ -72,11 +79,15 @@ type SaoIguais<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : fals
 const _uniaoConfere: SaoIguais<TipoRegistro, TipoEvento> = true;
 void _uniaoConfere;
 
-/** Tabela e coluna de tempo saem do schema — não há segunda tabela de verdade. */
-const TABELA = (tipo: TipoRegistro) => SCHEMAS[tipo].tabela;
-const COLUNA_TEMPO = (tipo: TipoRegistro) => SCHEMAS[tipo].colunaTempo;
+/**
+ * A tabela. Uma, e por isso uma constante e não uma função do tipo.
+ *
+ * O nome fica aqui em vez de repetido em nove `.from()`: renomear tabela é raro,
+ * mas renomear em oito lugares e esquecer o nono é o modo normal de fazê-lo.
+ */
+const TABELA = 'registros';
 
-/** Linha já pronta pra lista "Últimos registros" — as 5 tabelas normalizadas num formato só. */
+/** Linha já pronta pra lista "Últimos registros". */
 export type RegistroRecente = {
   id: string;
   tipo: TipoRegistro;
@@ -109,9 +120,9 @@ export type PaginaRegistros = Pagina<RegistroRecente>;
 /**
  * Grava um registro qualquer.
  *
- * Uma função no lugar de cinco. O que variava entre elas — tabela, colunas
- * fixas, coluna de tempo, quais campos existem — está declarado no schema, e o
- * que sobra é idêntico: montar a linha, inserir, e traduzir falha em frase.
+ * Uma função no lugar de cinco. O que variava entre elas — quais campos existem
+ * e o que cada um vale — está declarado no schema, e o que sobra é idêntico:
+ * montar a linha, inserir, e traduzir falha em frase.
  *
  * A validação NÃO acontece aqui: quem valida é a tela, com a mesma
  * `validarRegistro` do schema, antes de chegar neste ponto. Validar de novo
@@ -128,7 +139,7 @@ export async function criarRegistro(
   ocorridoEm: string
 ): Promise<{ error: string | null }> {
   const { error } = await supabase
-    .from(TABELA(tipo))
+    .from(TABELA)
     .insert({ ...linhaParaBanco(tipo, valores, ocorridoEm), baby_id: babyId });
 
   if (error) {
@@ -139,20 +150,25 @@ export async function criarRegistro(
 }
 
 /**
- * Abre um sono em andamento: ended_at fica null até a mãe encerrar.
+ * Abre um sono em andamento: `terminou_em` fica null até a mãe encerrar.
  *
  * Recusa se já houver um sono aberto — dois registros correndo ao mesmo tempo
  * sujariam o cálculo de duração média do motor de personalização.
+ *
+ * O filtro por `tipo` na checagem não é decoração: `terminou_em` nulo passou a
+ * ser o normal de todos os outros cinco tipos, que não têm fim nenhum. Sem ele,
+ * uma fralda trocada às 3h impediria a mãe de começar um sono.
  */
 export async function iniciarSono(
   babyId: string,
   startedAt: string
-): Promise<Resultado<SleepRecord | null>> {
+): Promise<Resultado<Registro | null>> {
   const emAndamento = await supabase
-    .from('sleep_records')
+    .from(TABELA)
     .select('id')
     .eq('baby_id', babyId)
-    .is('ended_at', null)
+    .eq('tipo', 'sono')
+    .is('terminou_em', null)
     .limit(1);
 
   if (emAndamento.error) {
@@ -167,8 +183,14 @@ export async function iniciarSono(
   }
 
   const { data, error } = await supabase
-    .from('sleep_records')
-    .insert({ baby_id: babyId, started_at: startedAt, ended_at: null })
+    .from(TABELA)
+    .insert({
+      baby_id: babyId,
+      tipo: 'sono',
+      ocorrido_em: startedAt,
+      terminou_em: null,
+      dados: {},
+    })
     .select()
     .single();
 
@@ -176,23 +198,28 @@ export async function iniciarSono(
     console.warn('[registros] falha ao iniciar sono:', error.message);
     return { data: null, error: ERRO_SALVAR };
   }
-  return { data: data as SleepRecord, error: null };
+  return { data: data as Registro, error: null };
 }
 
 /**
- * Fecha o sono em andamento. `is('ended_at', null)` evita reescrever a hora de fim de um
- * sono que já foi encerrado noutro aparelho — nesse caso não casa linha nenhuma, e isso
+ * Fecha o sono em andamento. `is('terminou_em', null)` evita reescrever a hora de fim de
+ * um sono que já foi encerrado noutro aparelho — nesse caso não casa linha nenhuma, e isso
  * não é erro: o estado desejado já está lá, então volta sem mensagem.
+ *
+ * O `eq('tipo', 'sono')` é a mesma defesa do `iniciarSono`, por outro motivo: com
+ * uma tabela só, um `id` de outro tipo chegando aqui gravaria `terminou_em` numa
+ * fralda. Ele não chega pela tela — mas a tela não é a única coisa que chama.
  */
 export async function encerrarSono(
   sonoId: string,
   endedAt: string = new Date().toISOString()
-): Promise<Resultado<SleepRecord | null>> {
+): Promise<Resultado<Registro | null>> {
   const { data, error } = await supabase
-    .from('sleep_records')
-    .update({ ended_at: endedAt })
+    .from(TABELA)
+    .update({ terminou_em: endedAt })
     .eq('id', sonoId)
-    .is('ended_at', null)
+    .eq('tipo', 'sono')
+    .is('terminou_em', null)
     .select()
     .maybeSingle();
 
@@ -200,7 +227,7 @@ export async function encerrarSono(
     console.warn('[registros] falha ao encerrar sono:', error.message);
     return { data: null, error: 'Não consegui encerrar esse sono agora. Tenta de novo em instantes.' };
   }
-  return { data: (data as SleepRecord) ?? null, error: null };
+  return { data: (data as Registro) ?? null, error: null };
 }
 
 /**
@@ -222,20 +249,19 @@ export async function encerrarSono(
  * ela só enxerga os próprios registros e isso não deveria acontecer.
  */
 export async function apagarRegistro(
-  tipo: TipoRegistro,
   id: string
 ): Promise<{ apagado: boolean; error: string | null }> {
-  const { data, error } = await supabase.from(TABELA(tipo)).delete().eq('id', id).select('id');
+  const { data, error } = await supabase.from(TABELA).delete().eq('id', id).select('id');
 
   if (error) {
-    console.warn(`[registros] falha ao apagar ${tipo}:`, error.message);
+    console.warn('[registros] falha ao apagar:', error.message);
     return { apagado: false, error: 'Não consegui apagar esse registro agora. Tenta de novo em instantes.' };
   }
 
   const apagado = (data ?? []).length > 0;
   if (!apagado) {
     console.warn(
-      `[registros] delete de ${tipo} ${id} não casou nenhuma linha — ` +
+      `[registros] delete de ${id} não casou nenhuma linha — ` +
         'já tinha sido apagado, ou a RLS barrou.'
     );
   }
@@ -266,7 +292,7 @@ function normalizar(tipo: TipoRegistro, linha: LinhaRegistro, agora: Date): Regi
   return {
     id: String(linha.id),
     tipo,
-    ocorridoEm: String(linha[SCHEMAS[tipo].colunaTempo]),
+    ocorridoEm: String(linha.ocorrido_em),
     resumo: leitura.resumir(linha, agora),
     emAndamento: leitura.emAndamento?.(linha) ?? false,
   };
@@ -278,32 +304,38 @@ function normalizar(tipo: TipoRegistro, linha: LinhaRegistro, agora: Date): Regi
  * `maybeSingle` em vez de `single`: registro apagado noutro aparelho volta como
  * `data: null` sem virar exceção, e a tela mostra "esse registro não está mais
  * aqui" em vez de um erro genérico.
+ *
+ * O TIPO NÃO VEM MAIS POR PARÂMETRO, e isso é ganho de correção, não economia de
+ * argumento: ele vem da própria linha. Antes a rota `/detalhe/[tipo]/[id]` dizia
+ * de que tipo era o registro, e a URL é digitável na web — `/detalhe/sono/<id de
+ * uma fralda>` lia a linha certa e a contava como sono. Agora quem responde é o
+ * banco.
  */
 export async function buscarRegistro(
-  tipo: TipoRegistro,
   id: string,
   agora: Date = new Date()
 ): Promise<Resultado<DetalheRegistro | null>> {
-  const { data, error } = await supabase
-    .from(TABELA(tipo))
-    .select('*')
-    .eq('id', id)
-    .maybeSingle();
+  const { data, error } = await supabase.from(TABELA).select('*').eq('id', id).maybeSingle();
 
   if (error) {
-    console.warn(`[registros] falha ao buscar ${tipo}:`, error.message);
+    console.warn('[registros] falha ao buscar registro:', error.message);
     return { data: null, error: 'Não consegui abrir esse registro agora.' };
   }
   if (!data) return { data: null, error: null };
 
   const linha = data as LinhaRegistro;
+  const tipo = tipoDaLinha(linha);
+  // Tipo que este app ainda não conhece: some como se não estivesse lá, em vez
+  // de abrir uma tela sem resumo e sem campos.
+  if (!tipo) return { data: null, error: null };
+
   const notas = linha.notes;
 
   return {
     data: {
       ...normalizar(tipo, linha, agora),
       campos: LEITURA[tipo].detalhar(linha, agora),
-      // Sono é a única tabela sem coluna `notes`.
+      // Sono é o único tipo que nunca preenche `notes`: ele não tem o campo.
       notas: typeof notas === 'string' && notas.trim() ? notas.trim() : null,
     },
     error: null,
@@ -311,24 +343,37 @@ export async function buscarRegistro(
 }
 
 /**
- * As linhas cruas que o motor precisa — feeding + sleep de uma janela.
+ * As linhas cruas que o motor precisa — mamada e sono de uma janela.
  *
  * POR QUE NÃO REUSA `listarRegistros`
  *
  * A lista unificada existe pra ser mostrada: ela normaliza tudo em
- * `RegistroRecente`, e nessa normalização o `ended_at` vira o booleano
+ * `RegistroRecente`, e nessa normalização o fim do sono vira o booleano
  * `emAndamento`. Para a tela isso basta ("Dormindo há 40 min"); para o motor,
  * não — sem o instante do fim não há duração de soneca. Reaproveitar aquela
  * função exigiria devolver o registro cru junto, o que engorda a lista inteira
  * pra servir a um consumidor só.
  *
- * O que É reaproveitado: o módulo, o contrato `{ data, error }`, o recorte por
- * `desde` e a regra de nunca lançar exceção. Não há caminho novo de acesso.
- *
  * Também não pagina, e é de propósito: a janela do motor é fechada em 7 dias
- * (~40 a 150 linhas), e paginar aqui só reintroduziria o problema que o D5
- * resolveu — janelas desalinhadas entre as duas tabelas. O motor precisa das
- * duas listas inteiras e alinhadas, ou de nenhuma.
+ * (~40 a 150 linhas), e paginar aqui reintroduziria o problema que o D5
+ * resolveu. O motor precisa das listas inteiras, ou de nenhuma.
+ *
+ * ------------------------------------------------------------------
+ * UMA JANELA, E ISSO APAGA UMA CLASSE DE ERRO
+ *
+ * Eram duas consultas em paralelo, uma por tabela, e a falha parcial precisava
+ * ser tratada à mão: metade dos dados produz um número errado com cara de
+ * certeza, que é o risco R3. Agora é uma leitura só — ou vem tudo, ou não vem
+ * nada, e não existe estado intermediário para alguém esquecer de tratar.
+ *
+ * ------------------------------------------------------------------
+ * OS NOMES `started_at` E `ended_at` SOBREVIVEM AQUI, DE PROPÓSITO
+ *
+ * Eles são o contrato de ENTRADA do `padroes.ts`, que é puro e não conhece
+ * banco nenhum — `consultas.ts` monta a mesma forma a partir dos eventos do
+ * assistente (ver o `doAlvo` de lá). Renomeá-los seria mexer no módulo mais
+ * testado do projeto para ganhar consistência de nome, e a hora de fazer isso
+ * não é a mesma em que se troca o banco de lugar.
  */
 export type RegistrosDoMotor = {
   mamadas: { started_at: string }[];
@@ -339,38 +384,35 @@ export async function listarParaPadroes(
   babyId: string,
   opcoes: { desde: Date }
 ): Promise<Resultado<RegistrosDoMotor>> {
-  const desde = opcoes.desde.toISOString();
+  const { data, error } = await supabase
+    .from(TABELA)
+    .select('tipo, ocorrido_em, terminou_em')
+    .eq('baby_id', babyId)
+    .in('tipo', ['amamentar', 'mamadeira', 'sono'])
+    .gte('ocorrido_em', opcoes.desde.toISOString())
+    .order('ocorrido_em', { ascending: true });
 
-  const [alimentacao, sono] = await Promise.all([
-    supabase
-      .from('feeding_records')
-      .select('started_at')
-      .eq('baby_id', babyId)
-      .gte('started_at', desde)
-      .order('started_at', { ascending: true }),
-    supabase
-      .from('sleep_records')
-      .select('started_at, ended_at')
-      .eq('baby_id', babyId)
-      .gte('started_at', desde)
-      .order('started_at', { ascending: true }),
-  ]);
-
-  const falha = alimentacao.error ?? sono.error;
-  if (falha) console.warn('[registros] falha ao ler para o motor:', falha.message);
-
-  // Diferente da lista, aqui falha parcial NÃO serve: um insight calculado sobre
-  // metade dos dados é um número errado com cara de certeza, que é justamente o
-  // R3. Sem as duas leituras, o motor não roda e o card mostra a frase de
-  // aprendizado — silêncio honesto.
-  if (falha) {
+  if (error) {
+    console.warn('[registros] falha ao ler para o motor:', error.message);
+    // O motor não roda com meia leitura: o card mostra a frase de aprendizado,
+    // que é silêncio honesto, em vez de um número calculado sobre um pedaço.
     return { data: { mamadas: [], sonos: [] }, error: ERRO_LISTAR };
   }
 
+  const linhas = (data ?? []) as {
+    tipo: string;
+    ocorrido_em: string;
+    terminou_em: string | null;
+  }[];
+
   return {
     data: {
-      mamadas: (alimentacao.data ?? []) as { started_at: string }[],
-      sonos: (sono.data ?? []) as { started_at: string; ended_at: string | null }[],
+      mamadas: linhas
+        .filter((l) => l.tipo === 'amamentar' || l.tipo === 'mamadeira')
+        .map((l) => ({ started_at: l.ocorrido_em })),
+      sonos: linhas
+        .filter((l) => l.tipo === 'sono')
+        .map((l) => ({ started_at: l.ocorrido_em, ended_at: l.terminou_em })),
     },
     error: null,
   };
@@ -379,34 +421,39 @@ export async function listarParaPadroes(
 /**
  * Uma página da lista unificada, da mais recente pra mais antiga.
  *
- * COMO A PAGINAÇÃO FUNCIONA COM VÁRIAS TABELAS
+ * UMA CONSULTA, E O CURSOR DESCE PARA O BANCO
  *
- * Cada tabela devolve suas `limite + 1` linhas mais recentes que ainda estão
- * atrás do cursor. A união dessas fatias contém, com certeza, as `limite` linhas
- * mais recentes da união inteira — é o argumento do merge de k listas ordenadas:
- * a i-ésima linha do resultado global não pode estar além da i-ésima posição de
- * nenhuma tabela isolada.
+ * Isto era um merge de k listas ordenadas no cliente: cada tabela devolvia
+ * `limite + 1` linhas, a união era ordenada em memória e cortada aqui. O
+ * argumento funcionava, mas existia só porque as linhas estavam em cinco
+ * lugares. Com uma tabela, ordenação e corte voltam para o índice
+ * `(baby_id, ocorrido_em desc)`, que é onde essa conta é barata.
  *
- * Por isso não dá pra paginar cada tabela por conta própria: cursores
- * independentes andam em velocidades diferentes e "carregar mais" traria janelas
- * de tempo desalinhadas por tipo — a mãe veria sono de terça ao lado de mamada de
- * domingo.
+ * O FILTRO POR TIPO TAMBÉM VIRA UMA LINHA. Antes, pedir só amamentação exigia
+ * traduzir o tipo numa coluna fixa dentro da tabela compartilhada — sem isso,
+ * "carregar mais" de amamentação trazia mamadeira junto. Agora é `in('tipo', …)`
+ * e o índice `(baby_id, tipo, ocorrido_em desc)` responde direto.
  *
- * O `+1` também é quem responde `temMais` sem consulta extra: sobrou candidato
- * além do limite, há mais; não sobrou, nenhuma tabela chegou a ser truncada e a
- * janela acabou.
+ * ------------------------------------------------------------------
+ * O CURSOR É KEYSET DE VERDADE, E ISSO CORRIGE UM BURACO
  *
- * Se uma das buscas falhar, devolve o que deu certo e ainda assim reporta o erro —
- * some com um pedaço da lista, não com a lista inteira. `data` e `error` são
- * independentes de propósito: lista vazia e falha de rede são estados diferentes,
- * e a tela precisa dizer coisas diferentes pra cada um.
+ * A condição é a mesma ordem total do `paginacao.ts`, escrita em SQL:
  *
- * A LISTA É POR TABELA, NÃO POR TIPO
+ *     ocorrido_em < cursor  OR  (ocorrido_em = cursor AND id < cursor.id)
  *
- * Antes havia uma consulta escrita à mão para cada uma das 5 tabelas, e somar um
- * tipo somava um bloco aqui. Agora as tabelas saem do schema, e o tipo de cada
- * linha volta por `tipoDaLinha` — quem grava numa tabela compartilhada se
- * distingue pela coluna fixa, que é a mesma que o insert usou.
+ * Antes era `lte` no instante, e o desempate por id acontecia no cliente,
+ * DEPOIS do corte por `limite + 1`. Com cinco tabelas isso se escondia atrás do
+ * volume; com uma, ele aparece: os empatados no instante do cursor voltam,
+ * ocupam o teto, são filtrados aqui, e a página encolhe — ou termina cedo,
+ * dizendo `temMais: false` com registro ainda por vir.
+ *
+ * E empate no instante é o caso COMUM deste app, não a exceção: a mãe informa a
+ * hora numa máscara HH:MM, então todo registro nasce com os segundos zerados.
+ * Fralda e humor salvos no mesmo minuto colidem.
+ *
+ * O filtro do `paginar` continua lá, e agora não corta nada. Fica como rede: se
+ * um dia esta condição e a ordem do `paginacao.ts` divergirem, é melhor a página
+ * vir curta do que vir com item repetido.
  */
 export async function listarRegistros(
   babyId: string,
@@ -415,69 +462,39 @@ export async function listarRegistros(
   const { desde = null, limite = 8, cursor = null, tipos = null, agora = new Date() } = opcoes;
 
   const pedidos = !tipos || tipos.length === 0 ? TIPOS_REGISTRO : tipos;
-  const teto = limite + 1;
 
-  const buscas = TABELAS_DE_REGISTRO.map(async (tabela) => {
-    const naTabela = tiposDaTabela(tabela);
-    const querAqui = naTabela.filter((tipo) => pedidos.includes(tipo));
-    if (querAqui.length === 0) return { data: null, error: null };
+  let q = supabase.from(TABELA).select('*').eq('baby_id', babyId).in('tipo', pedidos);
 
-    // Tipos que dividem tabela também dividem a coluna de tempo — o schema é
-    // conferido nisso pelo teste, então a primeira serve para todos.
-    const coluna = SCHEMAS[naTabela[0]].colunaTempo;
+  if (desde) q = q.gte('ocorrido_em', desde.toISOString());
+  // A condição em si mora no `paginacao.ts`, colada na versão em JavaScript que
+  // o `paginar` usa. As duas discordarem é o bug; separá-las seria convidá-lo.
+  if (cursor) q = q.or(filtroDoCursor(cursor));
 
-    let q = supabase.from(tabela).select('*').eq('baby_id', babyId);
-    if (desde) q = q.gte(coluna, desde.toISOString());
-    // `lte` e não `lt`: o cursor pode ter empatado no instante com outra linha, e
-    // essas empatadas precisam vir pra serem desempatadas por id aqui no cliente.
-    if (cursor) q = q.lte(coluna, cursor.ocorridoEm);
+  // `limite + 1` continua sendo quem responde `temMais` sem consulta extra:
+  // sobrou linha além do limite, há mais; não sobrou, a janela acabou.
+  const { data, error } = await q
+    .order('ocorrido_em', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(limite + 1);
 
-    // Sem filtro quando a tabela inteira foi pedida. Pedindo só um dos tipos que
-    // moram nela, o filtro vai na coluna fixa — sem isso, "carregar mais" de
-    // amamentação traria mamadeira junto.
-    if (querAqui.length < naTabela.length) {
-      const [colunaFixa, valores] = filtroFixo(querAqui);
-      if (colunaFixa) q = q.in(colunaFixa, valores);
-    }
-
-    return q.order(coluna, { ascending: false }).limit(teto);
-  });
-
-  const respostas = await Promise.all(buscas);
-
-  const falhas = respostas.map((r) => r.error).filter(Boolean);
-  falhas.forEach((erro) => console.warn('[registros] falha ao listar:', erro?.message));
+  if (error) console.warn('[registros] falha ao listar:', error.message);
 
   const candidatos: RegistroRecente[] = [];
-  respostas.forEach((resposta, i) => {
-    const tabela = TABELAS_DE_REGISTRO[i];
-    for (const linha of (resposta.data ?? []) as LinhaRegistro[]) {
-      const tipo = tipoDaLinha(tabela, linha);
-      // Linha de um tipo que o app não conhece mais não derruba a lista: ela
-      // simplesmente não aparece, e o resto continua.
-      if (tipo) candidatos.push(normalizar(tipo, linha, agora));
-    }
-  });
+  for (const linha of (data ?? []) as LinhaRegistro[]) {
+    const tipo = tipoDaLinha(linha);
+    // O `in('tipo', …)` já não deixa passar tipo desconhecido, então isto nunca
+    // dispara hoje. Fica porque o dia em que disparar — um dos 14 que faltam,
+    // aberto num PWA antigo em cache — é melhor a linha sumir do que a lista
+    // inteira quebrar num `LEITURA[undefined]`.
+    if (tipo) candidatos.push(normalizar(tipo, linha, agora));
+  }
 
+  // `data` e `error` são independentes de propósito: lista vazia e falha de rede
+  // são estados diferentes, e a tela precisa dizer coisas diferentes pra cada um.
   return {
     data: paginar(candidatos, limite, cursor),
-    error: falhas.length > 0 ? ERRO_LISTAR : null,
+    error: error ? ERRO_LISTAR : null,
   };
-}
-
-/**
- * A coluna fixa que separa tipos de uma mesma tabela, e os valores pedidos.
- *
- * Devolve `[null, []]` quando os tipos não se distinguem por uma coluna só —
- * hoje não acontece, e o dia que acontecer é melhor não filtrar do que filtrar
- * errado: lista com item a mais é visível, lista com item a menos não.
- */
-function filtroFixo(tipos: TipoRegistro[]): [string | null, string[]] {
-  const colunas = new Set(tipos.flatMap((t) => Object.keys(SCHEMAS[t].fixas ?? {})));
-  if (colunas.size !== 1) return [null, []];
-
-  const coluna = [...colunas][0];
-  return [coluna, tipos.map((t) => SCHEMAS[t].fixas![coluna])];
 }
 
 /**
@@ -511,10 +528,15 @@ export async function carregarParaEdicao(
   tipo: TipoRegistro,
   id: string
 ): Promise<Resultado<{ valores: ValoresRegistro; ocorridoEm: string } | null>> {
+  // O `tipo` aqui é o da tela, e ele CONFERE contra a linha em vez de mandar
+  // nela: o formulário já foi desenhado com os campos desse tipo, e ler uma
+  // fralda com o schema de sono devolveria um formulário vazio que, ao salvar,
+  // apagaria o conteúdo da fralda.
   const { data, error } = await supabase
-    .from(TABELA(tipo))
+    .from(TABELA)
     .select('*')
     .eq('id', id)
+    .eq('tipo', tipo)
     .maybeSingle();
 
   if (error) {
@@ -524,7 +546,7 @@ export async function carregarParaEdicao(
   if (!data) return { data: null, error: null };
 
   const linha = data as LinhaRegistro;
-  const ocorridoEm = String(linha[SCHEMAS[tipo].colunaTempo]);
+  const ocorridoEm = String(linha.ocorrido_em);
 
   return {
     data: {
@@ -538,14 +560,21 @@ export async function carregarParaEdicao(
 /**
  * Salva a edição.
  *
- * Escreve as MESMAS colunas que o insert escreveria — inclusive as fixas, que
- * não mudam de valor e por isso não fazem mal, e inclusive as vazias, que viram
- * `null`. Um update parcial, só do que a tela julgou alterado, deixaria para trás
- * o campo que a mãe acabou de esvaziar.
+ * Escreve os MESMOS campos que o insert escreveria, inclusive os vazios. Um
+ * update parcial, só do que a tela julgou alterado, deixaria para trás o campo
+ * que a mãe acabou de esvaziar.
  *
- * O que ele NÃO toca: `baby_id`, `id`, e o que não está no schema — `ended_at` de
- * um sono continua onde estava, e editar o começo de um sono encerrado muda a
- * duração, que é o que ela pediu ao mudar o começo.
+ * O `dados` inteiro é substituído, e é isso que faz o esvaziar funcionar: a
+ * chave que ficou sem valor não é escrita como nula — ela deixa de existir, que
+ * é a mesma forma que as 97 linhas migradas usam para "não informado".
+ *
+ * O que ele NÃO toca: `baby_id`, `id`, `tipo` e `terminou_em`. O fim de um sono
+ * continua onde estava, e editar o começo de um sono encerrado muda a duração,
+ * que é o que ela pediu ao mudar o começo.
+ *
+ * O `eq('tipo', tipo)` fecha o mesmo buraco do `carregarParaEdicao`: com uma
+ * tabela só, salvar o formulário de um tipo por cima do `id` de outro deixaria
+ * de ser impossível por construção.
  */
 export async function atualizarRegistro(
   tipo: TipoRegistro,
@@ -553,10 +582,16 @@ export async function atualizarRegistro(
   valores: ValoresRegistro,
   ocorridoEm: string
 ): Promise<{ error: string | null }> {
+  // `tipo` sai do payload: ele identifica a linha (no `eq` abaixo), não é algo
+  // que a edição decide. Um update que escreve a própria chave de identidade é
+  // um update que, no dia em que a montagem tiver um bug, troca o tipo da linha.
+  const { tipo: _identidade, ...campos } = linhaParaBanco(tipo, valores, ocorridoEm);
+
   const { data, error } = await supabase
-    .from(TABELA(tipo))
-    .update(linhaParaBanco(tipo, valores, ocorridoEm))
+    .from(TABELA)
+    .update(campos)
     .eq('id', id)
+    .eq('tipo', tipo)
     .select('id');
 
   if (error) {

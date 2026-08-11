@@ -342,8 +342,12 @@ const TIPOS = [
     edicao: { notes: `${PREFIXO} invadido` },
   },
   {
-    // A tabela de eventos do bloco 3. Provada com ela VAZIA, antes do backfill:
-    // RLS provada com dado dentro é RLS provada tarde demais.
+    // A tabela de eventos do bloco 3, e a única que o app usa desde a virada.
+    //
+    // A RLS dela foi provada com a tabela VAZIA, no passo 2, antes de qualquer
+    // dado entrar — RLS provada com dado dentro é RLS provada tarde demais. O
+    // caso continua rodando a cada rodada, agora com as 97 linhas migradas ao
+    // lado, e é isso que ele passa a defender: que o furo não apareceu depois.
     //
     // E aqui a leitura pesa mais que nas outras. Com uma tabela por tipo, um furo
     // de select exporia um tipo de registro de outra mãe; com tabela única, expõe

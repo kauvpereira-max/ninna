@@ -59,11 +59,22 @@ export function gerarMassa(babyId, { agora = new Date() } = {}) {
   const iso = (dia, horas) =>
     new Date(meiaNoite(dia).getTime() + horas * 3_600_000).toISOString();
 
-  const alimentacao = [];
-  const sono = [];
-  const fralda = [];
-  const humor = [];
-  const sintoma = [];
+  /**
+   * Uma lista só, com o `tipo` em cada linha — a forma de `registros`.
+   *
+   * Eram cinco listas, uma por tabela. Quem consome filtra por tipo, que é a
+   * mesma coisa que o app faz agora, e o gerador deixa de ter uma segunda
+   * opinião sobre onde cada registro mora.
+   */
+  const registros = [];
+
+  const linha = (tipo, quando, dados, extra = {}) => ({
+    baby_id: babyId,
+    tipo,
+    ocorrido_em: quando,
+    dados,
+    ...extra,
+  });
 
   for (let dia = DIAS - 1; dia >= 0; dia--) {
     const hoje = dia === 0;
@@ -73,24 +84,26 @@ export function gerarMassa(babyId, { agora = new Date() } = {}) {
     // Mamadas a cada ~3h, começando às 6h.
     for (let h = 6; h < limite; h += entre(2.7, 3.3)) {
       const peito = aleatorio() < 0.6;
-      alimentacao.push(
+      registros.push(
         peito
-          ? {
-              baby_id: babyId,
-              type: 'breast',
-              side: escolher(['left', 'right', 'both']),
-              duration_seconds: inteiro(8, 22) * 60,
-              started_at: iso(dia, h),
-              notes: MARCA,
-            }
-          : {
-              baby_id: babyId,
-              type: 'bottle',
-              amount_ml: inteiro(6, 15) * 10,
-              bottle_type: escolher(['breast_milk', 'formula']),
-              started_at: iso(dia, h),
-              notes: MARCA,
-            }
+          ? linha(
+              'amamentar',
+              iso(dia, h),
+              {
+                side: escolher(['left', 'right', 'both']),
+                duration_seconds: inteiro(8, 22) * 60,
+              },
+              { notes: MARCA }
+            )
+          : linha(
+              'mamadeira',
+              iso(dia, h),
+              {
+                amount_ml: inteiro(6, 15) * 10,
+                bottle_type: escolher(['breast_milk', 'formula']),
+              },
+              { notes: MARCA }
+            )
       );
     }
 
@@ -103,60 +116,81 @@ export function gerarMassa(babyId, { agora = new Date() } = {}) {
       const inicio = entre(faixa[0], faixa[1]);
       if (inicio >= limite) continue;
       const duracao = entre(0.7, 1.5);
-      sono.push({
-        baby_id: babyId,
-        started_at: iso(dia, inicio),
-        ended_at: iso(dia, inicio + duracao),
-      });
+      registros.push(
+        linha('sono', iso(dia, inicio), {}, { terminou_em: iso(dia, inicio + duracao) })
+      );
     }
 
     const noite = entre(19.5, 20.5);
     if (noite < limite) {
-      sono.push({
-        baby_id: babyId,
-        started_at: iso(dia, noite),
-        ended_at: iso(dia, noite + entre(8, 10)),
-      });
+      registros.push(
+        linha('sono', iso(dia, noite), {}, { terminou_em: iso(dia, noite + entre(8, 10)) })
+      );
     }
 
     // Fraldas, humor e sintoma — esparsos.
     for (let n = 0; n < inteiro(3, 5); n++) {
       const h = entre(6, 22);
       if (h >= limite) continue;
-      fralda.push({
-        baby_id: babyId,
-        content: escolher(['pee', 'pee', 'poop', 'both']),
-        recorded_at: iso(dia, h),
-        notes: MARCA,
-      });
+      registros.push(
+        linha(
+          'fralda',
+          iso(dia, h),
+          { content: escolher(['pee', 'pee', 'poop', 'both']) },
+          { notes: MARCA }
+        )
+      );
     }
 
     if (aleatorio() < 0.7) {
       const h = entre(7, 21);
       if (h < limite) {
-        humor.push({
-          baby_id: babyId,
-          mood: escolher(['happy', 'calm', 'crying', 'sleepy', 'agitated', 'irritated']),
-          probable_reason: escolher(['hunger', 'sleep', 'diaper', 'colic', 'holding', 'unknown']),
-          recorded_at: iso(dia, h),
-          notes: MARCA,
-        });
+        registros.push(
+          linha(
+            'humor',
+            iso(dia, h),
+            {
+              mood: escolher(['happy', 'calm', 'crying', 'sleepy', 'agitated', 'irritated']),
+              probable_reason: escolher([
+                'hunger',
+                'sleep',
+                'diaper',
+                'colic',
+                'holding',
+                'unknown',
+              ]),
+            },
+            { notes: MARCA }
+          )
+        );
       }
     }
 
     if (aleatorio() < 0.25) {
       const h = entre(8, 20);
       if (h < limite) {
-        sintoma.push({
-          baby_id: babyId,
-          symptom: escolher(['fever', 'runny_nose', 'cough', 'colic']),
-          intensity: escolher(['mild', 'moderate']),
-          recorded_at: iso(dia, h),
-          notes: MARCA,
-        });
+        registros.push(
+          linha(
+            'sintoma',
+            iso(dia, h),
+            {
+              symptom: escolher(['fever', 'runny_nose', 'cough', 'colic']),
+              intensity: escolher(['mild', 'moderate']),
+            },
+            { notes: MARCA }
+          )
+        );
       }
     }
   }
 
-  return { alimentacao, sono, fralda, humor, sintoma };
+  // Em ordem de tempo, como o banco devolve — a massa deixa de depender da ordem
+  // em que este laço monta os tipos.
+  registros.sort((a, b) => a.ocorrido_em.localeCompare(b.ocorrido_em));
+  return registros;
+}
+
+/** Os registros de um tipo — ou de vários, quando o alvo é "mamada". */
+export function doTipo(registros, ...tipos) {
+  return registros.filter((r) => tipos.includes(r.tipo));
 }

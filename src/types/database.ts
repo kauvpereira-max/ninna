@@ -32,112 +32,56 @@ export type NovoBebe = {
 
 // ============================================================
 // REGISTROS
-// Nas tabelas abaixo não existe coluna user_id: a RLS é `for all using (...)`
-// com join em babies, então o baby_id correto já basta pro insert passar.
+//
+// Uma tabela para os seis tipos, e para os catorze que faltam — espelha
+// `supabase/migrations/005_registros.sql`, que por sua vez é GERADA do
+// `registroSchema.ts`. Mexer no vocabulário abaixo sem regerar a migration
+// quebra o `teste-registros-sql.ts`.
+//
+// Não existe coluna user_id: a RLS é `for all using (...)` com join em babies,
+// então o baby_id correto já basta pro insert passar.
+//
+// As cinco tabelas antigas (feeding_records e companhia) continuam no banco até
+// a `006`, mas o app não as lê nem escreve nelas desde o bloco 3 — por isso os
+// tipos delas saíram daqui. Tipo de tabela que ninguém consulta é documentação
+// que envelhece sem ninguém notar.
 // ============================================================
 
-/** A mesma tabela guarda peito e mamadeira — a coluna `type` separa os dois. */
-export type TipoAlimentacao = 'breast' | 'bottle';
 export type LadoSeio = 'left' | 'right' | 'both';
 export type TipoLeite = 'breast_milk' | 'formula';
 export type ConteudoFralda = 'pee' | 'poop' | 'both';
-
-export type FeedingRecord = {
-  id: string;
-  baby_id: string;
-  type: TipoAlimentacao;
-  /** Só preenchido quando type = 'breast'. */
-  side: LadoSeio | null;
-  /** Só preenchido quando type = 'breast'. */
-  duration_seconds: number | null;
-  /** Só preenchido quando type = 'bottle'. */
-  amount_ml: number | null;
-  /** Só preenchido quando type = 'bottle'. */
-  bottle_type: TipoLeite | null;
-  started_at: string;
-  notes: string | null;
-  created_at: string;
-};
-
-export type NovaAmamentacao = {
-  side: LadoSeio;
-  duration_seconds: number | null;
-  started_at: string;
-  notes: string | null;
-};
-
-export type NovaMamadeira = {
-  amount_ml: number;
-  bottle_type: TipoLeite;
-  started_at: string;
-  notes: string | null;
-};
-
-export type SleepRecord = {
-  id: string;
-  baby_id: string;
-  started_at: string;
-  /** Null enquanto o bebê ainda está dormindo. */
-  ended_at: string | null;
-  created_at: string;
-};
-
-export type DiaperRecord = {
-  id: string;
-  baby_id: string;
-  content: ConteudoFralda;
-  color: string | null;
-  recorded_at: string;
-  notes: string | null;
-  created_at: string;
-};
-
-export type NovaFralda = {
-  content: ConteudoFralda;
-  recorded_at: string;
-  notes: string | null;
-};
-
 export type Humor = 'happy' | 'irritated' | 'crying' | 'sleepy' | 'calm' | 'agitated';
-
-export type MoodRecord = {
-  id: string;
-  baby_id: string;
-  mood: Humor;
-  /** Texto livre no banco; o app grava só os motivos da lista (inclusive 'unknown'). */
-  probable_reason: string | null;
-  notes: string | null;
-  recorded_at: string;
-  created_at: string;
-};
-
-export type NovoHumor = {
-  mood: Humor;
-  probable_reason: string | null;
-  recorded_at: string;
-  notes: string | null;
-};
-
 export type Intensidade = 'mild' | 'moderate' | 'high';
 
-export type SymptomRecord = {
+export type Registro = {
   id: string;
   baby_id: string;
   /**
-   * A coluna não tem check — é texto livre no banco. O app só grava valores de
-   * `SINTOMAS` (ver src/lib/registros.ts): dado agregável é requisito do motor de
-   * personalização. Descrição da mãe vai em `notes`, com symptom = 'other'.
+   * A união em si mora no `registroSchema.ts` (`TipoRegistro`), que é quem gera
+   * o `check` desta coluna. Aqui fica `string` de propósito: este arquivo
+   * descreve a FORMA da linha, e importar de lá inverteria a direção — o schema
+   * é que importa os vocabulários daqui.
    */
-  symptom: string;
-  intensity: Intensidade | null;
+  tipo: string;
+  /** Ancora o registro na linha do tempo. Substituiu started_at/recorded_at. */
+  ocorrido_em: string;
+  /** Fim do evento, quando ele tem duração. Null no sono ainda em andamento. */
+  terminou_em: string | null;
+  /**
+   * O que varia por tipo, com vocabulário garantido por `check` condicionado ao
+   * tipo. As chaves possíveis são os `coluna` dos campos do schema: `side`,
+   * `duration_seconds`, `amount_ml`, `bottle_type`, `content`, `mood`,
+   * `probable_reason`, `symptom`, `intensity` — e `color`, que só existe nas
+   * fralda migradas e que o app nunca escreveu.
+   */
+  dados: Record<string, unknown>;
+  /** Texto livre da mãe. Coluna, e não chave no `dados`: não tem vocabulário. */
   notes: string | null;
-  recorded_at: string;
   created_at: string;
-};
-
-export type NovoSintoma = {
-  symptom: string;
-  intensity: Intensidade | null;
-  recorded_at: string;
-  notes: string | null;
+  /**
+   * Colunas GERADAS a partir do `dados`, para o `check` de faixa ficar legível e
+   * o número ser somável em SQL. Não se escreve nelas — o Postgres recalcula.
+   */
+  duration_seconds: number | null;
+  amount_ml: number | null;
 };

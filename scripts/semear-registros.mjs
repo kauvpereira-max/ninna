@@ -27,8 +27,10 @@
 //
 // Num BEBÊ DEDICADO, criado pelo próprio script — nunca no bebê real da mãe.
 //
-// A razão é o `--limpar`. `sleep_records` não tem coluna `notes`, então não há
-// como marcar procedência linha a linha: a única âncora confiável é o `baby_id`.
+// A razão é o `--limpar`. O sono não tem campo de observação, então não há como
+// marcar procedência linha a linha: a única âncora confiável é o `baby_id`. Com
+// uma tabela só, isso passou a valer para a limpeza inteira — um `delete` por
+// marca em `notes` deixaria os sonos para trás e levaria junto o que não é dele.
 // Semeando no bebê real, limpar exigiria apagar sono por janela de tempo, e no
 // D21 há três mães com sono de verdade no mesmo banco. Avisar na saída seria
 // honesto e não impediria o estrago.
@@ -87,13 +89,7 @@ const cliente = createClient(URL_SUPABASE, ANON, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
-const TABELAS = [
-  { nome: 'feeding_records', temNotes: true },
-  { nome: 'sleep_records', temNotes: false },
-  { nome: 'diaper_records', temNotes: true },
-  { nome: 'mood_records', temNotes: true },
-  { nome: 'symptom_records', temNotes: true },
-];
+const TABELA = 'registros';
 
 /**
  * Resolve em qual bebê semear.
@@ -157,24 +153,20 @@ async function resolverBebe(userId) {
  * real, que não tem backup nem desfazer. Se um dia alguém afrouxar o filtro, é
  * aqui que para.
  */
-async function limparTabela(tabela, babyId) {
-  const alvo = await cliente.from(tabela.nome).select('id, baby_id').eq('baby_id', babyId);
+async function limparRegistros(babyId) {
+  const alvo = await cliente.from(TABELA).select('id, baby_id').eq('baby_id', babyId);
   if (alvo.error) return `erro ao conferir escopo: ${alvo.error.message}`;
   if (alvo.data.length === 0) return '0 apagados';
 
   const bebes = new Set(alvo.data.map((r) => r.baby_id));
   if (bebes.size !== 1 || !bebes.has(babyId)) {
     throw new Error(
-      `ABORTANDO: a limpeza de ${tabela.nome} alcançaria ${bebes.size} bebê(s) ` +
+      `ABORTANDO: a limpeza alcançaria ${bebes.size} bebê(s) ` +
         `(${[...bebes].join(', ')}), e deveria alcançar só ${babyId}.`
     );
   }
 
-  const { data, error } = await cliente
-    .from(tabela.nome)
-    .delete()
-    .eq('baby_id', babyId)
-    .select('id');
+  const { data, error } = await cliente.from(TABELA).delete().eq('baby_id', babyId).select('id');
   return error ? `erro: ${error.message}` : `${data.length} apagados`;
 }
 
@@ -191,12 +183,11 @@ async function main() {
   console.log(`Bebê:  ${bebe.name} (${bebe.id})${bebe.dedicado ? '' : '  <- BEBÊ REAL'}\n`);
 
   if (process.argv.includes('--limpar')) {
-    // Por `baby_id`, não por janela de tempo: é o `baby_id` que garante que a
-    // limpeza não alcança sono de mãe nenhuma. Vale inclusive pra sleep_records,
-    // que não tem `notes` pra marcar procedência.
-    for (const tabela of TABELAS) {
-      console.log(`${tabela.nome.padEnd(18)} ${await limparTabela(tabela, bebe.id)}`);
-    }
+    // Por `baby_id`, não por janela de tempo nem pela marca em `notes`: é o
+    // `baby_id` que garante que a limpeza não alcança registro de mãe nenhuma.
+    // O sono continua sendo o caso que decide — ele não tem `notes` para marcar
+    // procedência, e agora divide a tabela com todo o resto.
+    console.log(`${TABELA.padEnd(18)} ${await limparRegistros(bebe.id)}`);
 
     if (bebe.dedicado) {
       const { error } = await cliente.from('babies').delete().eq('id', bebe.id);
@@ -211,27 +202,18 @@ async function main() {
 
   const massa = gerarMassa(bebe.id);
 
-  for (const [tabela, linhas] of [
-    ['feeding_records', massa.alimentacao],
-    ['sleep_records', massa.sono],
-    ['diaper_records', massa.fralda],
-    ['mood_records', massa.humor],
-    ['symptom_records', massa.sintoma],
-  ]) {
-    if (!linhas.length) continue;
-    const { data, error } = await cliente.from(tabela).insert(linhas).select('id');
-    if (error) throw new Error(`falha ao inserir em ${tabela}: ${error.message}`);
-    console.log(`${tabela.padEnd(18)} ${data.length} inseridos`);
+  const { data, error } = await cliente.from(TABELA).insert(massa).select('id, tipo');
+  if (error) throw new Error(`falha ao inserir em ${TABELA}: ${error.message}`);
+
+  // A contagem por tipo continua saindo, porque é ela que se lê de relance —
+  // o que mudou foi ser um insert só, não deixar de saber o que entrou.
+  const porTipo = new Map();
+  for (const linha of data) porTipo.set(linha.tipo, (porTipo.get(linha.tipo) ?? 0) + 1);
+  for (const [tipo, quantos] of [...porTipo].sort()) {
+    console.log(`${tipo.padEnd(18)} ${quantos} inseridos`);
   }
 
-  const total =
-    massa.alimentacao.length +
-    massa.sono.length +
-    massa.fralda.length +
-    massa.humor.length +
-    massa.sintoma.length;
-
-  console.log(`\n${total} registros em ${DIAS} dias.`);
+  console.log(`\n${data.length} registros em ${DIAS} dias.`);
   console.log('Gabarito esperado pro motor do D8:');
   console.log('  intervalo médio entre mamadas ~3h');
   console.log('  sonecas por volta de 9h, 13h e 16h30, de 40 a 90 min');

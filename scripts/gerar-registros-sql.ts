@@ -27,21 +27,18 @@
  */
 
 import {
+  COLUNAS_REAIS,
   SCHEMAS,
   TIPOS_REGISTRO,
   type CampoSchema,
   type TipoRegistro,
 } from '../src/lib/registroSchema.ts';
 
-/**
- * Colunas do schema que viram coluna DE VERDADE na tabela de eventos, em vez de
- * chave no `dados`.
- *
- * `notes` é texto livre por definição — não tem vocabulário para checar, é
- * consultado por presença, e sai mais barato como coluna. As colunas de tempo
- * (`started_at`/`recorded_at`) viram `ocorrido_em`, e são a chave do índice.
- */
-const COLUNAS_REAIS = new Set(['notes']);
+// `COLUNAS_REAIS` — o que vira coluna de verdade em vez de chave no `dados` —
+// mora no `registroSchema.ts`, e não aqui. Ela decide duas coisas ao mesmo
+// tempo: o que este gerador transforma em `check`, e onde o `linhaParaBanco`
+// escreve o valor. Duas listas divergiriam na primeira coluna nova, e a
+// divergência apareceria como campo que o app grava e o banco não confere.
 
 const aspas = (valor: string) => `'${valor.replace(/'/g, "''")}'`;
 

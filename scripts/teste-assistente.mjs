@@ -139,8 +139,15 @@ if (!bebe) {
 const MINUTOS_ATRAS = 160;
 const mamadaEm = new Date(Date.now() - MINUTOS_ATRAS * 60_000).toISOString();
 const mamada = await cliente
-  .from('feeding_records')
-  .insert({ baby_id: bebe.id, type: 'breast', started_at: mamadaEm })
+  .from('registros')
+  .insert({
+    baby_id: bebe.id,
+    tipo: 'amamentar',
+    ocorrido_em: mamadaEm,
+    // `side` é exigido pelo check da 005. A linha de teste passa pela mesma
+    // porta que a da mãe — senão ela provaria um caminho que não existe.
+    dados: { side: 'left' },
+  })
   .select('id')
   .single();
 
@@ -242,7 +249,7 @@ try {
   conferir('admite que não sabe', r3ok && /não sei|não consigo/i.test(r3.resposta ?? ''));
 } finally {
   // Limpeza: o registro sai sempre, mesmo se um caso falhar no meio.
-  await cliente.from('feeding_records').delete().eq('id', mamada.data.id);
+  await cliente.from('registros').delete().eq('id', mamada.data.id);
 }
 
 console.log(

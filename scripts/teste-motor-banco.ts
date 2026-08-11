@@ -4,7 +4,7 @@
 //
 // O P2 provou a matemática contra massa gerada em memória. O que nenhum teste
 // puro alcança é a volta pelo banco: `timestamptz` serializado pelo PostgREST,
-// `ended_at` nulo vindo como null de verdade, e a hora local sendo extraída de
+// `terminou_em` nulo vindo como null de verdade, e a hora local sendo extraída de
 // uma string com offset — que é exatamente onde o R4 se esconde.
 //
 // Três conferências independentes:
@@ -29,7 +29,7 @@ import {
   fusoDoDispositivo,
   JANELA_DIAS,
 } from '../src/lib/padroes.ts';
-import { gerarMassa, NOME_BEBE_TESTE } from './massa-semeada.mjs';
+import { doTipo, gerarMassa, NOME_BEBE_TESTE } from './massa-semeada.mjs';
 import { escolherInsight } from '../src/lib/copyInsight.ts';
 
 function lerEnv() {
@@ -92,27 +92,42 @@ console.log(`bebê:    ${bebe.name} (${bebe.id})\n`);
 
 const desde = new Date(agora.getTime() - JANELA_DIAS * 24 * 60 * 60_000).toISOString();
 
-const [{ data: mamadas, error: e1 }, { data: sonos, error: e2 }] = await Promise.all([
-  cliente
-    .from('feeding_records')
-    .select('started_at')
-    .eq('baby_id', bebe.id)
-    .gte('started_at', desde)
-    .order('started_at', { ascending: true }),
-  cliente
-    .from('sleep_records')
-    .select('started_at, ended_at')
-    .eq('baby_id', bebe.id)
-    .gte('started_at', desde)
-    .order('started_at', { ascending: true }),
-]);
+/**
+ * Uma leitura, como o app faz.
+ *
+ * Eram duas consultas em paralelo, e a falha parcial precisava ser tratada aqui
+ * também. Agora ou vem tudo, ou não vem nada — e as duas listas saem alinhadas
+ * por construção, em vez de por cuidado.
+ *
+ * Os nomes `started_at`/`ended_at` reaparecem no `map` abaixo porque são o
+ * contrato de entrada do `padroes.ts`, que é puro e não conhece banco. É a mesma
+ * tradução que o `listarParaPadroes` faz no app — e é ela que este teste precisa
+ * exercitar, não contornar.
+ */
+const { data: linhas, error: erroLeitura } = await cliente
+  .from('registros')
+  .select('tipo, ocorrido_em, terminou_em')
+  .eq('baby_id', bebe.id)
+  .in('tipo', ['amamentar', 'mamadeira', 'sono'])
+  .gte('ocorrido_em', desde)
+  .order('ocorrido_em', { ascending: true });
 
-if (e1 || e2) {
-  console.error(`Falha na leitura: ${e1?.message ?? ''} ${e2?.message ?? ''}`);
+if (erroLeitura) {
+  console.error(`Falha na leitura: ${erroLeitura.message}`);
   process.exit(1);
 }
 
-console.log(`lidos do banco: ${mamadas!.length} mamadas, ${sonos!.length} sonos\n`);
+const mamadas = (linhas ?? [])
+  .filter((l) => l.tipo === 'amamentar' || l.tipo === 'mamadeira')
+  .map((l) => ({ started_at: l.ocorrido_em as string }));
+const sonos = (linhas ?? [])
+  .filter((l) => l.tipo === 'sono')
+  .map((l) => ({
+    started_at: l.ocorrido_em as string,
+    ended_at: l.terminou_em as string | null,
+  }));
+
+console.log(`lidos do banco: ${mamadas.length} mamadas, ${sonos.length} sonos\n`);
 
 // ------------------------------------------------------------------
 // 1. Fidelidade — o banco devolve o que o gerador escreveu?
@@ -131,9 +146,9 @@ const hojeLocal = chaveDia(agora.toISOString());
 const massaGerada = gerarMassa(bebe.id, { agora });
 const antesDeHoje = (iso: string) => chaveDia(iso) !== hojeLocal;
 
-const mamadasBanco = mamadas!.map((m) => m.started_at).filter(antesDeHoje).sort();
-const mamadasGerador = massaGerada.alimentacao
-  .map((m: { started_at: string }) => m.started_at)
+const mamadasBanco = mamadas.map((m) => m.started_at).filter(antesDeHoje).sort();
+const mamadasGerador = doTipo(massaGerada, 'amamentar', 'mamadeira')
+  .map((m: { ocorrido_em: string }) => m.ocorrido_em)
   .filter(antesDeHoje)
   .sort();
 
@@ -144,9 +159,9 @@ conferir(
   `${mamadasBanco.length} no banco, ${mamadasGerador.length} no gerador`
 );
 
-const sonosBanco = sonos!.filter((s) => antesDeHoje(s.started_at)).map((s) => s.started_at).sort();
-const sonosGerador = massaGerada.sono
-  .map((s: { started_at: string }) => s.started_at)
+const sonosBanco = sonos.filter((s) => antesDeHoje(s.started_at)).map((s) => s.started_at).sort();
+const sonosGerador = doTipo(massaGerada, 'sono')
+  .map((s: { ocorrido_em: string }) => s.ocorrido_em)
   .filter(antesDeHoje)
   .sort();
 
@@ -159,8 +174,8 @@ conferir(
 
 conferir(
   'todo sono do banco veio com ended_at preenchido ou null explícito',
-  sonos!.every((s) => s.ended_at === null || typeof s.ended_at === 'string'),
-  `${sonos!.filter((s) => s.ended_at === null).length} em andamento`
+  sonos.every((s) => s.ended_at === null || typeof s.ended_at === 'string'),
+  `${sonos.filter((s) => s.ended_at === null).length} em andamento`
 );
 
 // ------------------------------------------------------------------
@@ -168,7 +183,7 @@ conferir(
 // ------------------------------------------------------------------
 
 const motor = calcularPadroes(
-  { mamadas: mamadas!, sonos: sonos! },
+  { mamadas: mamadas, sonos: sonos },
   { agora, fusoHorario: fuso }
 );
 
@@ -176,12 +191,12 @@ const motor = calcularPadroes(
 // 3. Gabarito à mão, a partir das MESMAS linhas, sem usar o motor
 // ------------------------------------------------------------------
 
-const instantes = mamadas!.map((m) => new Date(m.started_at).getTime()).sort((a, b) => a - b);
+const instantes = mamadas.map((m) => new Date(m.started_at).getTime()).sort((a, b) => a - b);
 const intervalos: number[] = [];
 for (let i = 1; i < instantes.length; i++) intervalos.push((instantes[i] - instantes[i - 1]) / 60_000);
 const gabIntervalo = Math.round(intervalos.reduce((a, b) => a + b, 0) / intervalos.length);
 
-const sonecas = sonos!
+const sonecas = sonos
   .map((s) => ({
     inicio: minutosDoDiaLocal(s.started_at, fuso)!,
     duracao: s.ended_at
@@ -194,7 +209,7 @@ const duracoes = sonecas.map((s) => s.duracao).filter((d): d is number => d !== 
 const gabDuracao = Math.round(duracoes.reduce((a, b) => a + b, 0) / duracoes.length);
 const gabHorario = mediaCircularMinutos(sonecas.map((s) => s.inicio));
 
-const noites = sonos!
+const noites = sonos
   .map((s) => ({
     inicio: minutosDoDiaLocal(s.started_at, fuso)!,
     duracao: s.ended_at
@@ -264,10 +279,15 @@ console.log(
 // ------------------------------------------------------------------
 // 4. Sono em andamento, com linha real
 //
-// A massa semeada não tem `ended_at` nulo — o gerador só cria sono fechado. Como
+// A massa semeada não tem sono aberto — o gerador só cria sono fechado. Como
 // o tratamento do D8 (conta pro horário, não pra duração) foi decidido contra
 // dado sintético, ele precisa ser exercitado contra uma linha que passou pelo
 // Postgres de verdade: é lá que `null` pode voltar como string, ou não voltar.
+//
+// Com a tabela única há um segundo motivo, e ele é novo: `terminou_em` nulo
+// deixou de identificar um sono aberto sozinho — fralda, humor e sintoma têm
+// `terminou_em` nulo SEMPRE, porque não têm fim. O filtro por tipo é o que
+// separa os dois, e é ele que a leitura abaixo precisa provar.
 //
 // A linha é criada no bebê DEDICADO e apagada no `finally`.
 // ------------------------------------------------------------------
@@ -288,9 +308,15 @@ const inicioAberto = new Date(candidato).toISOString();
 let idAberto: string | null = null;
 try {
   const { data: criado, error: erroCriar } = await cliente
-    .from('sleep_records')
-    .insert({ baby_id: bebe.id, started_at: inicioAberto, ended_at: null })
-    .select('id, started_at, ended_at')
+    .from('registros')
+    .insert({
+      baby_id: bebe.id,
+      tipo: 'sono',
+      ocorrido_em: inicioAberto,
+      terminou_em: null,
+      dados: {},
+    })
+    .select('id, ocorrido_em, terminou_em')
     .single();
 
   if (erroCriar || !criado) {
@@ -299,20 +325,35 @@ try {
     idAberto = criado.id;
 
     conferir(
-      'o banco devolve ended_at como null de verdade, não string',
-      criado.ended_at === null,
-      `tipo: ${criado.ended_at === null ? 'null' : typeof criado.ended_at}`
+      'o banco devolve terminou_em como null de verdade, não string',
+      criado.terminou_em === null,
+      `tipo: ${criado.terminou_em === null ? 'null' : typeof criado.terminou_em}`
     );
 
-    const { data: sonosComAberto } = await cliente
-      .from('sleep_records')
-      .select('started_at, ended_at')
+    const { data: linhasComAberto } = await cliente
+      .from('registros')
+      .select('tipo, ocorrido_em, terminou_em')
       .eq('baby_id', bebe.id)
-      .gte('started_at', desde)
-      .order('started_at', { ascending: true });
+      .eq('tipo', 'sono')
+      .gte('ocorrido_em', desde)
+      .order('ocorrido_em', { ascending: true });
+
+    const sonosComAberto = (linhasComAberto ?? []).map((l) => ({
+      started_at: l.ocorrido_em as string,
+      ended_at: l.terminou_em as string | null,
+    }));
+
+    // O controle do filtro por tipo: sem `eq('tipo','sono')`, toda fralda e todo
+    // humor entrariam aqui como sono aberto — e a asserção seguinte, que conta
+    // UMA soneca a mais, é quem pega isso.
+    conferir(
+      'a leitura por tipo trouxe só sono, e exatamente um a mais',
+      sonosComAberto.length === sonos.length + 1,
+      `${sonos.length} -> ${sonosComAberto.length}`
+    );
 
     const comAberto = calcularPadroes(
-      { mamadas: mamadas!, sonos: sonosComAberto! },
+      { mamadas: mamadas, sonos: sonosComAberto },
       { agora, fusoHorario: fuso }
     );
 
@@ -330,7 +371,7 @@ try {
   }
 } finally {
   if (idAberto) {
-    const { error } = await cliente.from('sleep_records').delete().eq('id', idAberto);
+    const { error } = await cliente.from('registros').delete().eq('id', idAberto);
     console.log(
       error ? `⚠️  NÃO consegui apagar o sono de teste ${idAberto}: ${error.message}` : 'linha de teste apagada.'
     );

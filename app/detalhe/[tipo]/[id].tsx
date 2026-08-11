@@ -53,7 +53,7 @@ export default function DetalheRegistroScreen() {
           setCarregando(false);
           return;
         }
-        const { data, error } = await buscarRegistro(tipo, id);
+        const { data, error } = await buscarRegistro(id);
         if (!ativo) return;
         setRegistro(data);
         setErro(error);
@@ -72,7 +72,7 @@ export default function DetalheRegistroScreen() {
     setApagando(true);
     setErro(null);
 
-    const { error } = await apagarRegistro(tipo, id);
+    const { error } = await apagarRegistro(id);
 
     if (error) {
       setApagando(false);

@@ -13,10 +13,9 @@
  */
 
 import {
+  COLUNAS_REAIS,
   LEITURA,
   SCHEMAS,
-  TABELAS_DE_REGISTRO,
-  tiposDaTabela,
   TIPOS_REGISTRO,
   SINTOMA_OUTRO,
   LADOS,
@@ -183,66 +182,122 @@ iguais(
   { humor: 'Qual estado você percebeu?' }
 );
 
-console.log('\n— a linha que vai para o banco, coluna por coluna —\n');
+console.log('\n— a linha que vai para o banco, campo por campo —\n');
 
 iguais(
-  'amamentação: type fixo, lado, e minutos viram segundos',
+  'amamentação: o tipo é coluna, o lado é chave do dados, e minutos viram segundos',
   linhaParaBanco('amamentar', { hora: HORA_OK, lado: 'left', duracao: '12' }, MOMENTO),
-  { type: 'breast', started_at: MOMENTO, side: 'left', duration_seconds: 720, notes: null }
+  {
+    tipo: 'amamentar',
+    ocorrido_em: MOMENTO,
+    notes: null,
+    dados: { side: 'left', duration_seconds: 720 },
+  }
 );
 
 iguais(
-  'mamadeira: outro type na mesma tabela, e ml sem escala',
+  'mamadeira: o que separava os dois tipos era uma coluna fixa, agora é o próprio tipo',
   linhaParaBanco(
     'mamadeira',
     { hora: HORA_OK, quantidade: '90', leite: 'formula', observacao: 'metade' },
     MOMENTO
   ),
   {
-    type: 'bottle',
-    started_at: MOMENTO,
-    amount_ml: 90,
-    bottle_type: 'formula',
+    tipo: 'mamadeira',
+    ocorrido_em: MOMENTO,
     notes: 'metade',
+    dados: { amount_ml: 90, bottle_type: 'formula' },
   }
 );
 
 iguais(
-  'fralda: coluna de tempo é recorded_at, não started_at',
+  'fralda: uma coluna de tempo para todos os tipos',
   linhaParaBanco('fralda', { hora: HORA_OK, conteudo: 'both' }, MOMENTO),
-  { recorded_at: MOMENTO, content: 'both', notes: null }
+  { tipo: 'fralda', ocorrido_em: MOMENTO, notes: null, dados: { content: 'both' } }
 );
 
+/**
+ * A asserção mais importante desta seção, e a que o `do nothing` do backfill
+ * ensinou a escrever: chave ausente e chave nula NÃO são o mesmo estado.
+ *
+ * As 97 linhas migradas passaram por `jsonb_strip_nulls`, então "não informado"
+ * lá é a chave não existir. Se o app escrevesse `"probable_reason": null`,
+ * passariam a existir duas formas de dizer a mesma coisa — e a de baixo
+ * atravessa o `dados ? 'chave'` que o Postgres usa para exigir campo.
+ */
 iguais(
-  'humor: motivo vazio vira null, não string vazia',
+  'humor: motivo vazio some do dados — não vira chave nula',
   linhaParaBanco('humor', { hora: HORA_OK, humor: 'crying', motivo: '' }, MOMENTO),
-  { recorded_at: MOMENTO, mood: 'crying', probable_reason: null, notes: null }
+  { tipo: 'humor', ocorrido_em: MOMENTO, notes: null, dados: { mood: 'crying' } }
 );
 
 iguais(
-  'sintoma "Outro": o slug vai na coluna, o texto da mãe vai em notes',
+  'sintoma "Outro": o slug vai no dados, o texto da mãe vai na coluna notes',
   linhaParaBanco(
     'sintoma',
     { hora: HORA_OK, sintoma: SINTOMA_OUTRO, observacao: 'pele fria' },
     MOMENTO
   ),
-  {
-    recorded_at: MOMENTO,
-    symptom: 'other',
-    intensity: null,
-    notes: 'pele fria',
-  }
+  { tipo: 'sintoma', ocorrido_em: MOMENTO, notes: 'pele fria', dados: { symptom: 'other' } }
 );
 
 iguais(
-  'sono: só o instante, e nenhuma coluna de observação',
+  'sono: só o instante, e um dados vazio — não um dados ausente',
   linhaParaBanco('sono', { hora: HORA_OK }, MOMENTO),
-  { started_at: MOMENTO }
+  { tipo: 'sono', ocorrido_em: MOMENTO, dados: {} }
 );
 
 checar(
-  'sono não declara coluna notes — a tabela não tem',
-  SCHEMAS.sono.campos.every((c) => c.coluna !== 'notes')
+  'sono não declara campo de observação — e por isso não escreve notes',
+  SCHEMAS.sono.campos.every((c) => c.coluna !== 'notes') &&
+    !('notes' in linhaParaBanco('sono', { hora: HORA_OK }, MOMENTO))
+);
+
+console.log('\n— o que é coluna e o que é chave do dados —\n');
+
+/**
+ * Um formulário com TODOS os campos preenchidos, por tipo.
+ *
+ * As asserções abaixo perguntam "onde cada campo foi parar", e campo vazio não
+ * vai a lugar nenhum — com valores parciais elas passariam sem olhar nada.
+ */
+const VALORES_CHEIOS: Record<TipoRegistro, ValoresRegistro> = {
+  amamentar: { hora: HORA_OK, lado: 'left', duracao: '12', observacao: 'sonolenta' },
+  mamadeira: { hora: HORA_OK, quantidade: '90', leite: 'formula', observacao: 'metade' },
+  fralda: { hora: HORA_OK, conteudo: 'both', observacao: 'bem líquido' },
+  sono: { hora: HORA_OK },
+  humor: { hora: HORA_OK, humor: 'calm', motivo: 'sleep', observacao: 'depois do banho' },
+  sintoma: { hora: HORA_OK, sintoma: 'fever', intensidade: 'mild', observacao: 'à tarde' },
+};
+
+checar(
+  'notes é a única coluna de verdade entre os campos',
+  COLUNAS_REAIS.size === 1 && COLUNAS_REAIS.has('notes'),
+  [...COLUNAS_REAIS].join(', ')
+);
+
+checar(
+  'todo campo que não é notes vira chave dentro do dados',
+  TIPOS_REGISTRO.every((tipo) => {
+    const linha = linhaParaBanco(tipo, VALORES_CHEIOS[tipo], MOMENTO);
+    const dados = linha.dados as Record<string, unknown>;
+    return SCHEMAS[tipo].campos
+      .filter((c) => c.coluna && !COLUNAS_REAIS.has(c.coluna))
+      .every((c) => c.coluna! in dados);
+  }),
+  'um campo que não chegasse ao dados sumiria do banco sem quebrar nada'
+);
+
+checar(
+  'e nenhuma coluna de verdade vaza para dentro do dados',
+  TIPOS_REGISTRO.every((tipo) => {
+    const dados = linhaParaBanco(tipo, VALORES_CHEIOS[tipo], MOMENTO).dados as Record<
+      string,
+      unknown
+    >;
+    return [...COLUNAS_REAIS].every((coluna) => !(coluna in dados));
+  }),
+  'notes duplicado nos dois lugares divergiria na primeira edição'
 );
 
 console.log('\n— um vocabulário, dois rótulos —\n');
@@ -260,18 +315,19 @@ checar(
   rotularValor(LADOS, 'seio_esquerdo') === 'seio_esquerdo'
 );
 
-console.log('\n— duas linhas na mesma tabela, dois tipos —\n');
+console.log('\n— o tipo da linha é leitura, não mais dedução —\n');
 
+checar('a linha diz o próprio tipo', tipoDaLinha({ tipo: 'amamentar' }) === 'amamentar');
 checar(
-  'feeding_records com type breast é amamentação',
-  tipoDaLinha('feeding_records', { type: 'breast' }) === 'amamentar'
+  'e os dois tipos de mamada deixam de depender de uma coluna fixa',
+  tipoDaLinha({ tipo: 'mamadeira' }) === 'mamadeira'
 );
 checar(
-  'feeding_records com type bottle é mamadeira',
-  tipoDaLinha('feeding_records', { type: 'bottle' }) === 'mamadeira'
+  'tipo que este app ainda não conhece devolve null, não quebra',
+  tipoDaLinha({ tipo: 'vacina' }) === null,
+  'é o que faz um dos 14 que faltam sumir da lista em vez de derrubá-la'
 );
-checar('sleep_records não precisa de coluna fixa', tipoDaLinha('sleep_records', {}) === 'sono');
-checar('tabela desconhecida devolve null', tipoDaLinha('vacinas', {}) === null);
+checar('linha sem tipo devolve null', tipoDaLinha({}) === null);
 
 
 console.log('\n— o resumo da lista, frase por frase —\n');
@@ -279,71 +335,106 @@ console.log('\n— o resumo da lista, frase por frase —\n');
 /**
  * As linhas cruas são escritas à mão, e não geradas por `linhaParaBanco`: o que
  * se testa aqui é a LEITURA, e alimentá-la com a saída da escrita esconderia um
- * erro que as duas cometessem juntas — a coluna trocada nas duas pontas.
+ * erro que as duas cometessem juntas — o campo trocado nas duas pontas.
+ *
+ * ------------------------------------------------------------------
+ * E ELAS TÊM A FORMA REAL DA LINHA: `dados` DENTRO, TEMPO FORA
+ *
+ * Isto é regra 2b do CLAUDE.md, e quase escapou. O acessor da LEITURA procura no
+ * `dados` e cai para o topo da linha se não achar — então um fixture achatado
+ * (`{ side: 'left' }`) continua passando **mesmo se o app parar de ler o jsonb**.
+ * O teste ficaria verde defendendo uma forma que o banco não devolve mais.
+ *
+ * Por isso: valor de campo vai em `dados`, e só `ocorrido_em`, `terminou_em` e
+ * `notes` ficam no topo — exatamente como a linha volta de `registros`.
  */
 const AGORA = new Date('2026-08-11T18:00:00.000Z');
+
+/** Monta a linha como o banco devolve, para o fixture não poder mentir a forma. */
+const linhaDoBanco = (
+  dados: Record<string, unknown>,
+  topo: Record<string, unknown> = {}
+): Record<string, unknown> => ({ dados, ...topo });
+
 const resumir = (tipo: TipoRegistro, linha: Record<string, unknown>) =>
   LEITURA[tipo].resumir(linha, AGORA);
 
 checar(
   'amamentação com lado e duração',
-  resumir('amamentar', { side: 'left', duration_seconds: 720 }) === 'Peito esquerdo · 12 min',
-  resumir('amamentar', { side: 'left', duration_seconds: 720 })
+  resumir('amamentar', linhaDoBanco({ side: 'left', duration_seconds: 720 })) ===
+    'Peito esquerdo · 12 min',
+  resumir('amamentar', linhaDoBanco({ side: 'left', duration_seconds: 720 }))
 );
 checar(
   'amamentação sem duração é só o lado',
-  resumir('amamentar', { side: 'both', duration_seconds: null }) === 'Os dois peitos'
+  resumir('amamentar', linhaDoBanco({ side: 'both' })) === 'Os dois peitos'
 );
 checar(
   'amamentação sem lado nenhum não vira frase quebrada',
-  resumir('amamentar', {}) === 'Peito'
+  resumir('amamentar', linhaDoBanco({})) === 'Peito'
 );
 checar(
   'mamadeira com ml e leite',
-  resumir('mamadeira', { amount_ml: 90, bottle_type: 'formula' }) === '90 ml de fórmula'
+  resumir('mamadeira', linhaDoBanco({ amount_ml: 90, bottle_type: 'formula' })) ===
+    '90 ml de fórmula'
 );
 checar(
   'mamadeira sem quantidade cai no nome',
-  resumir('mamadeira', { bottle_type: 'breast_milk' }) === 'Mamadeira de leite materno'
+  resumir('mamadeira', linhaDoBanco({ bottle_type: 'breast_milk' })) ===
+    'Mamadeira de leite materno'
 );
-checar('fralda é só o conteúdo', resumir('fralda', { content: 'both' }) === 'Xixi e cocô');
+checar(
+  'fralda é só o conteúdo',
+  resumir('fralda', linhaDoBanco({ content: 'both' })) === 'Xixi e cocô'
+);
 checar(
   'sono encerrado vira duração',
-  resumir('sono', {
-    started_at: '2026-08-11T12:00:00.000Z',
-    ended_at: '2026-08-11T13:20:00.000Z',
-  }) === '1h 20min de sono'
+  resumir(
+    'sono',
+    linhaDoBanco(
+      {},
+      { ocorrido_em: '2026-08-11T12:00:00.000Z', terminou_em: '2026-08-11T13:20:00.000Z' }
+    )
+  ) === '1h 20min de sono'
 );
 checar(
   'sono aberto fala no presente',
-  resumir('sono', { started_at: '2026-08-11T17:30:00.000Z', ended_at: null }) ===
-    'Dormindo há 30 min'
+  resumir(
+    'sono',
+    linhaDoBanco({}, { ocorrido_em: '2026-08-11T17:30:00.000Z', terminou_em: null })
+  ) === 'Dormindo há 30 min'
 );
 checar(
   'sono aberto de menos de 2 minutos não fala em duração',
-  resumir('sono', { started_at: '2026-08-11T17:59:30.000Z', ended_at: null }) === 'Dormindo agora'
+  resumir(
+    'sono',
+    linhaDoBanco({}, { ocorrido_em: '2026-08-11T17:59:30.000Z', terminou_em: null })
+  ) === 'Dormindo agora'
 );
 checar(
   'humor com motivo vem em minúscula',
-  resumir('humor', { mood: 'crying', probable_reason: 'hunger' }) === 'Choro · fome'
+  resumir('humor', linhaDoBanco({ mood: 'crying', probable_reason: 'hunger' })) === 'Choro · fome'
 );
 checar(
   '"Não sei" vira "motivo não identificado", não "por Não sei"',
-  resumir('humor', { mood: 'crying', probable_reason: 'unknown' }) ===
+  resumir('humor', linhaDoBanco({ mood: 'crying', probable_reason: 'unknown' })) ===
     'Choro · motivo não identificado'
 );
-checar('humor sem motivo é só o estado', resumir('humor', { mood: 'calm' }) === 'Tranquilidade');
 checar(
-  'sintoma com intensidade',
-  resumir('sintoma', { symptom: 'fever', intensity: 'high' }) === 'Febre · forte'
+  'humor sem motivo é só o estado',
+  resumir('humor', linhaDoBanco({ mood: 'calm' })) === 'Tranquilidade'
 );
 checar(
-  'sintoma "Outro" mostra o que a mãe escreveu, não o rótulo',
-  resumir('sintoma', { symptom: 'other', notes: 'pele fria' }) === 'pele fria'
+  'sintoma com intensidade',
+  resumir('sintoma', linhaDoBanco({ symptom: 'fever', intensity: 'high' })) === 'Febre · forte'
+);
+checar(
+  'sintoma "Outro" mostra o que a mãe escreveu, e ela mora na COLUNA notes',
+  resumir('sintoma', linhaDoBanco({ symptom: 'other' }, { notes: 'pele fria' })) === 'pele fria'
 );
 checar(
   'sintoma aposentado continua legível',
-  resumir('sintoma', { symptom: 'irritability' }) === 'Irritação'
+  resumir('sintoma', linhaDoBanco({ symptom: 'irritability' })) === 'Irritação'
 );
 
 console.log('\n— o detalhe: rótulos, ordem, e nada em branco —\n');
@@ -353,72 +444,78 @@ const detalhar = (tipo: TipoRegistro, linha: Record<string, unknown>) =>
 
 iguais(
   'amamentação sem duração não mostra a linha de duração',
-  detalhar('amamentar', { side: 'left', started_at: '2026-08-11T17:00:00.000Z' }),
+  detalhar('amamentar', linhaDoBanco({ side: 'left' }, { ocorrido_em: '2026-08-11T17:00:00.000Z' })),
   ['Lado', 'Início']
 );
 iguais(
   'amamentação com duração mostra as três',
-  detalhar('amamentar', {
-    side: 'left',
-    duration_seconds: 720,
-    started_at: '2026-08-11T17:00:00.000Z',
-  }),
+  detalhar(
+    'amamentar',
+    linhaDoBanco(
+      { side: 'left', duration_seconds: 720 },
+      { ocorrido_em: '2026-08-11T17:00:00.000Z' }
+    )
+  ),
   ['Lado', 'Duração', 'Início']
 );
 iguais(
   'sono aberto diz "Até agora"; encerrado diz "Duração"',
-  detalhar('sono', { started_at: '2026-08-11T17:00:00.000Z', ended_at: null }),
+  detalhar(
+    'sono',
+    linhaDoBanco({}, { ocorrido_em: '2026-08-11T17:00:00.000Z', terminou_em: null })
+  ),
   ['Começou', 'Terminou', 'Até agora']
 );
 iguais(
   'e o encerrado troca só esse rótulo',
-  detalhar('sono', {
-    started_at: '2026-08-11T17:00:00.000Z',
-    ended_at: '2026-08-11T17:40:00.000Z',
-  }),
+  detalhar(
+    'sono',
+    linhaDoBanco(
+      {},
+      { ocorrido_em: '2026-08-11T17:00:00.000Z', terminou_em: '2026-08-11T17:40:00.000Z' }
+    )
+  ),
   ['Começou', 'Terminou', 'Duração']
 );
 checar(
   'no detalhe o sintoma "Outro" mostra o rótulo, não a descrição',
   LEITURA.sintoma
-    .detalhar({ symptom: 'other', notes: 'pele fria', recorded_at: '2026-08-11T17:00:00.000Z' }, AGORA)
+    .detalhar(
+      linhaDoBanco(
+        { symptom: 'other' },
+        { notes: 'pele fria', ocorrido_em: '2026-08-11T17:00:00.000Z' }
+      ),
+      AGORA
+    )
     .some((c) => c.rotulo === 'Sintoma' && c.valor === 'Outro'),
   'a descrição aparece inteira no campo de observação, logo abaixo'
 );
 checar(
   'humor com "Não sei" mostra "não identificado" no detalhe',
   LEITURA.humor
-    .detalhar({ mood: 'crying', probable_reason: 'unknown', recorded_at: '2026-08-11T17:00:00.000Z' }, AGORA)
+    .detalhar(
+      linhaDoBanco(
+        { mood: 'crying', probable_reason: 'unknown' },
+        { ocorrido_em: '2026-08-11T17:00:00.000Z' }
+      ),
+      AGORA
+    )
     .some((c) => c.rotulo === 'Motivo provável' && c.valor === 'não identificado')
 );
 
-console.log('\n— a lista é por tabela, e as tabelas se comportam —\n');
+console.log('\n— e o acessor lê o jsonb, não o topo da linha —\n');
 
+/**
+ * O controle que torna os fixtures acima honestos.
+ *
+ * Se a LEITURA voltasse a ler campo do topo da linha, todos eles continuariam
+ * passando — o acessor cai para o topo quando não acha no `dados`. Aqui os dois
+ * lugares discordam DE PROPÓSITO, e a asserção diz qual tem que ganhar.
+ */
 checar(
-  'cinco tabelas para seis tipos',
-  TABELAS_DE_REGISTRO.length === 5,
-  TABELAS_DE_REGISTRO.join(', ')
-);
-iguais(
-  'feeding_records atende os dois tipos de mamada',
-  tiposDaTabela('feeding_records'),
-  ['amamentar', 'mamadeira']
-);
-checar(
-  'tipos que dividem tabela dividem a coluna de tempo',
-  TABELAS_DE_REGISTRO.every((tabela) => {
-    const colunas = new Set(tiposDaTabela(tabela).map((t) => SCHEMAS[t].colunaTempo));
-    return colunas.size === 1;
-  }),
-  'a listagem consulta uma vez por tabela — duas colunas de tempo na mesma quebraria o cursor'
-);
-checar(
-  'tipo que divide tabela declara coluna fixa',
-  TABELAS_DE_REGISTRO.every((tabela) => {
-    const tipos = tiposDaTabela(tabela);
-    return tipos.length === 1 || tipos.every((t) => Object.keys(SCHEMAS[t].fixas ?? {}).length > 0);
-  }),
-  'sem ela não dá pra saber de que tipo é a linha nem filtrar a consulta'
+  'com o campo nos dois lugares, quem manda é o dados',
+  resumir('fralda', { dados: { content: 'poop' }, content: 'pee' }) === 'Cocô',
+  'se um dia isto virar "Xixi", os fixtures acima pararam de provar a forma real'
 );
 
 
@@ -449,17 +546,25 @@ for (const [tipo, valores] of EXEMPLOS) {
 }
 
 checar(
-  'número volta na unidade do campo, não na da coluna',
-  valoresDaLinha('amamentar', { side: 'left', duration_seconds: 720 }, HORA_OK).duracao === '12',
-  'o campo pergunta minutos; a coluna guarda segundos'
+  'número volta na unidade do campo, não na do banco',
+  valoresDaLinha('amamentar', linhaDoBanco({ side: 'left', duration_seconds: 720 }), HORA_OK)
+    .duracao === '12',
+  'o campo pergunta minutos; o dados guarda segundos'
 );
 checar(
-  'coluna nula vira null no formulário, nunca "null" nem string vazia',
-  valoresDaLinha('humor', { mood: 'calm', probable_reason: null }, HORA_OK).motivo === null
+  'chave AUSENTE no dados vira null no formulário, nunca "null" nem string vazia',
+  valoresDaLinha('humor', linhaDoBanco({ mood: 'calm' }), HORA_OK).motivo === null,
+  'ausente é como as 97 linhas migradas dizem "não informado"'
+);
+checar(
+  'e chave presente e nula chega ao mesmo lugar',
+  valoresDaLinha('humor', linhaDoBanco({ mood: 'calm', probable_reason: null }), HORA_OK)
+    .motivo === null,
+  'registro antigo não some do formulário por causa da forma que o backfill não usou'
 );
 checar(
   'a hora vem de fora, do instante do registro',
-  valoresDaLinha('fralda', { content: 'pee' }, '05:40').hora === '05:40'
+  valoresDaLinha('fralda', linhaDoBanco({ content: 'pee' }), '05:40').hora === '05:40'
 );
 
 console.log('\n— e o horário editado fica no dia do registro —\n');
@@ -522,8 +627,10 @@ checar(
 );
 checar(
   'uma montagem sem escala seria pega pela duração',
-  (linhaParaBanco('amamentar', { hora: HORA_OK, lado: 'left', duracao: '12' }, MOMENTO)
-    .duration_seconds as number) !== 12,
+  ((
+    linhaParaBanco('amamentar', { hora: HORA_OK, lado: 'left', duracao: '12' }, MOMENTO)
+      .dados as Record<string, unknown>
+  ).duration_seconds as number) !== 12,
   '12 minutos não podem virar 12 segundos'
 );
 

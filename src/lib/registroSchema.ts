@@ -16,9 +16,14 @@
  * ------------------------------------------------------------------
  * O QUE MORA AQUI, E O QUE NÃO
  *
- * Mora: o que o tipo É — vocabulário, campos, regras de preenchimento, onde
- * grava, o que a mãe lê. É tudo **puro**: nenhuma linha aqui fala com o
- * Supabase, e por isso o teste roda no Node sem banco.
+ * Mora: o que o tipo É — vocabulário, campos, regras de preenchimento, o que a
+ * mãe lê. É tudo **puro**: nenhuma linha aqui fala com o Supabase, e por isso o
+ * teste roda no Node sem banco.
+ *
+ * O que SAIU daqui no bloco 3: `tabela` e `colunaTempo`. Não existe mais tabela
+ * por tipo — existe `registros`, e o tipo é uma coluna dela. `fixas` saiu junto:
+ * ela existia só para separar amamentação de mamadeira dentro de
+ * `feeding_records`, e agora `tipo` faz isso sozinho.
  *
  * Não mora: a escrita em si (`registros.ts`), a renderização (`app/registro`) e
  * qualquer regra que dependa de estado do banco — o "só um sono por vez", por
@@ -146,10 +151,24 @@ export const SINTOMA_OUTRO = 'other';
 // OS CAMPOS
 // ============================================================
 
+/**
+ * Os `coluna` que são coluna DE VERDADE em `registros`. Todo o resto vira chave
+ * dentro do `dados`.
+ *
+ * `notes` fica de fora do jsonb porque é texto livre: não tem vocabulário para
+ * checar, é consultado por presença, e sai mais barato como coluna. É a mesma
+ * lista que `gerar-registros-sql.ts` usa para decidir o que vira `check` — ela
+ * mora aqui para os dois lados não divergirem.
+ */
+export const COLUNAS_REAIS = new Set(['notes']);
+
 type CampoBase = {
   /** Nome no estado da tela, e chave nos valores que a validação recebe. */
   chave: string;
-  /** Coluna do banco. `null` quando o valor não vai direto para uma coluna. */
+  /**
+   * Onde o valor mora na linha do banco: chave dentro de `dados`, ou coluna de
+   * verdade quando está em `COLUNAS_REAIS`. `null` quando não vai para a linha.
+   */
   coluna: string | null;
   rotulo: string;
   obrigatorio: boolean;
@@ -188,11 +207,6 @@ export type SchemaRegistro = {
   titulo: string;
   subtitulo: string;
   acao: string;
-  /** Tabela e coluna de tempo. Amamentar e mamadeira dividem a tabela. */
-  tabela: string;
-  colunaTempo: 'started_at' | 'recorded_at';
-  /** Colunas com valor fixo — é o que separa peito de mamadeira na mesma tabela. */
-  fixas?: Record<string, string>;
   /**
    * `true` quando o registro fica correndo até a mãe encerrar. Quem cuida disso
    * é `registros.ts`: a regra de "só um por vez" precisa consultar o banco.
@@ -230,9 +244,6 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
     titulo: 'Amamentação',
     subtitulo: 'Anota rapidinho — dá pra ajustar depois.',
     acao: 'Salvar mamada',
-    tabela: 'feeding_records',
-    colunaTempo: 'started_at',
-    fixas: { type: 'breast' },
     campos: [
       HORA('Começou às'),
       {
@@ -266,9 +277,6 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
     titulo: 'Mamadeira',
     subtitulo: 'Anota rapidinho — dá pra ajustar depois.',
     acao: 'Salvar mamadeira',
-    tabela: 'feeding_records',
-    colunaTempo: 'started_at',
-    fixas: { type: 'bottle' },
     campos: [
       HORA('Começou às'),
       {
@@ -303,8 +311,6 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
     titulo: 'Troca de fralda',
     subtitulo: 'Um toque e já volto pra Home.',
     acao: 'Salvar troca',
-    tabela: 'diaper_records',
-    colunaTempo: 'recorded_at',
     campos: [
       HORA('Horário da troca'),
       {
@@ -326,10 +332,8 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
     subtitulo:
       'Deixo o sono correndo a partir desse horário — você encerra na Home quando acabar.',
     acao: 'Começar sono',
-    tabela: 'sleep_records',
-    colunaTempo: 'started_at',
     emAberto: true,
-    // Sem observação: `sleep_records` é a única tabela de registro sem `notes`.
+    // Sem observação: o sono é o único tipo sem campo de texto livre.
     campos: [HORA('Começou às')],
   },
 
@@ -338,8 +342,6 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
     titulo: 'Humor',
     subtitulo: 'O estado do momento. Não saber o motivo também é uma resposta.',
     acao: 'Salvar humor',
-    tabela: 'mood_records',
-    colunaTempo: 'recorded_at',
     campos: [
       HORA('Horário'),
       {
@@ -368,8 +370,6 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
     titulo: 'Sintoma',
     subtitulo: 'Anotar ajuda a enxergar o padrão depois — aqui não é diagnóstico.',
     acao: 'Salvar sintoma',
-    tabela: 'symptom_records',
-    colunaTempo: 'recorded_at',
     campos: [
       HORA('Horário'),
       {
@@ -486,38 +486,51 @@ export function validarRegistro(
 // ============================================================
 
 /**
- * Monta a linha a partir dos valores da tela.
+ * Monta a linha de `registros` a partir dos valores da tela.
  *
  * Assume validação já feita — é a mesma ordem da tela, e duplicar a checagem
  * aqui só criaria um segundo lugar para as regras discordarem.
  *
- * Campo vazio vira `null` e não string vazia: o motor conta `null` como "não
- * informado", e `''` como um valor que ele não sabe ler.
+ * ------------------------------------------------------------------
+ * VAZIO É AUSÊNCIA NO `dados`, E `null` NA COLUNA
+ *
+ * São dois destinos com regras diferentes, e a diferença não é estética:
+ *
+ * - coluna de verdade (`notes`) vazia vira `null`. O motor conta `null` como
+ *   "não informado" e `''` como um valor que ele não sabe ler;
+ * - chave do `dados` vazia simplesmente **não é escrita**. É o
+ *   `jsonb_strip_nulls` do backfill, do lado do app — e precisa ser, porque
+ *   chave ausente e chave com valor nulo são estados diferentes para o
+ *   Postgres: `dados ? 'amount_ml'` passa numa chave presente e nula, e o
+ *   vocabulário não. Escrever `null` no jsonb criaria uma segunda forma de
+ *   dizer "não informado", divergente da que as 97 linhas migradas usam.
  */
 export function linhaParaBanco(
   tipo: TipoRegistro,
   valores: ValoresRegistro,
   ocorridoEm: string
 ): Record<string, unknown> {
-  const schema = SCHEMAS[tipo];
-  const linha: Record<string, unknown> = {
-    ...(schema.fixas ?? {}),
-    [schema.colunaTempo]: ocorridoEm,
-  };
+  const linha: Record<string, unknown> = { tipo, ocorrido_em: ocorridoEm };
+  const dados: Record<string, unknown> = {};
 
-  for (const bruto of schema.campos) {
+  for (const bruto of SCHEMAS[tipo].campos) {
     const campo = resolverCampo(bruto, valores);
     if (!campo.coluna) continue;
 
+    const ehColuna = COLUNAS_REAIS.has(campo.coluna);
     const valor = (valores[campo.chave] ?? '').trim();
+
     if (!valor) {
-      linha[campo.coluna] = null;
+      if (ehColuna) linha[campo.coluna] = null;
       continue;
     }
 
-    linha[campo.coluna] = campo.entrada === 'numero' ? Number(valor) * campo.escala : valor;
+    const pronto = campo.entrada === 'numero' ? Number(valor) * campo.escala : valor;
+    if (ehColuna) linha[campo.coluna] = pronto;
+    else dados[campo.coluna] = pronto;
   }
 
+  linha.dados = dados;
   return linha;
 }
 
@@ -539,17 +552,17 @@ export function rotularValor(opcoes: OpcaoCampo[], valor: string | null): string
   return opcao.noResumo ?? opcao.label;
 }
 
-/** Tipos que compartilham tabela precisam da coluna fixa para se distinguir. */
-export function tipoDaLinha(tabela: string, linha: Record<string, unknown>): TipoRegistro | null {
-  const candidatos = TIPOS_REGISTRO.filter((t) => SCHEMAS[t].tabela === tabela);
-  if (candidatos.length === 0) return null;
-  if (candidatos.length === 1) return candidatos[0];
-
-  return (
-    candidatos.find((t) =>
-      Object.entries(SCHEMAS[t].fixas ?? {}).every(([coluna, valor]) => linha[coluna] === valor)
-    ) ?? null
-  );
+/**
+ * O tipo de uma linha de `registros`, se for um que este app conhece.
+ *
+ * Antes isto era dedução — qual tabela, e qual coluna fixa dentro dela. Agora é
+ * leitura de uma coluna, e o que sobra da função é a única parte que importava:
+ * linha de um tipo que o app ainda não conhece (um dos 14 que faltam, aberto
+ * numa versão antiga do PWA) devolve `null` em vez de derrubar a lista.
+ */
+export function tipoDaLinha(linha: LinhaRegistro): TipoRegistro | null {
+  const tipo = linha.tipo;
+  return typeof tipo === 'string' && ehTipoRegistro(tipo) ? tipo : null;
 }
 
 /** Ajuda os tipos: `LadoSeio` etc. continuam existindo, e o schema não os perde. */
@@ -573,23 +586,43 @@ export type ValorIntensidade = Intensidade;
  * que os seis, e cada tipo novo tentaria caber nela em vez de dizer a verdade.
  *
  * O que o bloco 2 promete não é "sem função por tipo" — é **um lugar por tipo**.
- * Aqui o tipo inteiro cabe numa entrada: o que ele pergunta, onde grava, e como
+ * Aqui o tipo inteiro cabe numa entrada: o que ele pergunta, o que ele guarda, e
  * se conta.
  */
 
-/** A linha crua do banco. Cada schema sabe ler as próprias colunas. */
+/** A linha crua de `registros`. Cada schema sabe ler os próprios campos. */
 export type LinhaRegistro = Record<string, unknown>;
 
 /** Uma linha do registro aberto: "Lado" / "Peito esquerdo". */
 export type CampoDetalhe = { rotulo: string; valor: string };
 
-const texto = (linha: LinhaRegistro, coluna: string): string | null => {
-  const valor = linha[coluna];
+/**
+ * O valor de um campo na linha, esteja ele onde estiver.
+ *
+ * `dados` primeiro, coluna depois. É o que permite a LEITURA abaixo continuar
+ * pedindo `side` sem saber que `side` deixou de ser coluna — e é também o que
+ * mantém `notes`, `ocorrido_em` e `terminou_em` alcançáveis pelo mesmo caminho.
+ *
+ * A ordem importa por um detalhe do banco: `duration_seconds` e `amount_ml`
+ * existem nos DOIS lugares, porque são colunas geradas a partir do próprio
+ * `dados`. Elas valem o mesmo, e ler sempre pelo jsonb é uma regra a menos para
+ * lembrar.
+ */
+function valorDoCampo(linha: LinhaRegistro, chave: string): unknown {
+  const dados = linha.dados;
+  if (dados && typeof dados === 'object' && chave in dados) {
+    return (dados as Record<string, unknown>)[chave];
+  }
+  return linha[chave];
+}
+
+const texto = (linha: LinhaRegistro, chave: string): string | null => {
+  const valor = valorDoCampo(linha, chave);
   return typeof valor === 'string' && valor.trim() ? valor : null;
 };
 
-const numero = (linha: LinhaRegistro, coluna: string): number | null => {
-  const valor = linha[coluna];
+const numero = (linha: LinhaRegistro, chave: string): number | null => {
+  const valor = valorDoCampo(linha, chave);
   return typeof valor === 'number' ? valor : null;
 };
 
@@ -626,7 +659,7 @@ type LeituraDoTipo = {
   resumir: (linha: LinhaRegistro, agora: Date) => string;
   /** As linhas da tela de detalhe, já rotuladas em PT-BR. */
   detalhar: (linha: LinhaRegistro, agora: Date) => CampoDetalhe[];
-  /** Só o sono sem `ended_at` — a Home oferece encerrar. */
+  /** Só o sono sem `terminou_em` — a Home oferece encerrar. */
   emAndamento?: (linha: LinhaRegistro) => boolean;
 };
 
@@ -641,7 +674,7 @@ export const LEITURA: Record<TipoRegistro, LeituraDoTipo> = {
       listar([
         ['Lado', rotularValor(LADOS, texto(l, 'side'))],
         ['Duração', minutosDe(numero(l, 'duration_seconds'))],
-        ['Início', formatarMomento(texto(l, 'started_at') ?? '', agora)],
+        ['Início', formatarMomento(texto(l, 'ocorrido_em') ?? '', agora)],
       ]),
   },
 
@@ -657,7 +690,7 @@ export const LEITURA: Record<TipoRegistro, LeituraDoTipo> = {
       return listar([
         ['Quantidade', ml ? `${ml} ml` : null],
         ['Tipo de leite', rotularValor(LEITES, texto(l, 'bottle_type'))],
-        ['Início', formatarMomento(texto(l, 'started_at') ?? '', agora)],
+        ['Início', formatarMomento(texto(l, 'ocorrido_em') ?? '', agora)],
       ]);
     },
   },
@@ -667,27 +700,27 @@ export const LEITURA: Record<TipoRegistro, LeituraDoTipo> = {
     detalhar: (l, agora) =>
       listar([
         ['Conteúdo', rotularValor(CONTEUDOS_FRALDA, texto(l, 'content'))],
-        ['Quando', formatarMomento(texto(l, 'recorded_at') ?? '', agora)],
+        ['Quando', formatarMomento(texto(l, 'ocorrido_em') ?? '', agora)],
       ]),
   },
 
   sono: {
     resumir: (l, agora) => {
-      const inicio = texto(l, 'started_at') ?? '';
-      const fim = texto(l, 'ended_at');
+      const inicio = texto(l, 'ocorrido_em') ?? '';
+      const fim = texto(l, 'terminou_em');
       if (!fim) return resumirSonoEmAndamento(inicio, agora);
       return `${formatarDuracaoMin(minutosEntre(inicio, fim))} de sono`;
     },
     detalhar: (l, agora) => {
-      const inicio = texto(l, 'started_at') ?? '';
-      const fim = texto(l, 'ended_at');
+      const inicio = texto(l, 'ocorrido_em') ?? '';
+      const fim = texto(l, 'terminou_em');
       return listar([
         ['Começou', formatarMomento(inicio, agora)],
         ['Terminou', fim ? formatarMomento(fim, agora) : 'ainda dormindo'],
         [fim ? 'Duração' : 'Até agora', formatarDuracaoMin(minutosEntre(inicio, fim ?? agora))],
       ]);
     },
-    emAndamento: (l) => texto(l, 'ended_at') === null,
+    emAndamento: (l) => texto(l, 'terminou_em') === null,
   },
 
   humor: {
@@ -705,7 +738,7 @@ export const LEITURA: Record<TipoRegistro, LeituraDoTipo> = {
       return listar([
         ['Estado', rotularValor(HUMORES, bruto) ?? bruto],
         ['Motivo provável', rotularValor(MOTIVOS_HUMOR, texto(l, 'probable_reason'))],
-        ['Quando', formatarMomento(texto(l, 'recorded_at') ?? '', agora)],
+        ['Quando', formatarMomento(texto(l, 'ocorrido_em') ?? '', agora)],
       ]);
     },
   },
@@ -723,21 +756,11 @@ export const LEITURA: Record<TipoRegistro, LeituraDoTipo> = {
         // que a mãe escreveu aparece inteira logo abaixo, no campo de observação.
         ['Sintoma', rotularValor([...SINTOMAS, ...SINTOMAS_APOSENTADOS], bruto) ?? bruto],
         ['Intensidade', rotularValor(INTENSIDADES, texto(l, 'intensity'))],
-        ['Quando', formatarMomento(texto(l, 'recorded_at') ?? '', agora)],
+        ['Quando', formatarMomento(texto(l, 'ocorrido_em') ?? '', agora)],
       ]);
     },
   },
 };
-
-/** As tabelas distintas. A lista é consultada por TABELA, não por tipo. */
-export const TABELAS_DE_REGISTRO: string[] = [
-  ...new Set(TIPOS_REGISTRO.map((tipo) => SCHEMAS[tipo].tabela)),
-];
-
-/** Os tipos que gravam nesta tabela — dois, no caso de `feeding_records`. */
-export function tiposDaTabela(tabela: string): TipoRegistro[] {
-  return TIPOS_REGISTRO.filter((tipo) => SCHEMAS[tipo].tabela === tabela);
-}
 
 /**
  * O caminho de volta: linha do banco → valores do formulário.
@@ -748,7 +771,8 @@ export function tiposDaTabela(tabela: string): TipoRegistro[] {
  * "reescrever com o que o formulário achou que entendeu".
  *
  * Número volta dividido pela escala — `duration_seconds` 720 vira "12" no campo
- * de minutos. Coluna nula vira `null`, nunca "null" nem string vazia.
+ * de minutos. Campo ausente vira `null`, nunca "null" nem string vazia — e
+ * ausente é o normal agora: `linhaParaBanco` não escreve chave vazia no `dados`.
  */
 export function valoresDaLinha(
   tipo: TipoRegistro,
@@ -760,7 +784,7 @@ export function valoresDaLinha(
   for (const campo of SCHEMAS[tipo].campos) {
     if (!campo.coluna) continue;
 
-    const valor = linha[campo.coluna];
+    const valor = valorDoCampo(linha, campo.coluna);
     if (valor === null || valor === undefined) {
       valores[campo.chave] = null;
       continue;
