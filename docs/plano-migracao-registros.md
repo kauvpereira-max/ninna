@@ -127,16 +127,23 @@ Um por tabela, rodados **um de cada vez**, cada um conferido antes do próximo.
 Antes de começar, rodar de novo a consulta de violações do passo 0.
 
 ```sql
-insert into registros (baby_id, tipo, ocorrido_em, terminou_em, dados, notes, created_at)
-select baby_id,
+insert into registros (id, baby_id, tipo, ocorrido_em, terminou_em, dados, notes, created_at)
+select id, baby_id,
        case when type = 'bottle' then 'mamadeira' else 'amamentar' end,
        started_at, null,
        jsonb_strip_nulls(jsonb_build_object(
          'side', side, 'duration_seconds', duration_seconds,
          'amount_ml', amount_ml, 'bottle_type', bottle_type)),
        notes, created_at
-from feeding_records;
+from feeding_records
+on conflict (id) do nothing;
 ```
+
+**O `id` original vem junto, e é ele que muda o plano inteiro.** Com o mesmo
+`id` dos dois lados, o backfill fica **idempotente**: dá pra rodar de novo, a
+qualquer momento, e ele copia só o que ainda não foi. Isso é o que dispensa
+parar de usar o app (ver abaixo) e é o que torna a reversão do passo 4 uma
+consulta simples em vez de um problema.
 
 `jsonb_strip_nulls` é o detalhe que faz a coisa funcionar: sem ele, uma
 amamentação carregaria `"amount_ml": null`, e a chave **presente com valor nulo**
@@ -186,6 +193,21 @@ momento em que algo deu errado. Ela é o item 5 do checklist abaixo.
 
 ---
 
+### 4½ · O repasse, imediatamente antes da virada
+
+Com o `id` carregado, rodar o backfill de novo copia só o que entrou desde a
+primeira vez:
+
+```sql
+-- as mesmas cinco consultas do passo 3, sem mudar nada
+```
+
+**Verificar:** `select count(*) from registros` igual à soma das cinco tabelas.
+
+É este passo que fecha a janela entre "copiei" e "troquei o código".
+
+---
+
 ### 5 · Conviver
 
 Alguns dias com as duas estruturas no ar, escrevendo só na nova. Sem prazo
@@ -219,11 +241,32 @@ repositório — ele contém dado de mãe.
 
 ---
 
-## O que eu não sei, e não vou fingir que sei
+## Preciso parar de usar o app?
 
-- **O plano supõe que ninguém está usando o app durante o backfill.** Com uma
-  usuária real isso se resolve escolhendo a hora; com cem, precisaria de outra
-  conversa.
+**Não** — e a razão é o `id` carregado no backfill.
+
+| Passo | Pode usar? | Por quê |
+|---|---|---|
+| 1 · criar a tabela | **sim** | tabela vazia, nada existente é tocado |
+| 2 · provar a RLS | **sim** | só contas de teste, na tabela vazia |
+| 3 · backfill | **sim** | o que entrar durante a cópia é pego pelo repasse |
+| 4½ · repasse | **sim** | é justamente o passo que recolhe o atraso |
+| 4 · virada do código | **os 2–3 min do deploy** | ver abaixo |
+| 5 · conviver | **sim** | normal |
+| 6 · apagar as antigas | **sim** | as antigas já não são lidas há dias |
+
+**A única janela real** é entre o repasse (4½) e o deploy fazer efeito: um
+registro criado exatamente aí nasceria numa tabela antiga que o código novo não
+lê mais. São dois ou três minutos, e a defesa é ordená-los — repasse, deploy,
+repasse de novo. O segundo repasse é a rede embaixo do trapézio.
+
+Na versão anterior deste plano eu supunha o app parado durante o backfill. A sua
+pergunta é que produziu o `id` carregado, e com ele a suposição deixou de ser
+necessária.
+
+---
+
+## O que eu não sei, e não vou fingir que sei
 - **`baby_patterns` não entra nesta migração.** É cache do motor, tem chave
   própria e não guarda registro — mas nunca foi exercitada de verdade, e vale
   olhar antes de assumir que passa incólume.
