@@ -746,6 +746,7 @@ assistente de último para primeiro. Agora o canal nativo desce de segundo para
 |---|---|---:|---:|---|
 | 0 | Fechar o que está aberto | 1 sem | DNS | Semeador, SMTP (§11.2), projeto antigo, tela do assistente |
 | 1 | **Cobrança por Stripe** | 1 sem | — | O assistente tem custo marginal; cada dia grátis no ar é dinheiro saindo |
+| 1c | **Virada para modo live** | 0,5 dia | conta Stripe | Meio dia que não pode acontecer no dia do lançamento — detalhe abaixo |
 | 1b | Painel de afiliadas (§3.5) | 1,5–2 sem | — | Depende do webhook da Stripe do bloco 1 — antes dele, seria construir duas vezes |
 | 2 | Refatorar registro (schema-driven) | 1,5 sem | — | Bloqueia o bloco 3 e paga a si mesmo no quinto tipo |
 | 3 | Monitoramento ampliado (14 tipos) | 3–4 sem | — | Cada tipo alarga a superfície de consulta do assistente |
@@ -758,6 +759,36 @@ Cobrando a partir da **semana 2**.
 
 O nativo soma 2–3 semanas de trabalho depois disso, mas o relógio dele deixa de
 importar — ninguém fica esperando.
+
+### Bloco 1c — a virada para modo live, e por que ela tem linha própria
+
+Meio dia de trabalho não merece uma linha na tabela. Este merece, e a razão é a
+mesma do D3: **item pequeno que não tem data some da fila**, e reaparece no pior
+dia possível. O D3b — o e-mail — está aberto desde o começo por exatamente isso.
+
+Hoje a cobrança inteira roda em **modo teste**, ponta a ponta verificada em
+11/08/2026. Virar para live é trocar quatro secrets, e isso é a parte fácil e
+sem risco: os price IDs saíram do código de propósito, então a virada **não é um
+commit**.
+
+O que não é secret, e por isso não vira sozinho:
+
+- **Ativar a conta na Stripe** — dados fiscais e bancários do Brasil, mais a
+  descrição do negócio. É análise do lado deles, com prazo que não controlamos;
+  é o único item aqui com relógio de terceiro;
+- **Meios de pagamento no painel**, em live — a conta live tem configuração
+  própria, separada da de teste. Pix entra sem tocar em código, porque
+  `payment_method_types` ficou de fora de propósito (ver o comentário na
+  `assinatura/index.ts`);
+- **Conferir a primeira fatura em BRL** — moeda, imposto e o descritivo que
+  aparece na fatura do cartão dela. Descritivo errado vira contestação, e
+  contestação de R$24,90 custa mais que R$24,90;
+- **Endpoint de webhook live**, com os mesmos 5 eventos e um `whsec_` novo. O de
+  teste não atende o live.
+
+**Fazer isto no dia do lançamento é o erro.** Se a ativação da conta travar em
+análise, o lançamento trava junto — e aí a pressa leva ao atalho, que é ir ao ar
+em modo teste "só pra ver", cobrando ninguém.
 
 **Uma consequência de calendário que vale explicitar:** a conta Apple custa
 US$99/ano e o relógio começa na compra, não no uso. Abri-la três meses antes do
