@@ -114,13 +114,26 @@ export function extrair(fonte: string, arquivo: string): Achado[] {
   return achados;
 }
 
-/** Corta nome de estilo, chave, rota e classe: copy tem espaço e palavra inteira. */
+/**
+ * Corta nome de estilo, chave, rota e classe: copy tem espaço e palavra inteira.
+ *
+ * O descarte por underscore e dígito julga a PROSA, não a interpolação. Sem
+ * isso, uma frase composta de constante — `Anotado. ${DEVOLVE_A_DECISAO} ...` —
+ * é descartada inteira por causa dos underscores do nome da constante, e a copy
+ * que está em volta some da varredura. Foi exatamente o que aconteceu quando a
+ * copy de saúde virou uma fonte única: o texto continuou no app e saiu do
+ * alcance do teste.
+ *
+ * O `texto` devolvido segue sendo o original, com a interpolação — as regras que
+ * procuram artigo antes de `${nome}` dependem dela.
+ */
 export function pareceCopy(texto: string): boolean {
   const t = texto.trim();
+  const prosa = t.replace(/\$\{[^}]*\}/g, ' ');
   if (t.includes('://') || t.startsWith('/') || t.startsWith('.')) return false;
-  if (/[_\d]/.test(t)) return false;
-  if (!/[a-zà-ú]{3}/i.test(t)) return false;
-  if (/ /.test(t) && t.length >= 6) return true;
+  if (/[_\d]/.test(prosa)) return false;
+  if (!/[a-zà-ú]{3}/i.test(prosa)) return false;
+  if (/ /.test(prosa) && prosa.trim().length >= 6) return true;
 
   // Copy de uma palavra só existe, e é justamente onde o gênero se esconde:
   // rótulo de chip e de botão. O que separa rótulo de valor de prop do React

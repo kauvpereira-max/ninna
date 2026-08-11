@@ -98,11 +98,12 @@ const PERMITIDOS: { arquivo: string; texto: string; porque: string }[] = [
     porque: 'idem — a outra opção do mesmo campo.',
   },
   {
-    arquivo: 'app/registro/[tipo].tsx',
-    texto:
-      'Anotado. Se você estiver preocupada com isso, confie no seu instinto e fale com o pediatra — o Ninna acompanha, mas quem examina é ele.',
+    arquivo: 'src/lib/copySaude.ts',
+    texto: 'Anotado. ${DEVOLVE_A_DECISAO} O Ninna acompanha, mas quem examina é ele.',
     porque:
-      'o "ele" é o PEDIATRA. Copy de saúde travada em CLAUDE.md — não se reescreve por varredura.',
+      'o "ele" é o PEDIATRA. Copy de saúde travada em CLAUDE.md — não se reescreve por varredura. ' +
+      'Saiu de app/registro/[tipo].tsx quando as duas frases de saúde viraram fonte única; ' +
+      '`teste-copy-saude.ts` confere que este segue sendo o ÚNICO pronome de gênero da copy de saúde.',
   },
 ];
 

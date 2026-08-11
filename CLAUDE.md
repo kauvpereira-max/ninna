@@ -194,6 +194,7 @@ Todos puros, rodando no Node sem banco — exceto os três últimos:
 - `teste-copy-telas.ts` — varredura de **gênero** em toda a copy do app
 - `teste-linguagem-media.ts` — varredura da **tese**: conteúdo populacional e
   julgamento sobre referência. É o risco N8, a deriva
+- `teste-copy-saude.ts` — as duas frases de saúde: uma promessa, duas aberturas
 - `teste-consultas.ts` — superfície, ancoragem, narração e gramática
 - `teste-horario.ts`, `teste-paginacao.ts`
 - `teste-rls-delete.mjs` — contra o banco real. Prova que A não apaga registro de
@@ -237,18 +238,25 @@ duas cópias divergiriam na primeira correção que só uma recebesse.
 ## Copy de saúde — regras travadas
 
 Ao salvar QUALQUER sintoma, o app mostra uma linha e devolve a decisão para a
-mãe. Texto em `app/registro/[tipo].tsx`:
+mãe:
 
-> Anotado. Se você estiver preocupada com isso, confie no seu instinto e fale
-> com o pediatra — o Ninna acompanha, mas quem examina é ele.
+> Anotado. Se você estiver preocupada, confie no seu instinto e fale com o
+> pediatra. O Ninna acompanha, mas quem examina é ele.
 
-A recusa do assistente, em `src/lib/consultas.ts`, faz a mesma promessa:
+**Os dois textos vivem em `src/lib/copySaude.ts`**, e a promessa que eles
+compartilham é uma constante única:
 
-> Não consigo te ajudar com isso — eu só sei o que você registrou. Se você
-> estiver preocupada, confie no seu instinto e fala com o pediatra.
+> `DEVOLVE_A_DECISAO` — "Se você estiver preocupada, confie no seu instinto e
+> fale com o pediatra."
 
-**As duas precisam continuar dizendo a mesma coisa.** Divergir entre elas é como
-uma promessa se perde.
+As aberturas são diferentes de propósito, porque os momentos são: "Anotado."
+confirma um registro; "Não consigo te ajudar com isso — eu só sei o que você
+registrou." recusa. Texto único diria a coisa errada em um dos dois.
+
+Antes disso eram dois literais soltos, já divergindo em "fale"/"fala" sem que
+nada notasse. `scripts/teste-copy-saude.ts` guarda os dois: que ambos contenham
+a promessa literalmente, que não virem o mesmo texto, e que nenhum cruze as
+linhas abaixo.
 
 O que essa copy **nunca** faz — vale para qualquer texto de saúde futuro:
 

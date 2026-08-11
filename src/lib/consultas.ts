@@ -47,6 +47,7 @@ import {
   MINIMO_REGISTROS,
   minutosDoDiaLocal,
 } from './padroes.ts';
+import { RECUSA_DE_SAUDE } from './copySaude.ts';
 /**
  * A união é declarada AQUI, e não importada de `registros.ts`.
  *
@@ -250,18 +251,11 @@ export type Resultado =
   | { estado: 'fora_de_escopo'; razao: RazaoForaDeEscopo };
 
 /**
- * Copy travada, derivada das regras de saúde do CLAUDE.md.
- *
- * Não avalia gravidade, não sugere urgência, não lista sinal de alarme, não cita
- * número, não diagnostica, não tranquiliza e não alarma. Diz o que a Ninna é —
- * memória do que foi registrado — e devolve a decisão para a mãe.
- *
- * Ao mexer aqui, mexer também no texto da tela de sintoma: os dois fazem a mesma
- * promessa, e divergir entre eles é como uma promessa se perde.
+ * Copy travada. Mora em `copySaude.ts` junto com o aviso da tela de sintoma:
+ * as duas fazem a mesma promessa e compartilham a cláusula que a expressa, para
+ * não poderem divergir. Reexportada aqui porque é daqui que a Edge Function lê.
  */
-export const RESPOSTA_SAUDE =
-  'Não consigo te ajudar com isso — eu só sei o que você registrou. Se você estiver ' +
-  'preocupada, confie no seu instinto e fala com o pediatra.';
+export const RESPOSTA_SAUDE = RECUSA_DE_SAUDE;
 
 export const RESPOSTA_DESCONHECIDA =
   'Essa eu não sei responder. Eu consigo te contar o que já foi registrado: horários, ' +

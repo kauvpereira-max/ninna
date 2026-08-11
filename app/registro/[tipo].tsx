@@ -16,6 +16,7 @@ import { Button } from '../../src/components/Button';
 import { TextField } from '../../src/components/TextField';
 import { ChipGroup } from '../../src/components/ChipGroup';
 import { aplicarMascaraHora, horaAtual, horaParaData } from '../../src/lib/horario';
+import { AVISO_AO_SALVAR_SINTOMA } from '../../src/lib/copySaude';
 import {
   criarAmamentacao,
   criarFralda,
@@ -145,13 +146,11 @@ export default function RegistroScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.scroll}>
           <View style={styles.pediatraCard}>
-            {/* Copy travada: não avalia gravidade, não sugere urgência, não cita
-                número nem sinal de alarme, e não diz que "não é nada". O app
-                registra e devolve a decisão pra mãe — ver CLAUDE.md. */}
-            <Text style={styles.pediatraTexto}>
-              Anotado. Se você estiver preocupada com isso, confie no seu instinto e fale com o
-              pediatra — o Ninna acompanha, mas quem examina é ele.
-            </Text>
+            {/* Copy travada, e o texto NÃO mora aqui: ele vem de
+                `src/lib/copySaude.ts`, que é onde a mesma promessa também
+                alimenta a recusa do assistente. Dois literais soltos já tinham
+                começado a divergir. */}
+            <Text style={styles.pediatraTexto}>{AVISO_AO_SALVAR_SINTOMA}</Text>
           </View>
 
           <Button label="Fechar" onPress={fechar} style={{ marginTop: spacing.lg }} />
