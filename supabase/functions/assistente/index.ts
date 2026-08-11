@@ -32,6 +32,7 @@
 
 import Anthropic from 'npm:@anthropic-ai/sdk@0.68.0';
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { headersCors, respostaDePreflight } from '../_shared/cors.ts';
 
 import {
   gramaticaParaModelo,
@@ -210,7 +211,7 @@ async function escolherConsulta(anthropic: Anthropic, pergunta: string): Promise
 // A função
 // ------------------------------------------------------------------
 
-Deno.serve(async (req: Request) => {
+async function tratar(req: Request): Promise<Response> {
   if (req.method !== 'POST') return json({ erro: 'método não suportado' }, 405);
 
   const autorizacao = req.headers.get('Authorization') ?? '';
@@ -338,4 +339,29 @@ Deno.serve(async (req: Request) => {
     console.error('[assistente]', erro instanceof Error ? erro.message : erro);
     return json({ resposta: RESPOSTA_ERRO, restantes: limiteDeHoje - jaFeitas - 1 });
   }
+}
+
+/**
+ * A casca de CORS, por fora de tudo.
+ *
+ * O preflight é respondido ANTES de qualquer checagem — ele não traz método
+ * POST, nem sessão, nem corpo, e testar as três nele foi o bug de 11/08/2026.
+ *
+ * Os headers entram por aqui, e não em cada `json()`: é uma resposta só que
+ * passa por este ponto, então não existe caminho de saída que esqueça deles.
+ */
+Deno.serve(async (req: Request) => {
+  const preflight = respostaDePreflight(req);
+  if (preflight) return preflight;
+
+  const resposta = await tratar(req);
+  const cabecalhos = new Headers(resposta.headers);
+  for (const [chave, valor] of Object.entries(headersCors(req))) cabecalhos.set(chave, valor);
+
+  return new Response(resposta.body, {
+    status: resposta.status,
+    statusText: resposta.statusText,
+    headers: cabecalhos,
+  });
 });
+
