@@ -395,6 +395,54 @@ vez de tabela própria.
 
 ---
 
+### 3.5 Painel de afiliadas — registrado em 11/08/2026, não construído
+
+**Trabalho: 1,5–2 semanas. Relógio: —. Depende da cobrança existir.**
+
+Escopo mínimo, um nível só, como pedido:
+
+- link rastreável por afiliada;
+- atribuição da origem no cadastro, persistida;
+- comissão como percentual da assinatura que veio daquele link;
+- painel com login próprio, vendo só os próprios indicados e ganhos;
+- solicitação de saque, com pagamento manual no começo.
+
+**Por que só depois da cobrança:** comissão é percentual de assinatura, e a
+assinatura só existe no bloco 1 do §7. O webhook da Stripe que confirma pagamento
+é o mesmo que credita a comissão — construir antes significaria construir duas
+vezes.
+
+**Onde o trabalho realmente está**, porque não é no link:
+
+- **Atribuição que sobrevive.** `?ref=CODE` guardado antes do cadastro, colado na
+  conta no momento do `signUp`. Uma tabela `afiliadas` e uma `indicacoes`.
+- **Painel com login próprio.** Não é uma segunda base de auth: é a mesma do
+  Supabase, com a afiliada tendo linha em `afiliadas` e uma rota que só abre para
+  quem tem. Um segundo sistema de login seria o dobro do trabalho e metade da
+  segurança.
+- **Saque.** Tabela de solicitações, estado, e pagamento manual fora do sistema.
+
+**Três coisas que vão morder, e que valem estar escritas antes:**
+
+1. **A atribuição se perde no iOS, e é o R1 de novo.** A influenciadora posta, a
+   mãe toca no link, não instala, volta cinco dias depois — e o Safari já limpou
+   o storage. A comissão some, a afiliada reclama, e ela tem razão. Mitigar exige
+   guardar a origem do lado do servidor no primeiro toque, não só no navegador.
+2. **A afiliada não pode ver quem indicou.** Só contagem e valor. Nome de mãe ou
+   qualquer coisa do bebê aparecendo num painel de terceiro é vazamento de dado
+   sensível de criança — e o termo promete o contrário. Isso é requisito, não
+   preferência de tela.
+3. **Comissão é evento fiscal.** Pagamento manual adia a questão, não a resolve.
+   Vale saber disso antes de a primeira afiliada acumular saldo.
+
+**Uma nota de tom:** este é o primeiro produto da Ninna cujo público não é a mãe.
+As varreduras de gênero e de linguagem de média existem para a copy que a mãe lê;
+a copy do painel de afiliadas é outra audiência e outro registro. Decidir se as
+regras valem lá é decisão a tomar quando o bloco começar — não herdar por
+descuido nem descartar por pressa.
+
+---
+
 ## 4. Onde a tese é difícil de sustentar
 
 Você fez a pergunta certa, e é a única do documento que não tem resposta
@@ -664,13 +712,15 @@ assistente de último para primeiro. Agora o canal nativo desce de segundo para
 |---|---|---:|---:|---|
 | 0 | Fechar o que está aberto | 1 sem | DNS | Semeador, SMTP (§11.2), projeto antigo, tela do assistente |
 | 1 | **Cobrança por Stripe** | 1 sem | — | O assistente tem custo marginal; cada dia grátis no ar é dinheiro saindo |
+| 1b | Painel de afiliadas (§3.5) | 1,5–2 sem | — | Depende do webhook da Stripe do bloco 1 — antes dele, seria construir duas vezes |
 | 2 | Refatorar registro (schema-driven) | 1,5 sem | — | Bloqueia o bloco 3 e paga a si mesmo no quinto tipo |
 | 3 | Monitoramento ampliado (14 tipos) | 3–4 sem | — | Cada tipo alarga a superfície de consulta do assistente |
 | 4 | Notificações (Web Push) | 2–3 sem | 1 sem | Funciona em PWA instalada; o agendador é o mesmo que o nativo usaria |
 | 5 | Previsões | 2–3 sem | 4+ sem | Precisa do histórico acumulado pelos blocos 2–3 para o backtesting ter o que testar |
 | 6 | **Canal nativo** | 2–3 sem | 1–3 sem | Último, e em paralelo a mães já usando e já pagando |
 
-**PWA completa e cobrando: ~12 semanas.** Cobrando a partir da **semana 2**.
+**PWA completa e cobrando: ~12 semanas**, ou ~14 com o painel de afiliadas.
+Cobrando a partir da **semana 2**.
 
 O nativo soma 2–3 semanas de trabalho depois disso, mas o relógio dele deixa de
 importar — ninguém fica esperando.
