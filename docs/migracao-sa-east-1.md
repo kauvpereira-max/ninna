@@ -90,7 +90,10 @@ SQL Editor → New query → colar o arquivo inteiro → Run. Uma de cada vez:
 A ordem importa: a `002` altera as chaves que a `001` cria, e a `003` referencia
 `auth.users`.
 
-**Conferência da 002** — esperado: 7 linhas, todas `CASCADE`.
+**Conferência da 002** — esperado: **8 linhas**, todas `CASCADE`, se a `003` já
+tiver rodado. Sete vêm da `002`; a oitava é `assistant_usage.user_id →
+auth.users`, que a `003` cria já em cascata. Rodando a conferência entre a `002`
+e a `003`, são 7.
 
 ```sql
 select t.relname as tabela, c.conname as constraint_name, ref.relname as referencia, case c.confdeltype when 'a' then 'NO ACTION' when 'r' then 'RESTRICT' when 'c' then 'CASCADE' when 'n' then 'SET NULL' when 'd' then 'SET DEFAULT' end as delete_rule from pg_constraint c join pg_class t on t.oid = c.conrelid join pg_namespace n on n.oid = t.relnamespace join pg_class ref on ref.oid = c.confrelid where c.contype = 'f' and n.nspname = 'public' order by t.relname;
@@ -102,9 +105,10 @@ select t.relname as tabela, c.conname as constraint_name, ref.relname as referen
 select (select relrowsecurity from pg_class where relname = 'assistant_usage') as rls_ligada, (select count(*) from pg_policy where polrelid = 'assistant_usage'::regclass) as policies;
 ```
 
-⚠️ O `BETA.md` §11.3 registra a cascata como verificada em 06/08/2026 — **isso
-vale para o projeto ANTIGO**. Só volta a ser verdade depois desta conferência
-rodar aqui.
+✅ Feito em 11/08/2026: 7 tabelas com RLS, 8 chaves em `CASCADE`,
+`assistant_usage` com 1 policy. O `BETA.md` §11.3 foi atualizado — a verificação
+de 06/08 valia para o projeto antigo e deixou de descrever o banco que está na
+frente no instante da migração.
 
 ### 3. As três configurações de painel
 
@@ -117,7 +121,14 @@ Este é o §11.1, que **nunca chegou a ser aplicado no projeto antigo** — é p
 isso que o `teste-rls-delete.mjs` está bloqueado desde sempre. Fazer agora, no
 projeto novo, é herdar a decisão certa em vez do impedimento.
 
-Conferir sem abrir o painel (esperado: `"mailer_autoconfirm": true`):
+⚠️ **Confira pelo servidor, nunca pela tela.** Na primeira tentativa aqui, com as
+duas caixinhas marcadas no painel, o servidor devolveu `external.email: false` e
+`mailer_autoconfirm: false` — nada tinha sido salvo. Sair da página sem clicar em
+**Save** descarta tudo sem avisar.
+
+Esperado nos DOIS campos: `"mailer_autoconfirm": true` e
+`"external": {"email": true}`. O segundo é o que mais dói sozinho: sem ele
+ninguém cria conta nem entra, e o sintoma é erro genérico de login.
 
 ```
 curl -s "https://<NOVO_REF>.supabase.co/auth/v1/settings" -H "apikey: <NOVA_ANON_KEY>"
@@ -216,7 +227,8 @@ Faça **depois** de o passo 7 passar, não antes.
 A migração está feita quando **todas** forem verdade:
 
 1. Projeto novo em `sa-east-1`, e o antigo apagado.
-2. As três migrations rodadas, com as duas conferências verdes.
+2. As três migrations rodadas, com as três conferências verdes (7 tabelas com
+   RLS, 8 chaves em CASCADE, `assistant_usage` com 1 policy).
 3. `mailer_autoconfirm: true` no `/auth/v1/settings` do projeto novo.
 4. Reset de senha chega na caixa de entrada de um Gmail que não é o seu (D3b).
 5. App na Vercel, com o build novo, cria conta e registra mamada.

@@ -35,7 +35,7 @@
  * desbloquear".
  */
 
-import type { Metrica, Padroes } from './padroes';
+import type { Metrica, Padroes } from './padroes.ts';
 import {
   RESPOSTA_DESCONHECIDA,
   RESPOSTA_SAUDE,

@@ -7,6 +7,7 @@
 import { supabase } from './supabase';
 import { formatarDuracaoMin, formatarMomento, minutosEntre } from './horario';
 import { paginar, type CursorRegistro, type Pagina } from './paginacao';
+import type { TipoEvento } from './consultas';
 
 export type { CursorRegistro } from './paginacao';
 import type {
@@ -45,6 +46,18 @@ export const TIPOS_REGISTRO: TipoRegistro[] = [
   'humor',
   'sintoma',
 ];
+
+/**
+ * Trava contra deriva com `consultas.ts`.
+ *
+ * Aquele módulo declara a mesma união por conta própria — ele roda também no
+ * Deno da Edge Function, onde este arquivo não pode ir (importa o Supabase e o
+ * AsyncStorage). A conferência mora aqui porque este lado pode importar os dois.
+ * Se as duas uniões divergirem, a linha abaixo para de compilar.
+ */
+type SaoIguais<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+const _uniaoConfere: SaoIguais<TipoRegistro, TipoEvento> = true;
+void _uniaoConfere;
 
 export function ehTipoRegistro(valor: string | undefined): valor is TipoRegistro {
   return TIPOS_REGISTRO.includes(valor as TipoRegistro);

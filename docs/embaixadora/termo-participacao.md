@@ -2,7 +2,7 @@
 
 *Versão 1 — 06/08/2026*
 
-> **Campos a preencher antes de enviar:** `[REGIÃO DO PROJETO]`, `[SEU NÚMERO]`,
+> **Campos a preencher antes de enviar:** `[SEU NÚMERO]`,
 > `[SEU NOME]`, `[E-MAIL]`, `[WHATSAPP]`. Trocar qualquer palavra depois de
 > enviado obriga a subir para a versão 2 e recolher o aceite de novo — é o que dá
 > sentido à frase fixa do fim. **Apagar este bloco antes de gerar o PDF.**
@@ -30,7 +30,7 @@ contatos, suas fotos nem sua localização.
 
 ## Onde esses dados ficam
 
-Num banco de dados do Supabase, região [REGIÃO DO PROJETO]. Cada conta enxerga
+Num banco de dados do Supabase, região Brasil (São Paulo). Cada conta enxerga
 apenas os próprios dados, e isso é uma regra do banco, não uma promessa de tela:
 mesmo que alguém tente, o banco recusa.
 

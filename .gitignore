@@ -38,6 +38,12 @@ yarn-error.*
 .env
 .env*.local
 
+# Supabase CLI
+# Estado local do `link`: ref do projeto, versoes do servidor. E da maquina de
+# quem rodou o link, nao do projeto — versionar isso faria o repositorio
+# apontar pro projeto de quem commitou por ultimo.
+supabase/.temp/
+
 # typescript
 *.tsbuildinfo
 

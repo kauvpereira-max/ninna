@@ -47,9 +47,30 @@ import {
   MINIMO_REGISTROS,
   minutosDoDiaLocal,
 } from './padroes.ts';
-// Só o tipo: `registros.ts` importa o Supabase, e importá-lo aqui em runtime
-// tiraria deste módulo a propriedade que o torna testável no Node.
-import type { TipoRegistro } from './registros.ts';
+/**
+ * A união é declarada AQUI, e não importada de `registros.ts`.
+ *
+ * Ela é idêntica à `TipoRegistro` de lá, e a duplicação é deliberada: este
+ * módulo roda em três lugares — no app, no Node dos testes e no Deno da Edge
+ * Function — e `registros.ts` só serve num deles, porque importa o Supabase e o
+ * AsyncStorage do React Native.
+ *
+ * Importar só o TIPO parecia resolver, já que tipo some na compilação. Não
+ * resolveu: o empacotador do Supabase segue o import antes de apagá-lo, subiu o
+ * `registros.ts` inteiro junto com a função e depois falhou em achar as
+ * dependências dele. O bundle foi para produção incompleto, com aviso em vez de
+ * erro — o pior desfecho possível.
+ *
+ * A trava contra deriva está no outro lado: `registros.ts` confere em tempo de
+ * compilação que as duas uniões continuam iguais.
+ */
+export type TipoEvento =
+  | 'amamentar'
+  | 'mamadeira'
+  | 'fralda'
+  | 'sono'
+  | 'humor'
+  | 'sintoma';
 
 // ------------------------------------------------------------------
 // Entrada
@@ -63,7 +84,7 @@ import type { TipoRegistro } from './registros.ts';
  * começou" e não conta para "quanto durou" — mesma regra do motor.
  */
 export type EventoBruto = {
-  tipo: TipoRegistro;
+  tipo: TipoEvento;
   ocorridoEm: string;
   fimEm?: string | null;
 };
@@ -80,7 +101,7 @@ export type Alvo = 'mamada' | 'sono' | 'fralda' | 'humor' | 'sintoma';
 
 export const ALVOS: Alvo[] = ['mamada', 'sono', 'fralda', 'humor', 'sintoma'];
 
-const TIPOS_DO_ALVO: Record<Alvo, TipoRegistro[]> = {
+const TIPOS_DO_ALVO: Record<Alvo, TipoEvento[]> = {
   mamada: ['amamentar', 'mamadeira'],
   sono: ['sono'],
   fralda: ['fralda'],

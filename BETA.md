@@ -1223,17 +1223,36 @@ faltando (`typography.caption` roda em Regular) · `src/theme/fonts.ts` citado e
 Nenhuma destas tem como ser feita por commit. Sem a §11.1, a §11.2 e a §11.5 o
 D3 não fecha; a §11.3 e a §11.4 barram os itens 12 e 13 da checklist.
 
-### 11.1 Desligar confirmação de e-mail — ⚠️ AINDA NÃO ESTÁ APLICADA
+### 11.1 Desligar confirmação de e-mail — ✅ APLICADA EM 11/08/2026
 `Authentication > Sign In / Providers > Email` → desmarcar **Confirm email** →
 **Salvar**.
 
-Verificado em 05/08/2026 contra o projeto: `mailer_autoconfirm` continua `false`,
-ou seja, a confirmação segue ligada. Conferir sem abrir o painel:
+**Aplicada no projeto `hzjcimgutccsfrxuuhrl` (São Paulo)**, o que destravou o
+§11.4 — verde pela primeira vez desde o D4, 18/18. No projeto antigo isso passou
+batido três vezes.
+
+⚠️ **E passou batido uma quarta, agora com o painel dizendo o contrário.** Na
+primeira conferência do projeto novo, depois de a caixinha ter sido marcada e o
+provedor ligado, o servidor devolveu `"external": {"email": false}` e
+`"mailer_autoconfirm": false` — as duas configurações não tinham sido salvas.
+A causa mais provável é sair da página sem clicar em **Save**, que descarta tudo
+sem avisar.
+
+**A lição é o procedimento, não o incidente: aqui se confere pelo servidor,
+nunca pela tela.** Conferir sem abrir o painel:
 
 ```
 curl -s "$EXPO_PUBLIC_SUPABASE_URL/auth/v1/settings" -H "apikey: <anon key>"
 ```
-Esperado: `"mailer_autoconfirm": true`.
+Esperado: `"mailer_autoconfirm": true` **e** `"external": {"email": true}`.
+
+Os dois, sempre. O segundo é o que mais dói se falhar sozinho: com
+`external.email` em `false`, ninguém cria conta nem entra — e o e-mail e senha
+são o único método de autenticação que a Ninna tem. O sintoma é erro genérico de
+login, que não aponta para lugar nenhum.
+
+Confirmado em 11/08/2026: `external.email = true`, `mailer_autoconfirm = true`,
+`disable_signup = false`.
 
 Decisão em §3.8. O código já lida com os dois estados, então ligar ou desligar
 não exige alterar nada — mas com a confirmação ligada o signup mostra a tela
@@ -1275,7 +1294,13 @@ de conferência comentada no fim: esperar **7 linhas, todas com
 Sem isso não existe exclusão de conta, e o termo LGPD do D18 estaria prometendo
 algo que o banco recusa (§6).
 
-**Aplicado e verificado em 06/08/2026**: as 7 chaves (`babies` → `auth.users` e as
+**Reconferido em 11/08/2026 no projeto `hzjcimgutccsfrxuuhrl` (São Paulo)**, que
+é o que vale — a verificação de 06/08 foi contra o projeto antigo, em Canadá, e
+deixou de descrever o banco que está na frente no dia em que a migração
+aconteceu. Agora são **8 linhas**, não 7: a oitava é
+`assistant_usage.user_id → auth.users`, que a `003` criou já em cascata.
+
+**Aplicado e verificado**: as 7 chaves da `002` (`babies` → `auth.users` e as
 6 tabelas de registro → `babies`) em `CASCADE`, conferidas como `postgres`. A
 regra travada no P7 — *o termo não é enviado a nenhuma mãe antes das 7 linhas em
 CASCADE* — está **cumprida, e o termo está liberado para envio**. Ela continua
@@ -1337,6 +1362,11 @@ para essa troca custar uma variável e não uma caça a string espalhada:
 
 - **hoje:** `http://localhost:8081/nova-senha` — a origem de onde o app é servido;
 - **a partir do P5:** o domínio da Vercel, via `EXPO_PUBLIC_APP_URL`.
+
+✅ **Refeita em 11/08/2026 no projeto `hzjcimgutccsfrxuuhrl`**, com Site URL
+`https://ninna-sigma.vercel.app` e as duas entradas de redirect. A allow-list
+mora no projeto, não no código, então a migração a zerou junto com o resto das
+configurações de painel — foi refeita, não herdada.
 
 As duas entradas precisam existir na allow-list, e **o P5 não fecha enquanto a de
 produção não entrar**. Não dá para verificar de fora: só abrindo o link de um
