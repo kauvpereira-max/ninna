@@ -130,7 +130,19 @@ Deno.serve(async (req: Request) => {
       return new Response('fora de ordem', { status: 200 });
     }
 
-    const fimDoPeriodo = assinaturaStripe.items?.data?.[0]?.current_period_end;
+    // Até quando o acesso vale.
+    //
+    // `ended_at` ANTES de `current_period_end`, e a ordem é o ponto:
+    //
+    // - assinatura viva (active, trialing, cancelar-no-fim-do-período) tem
+    //   `ended_at` nulo, e vale até o fim do período pago — que é a promessa:
+    //   quem cancelou hoje não perde o mês que já pagou;
+    // - assinatura encerrada NA HORA (estorno, fraude, cortesia revogada) tem
+    //   `ended_at` preenchido com o instante em que acabou, e é ele que manda.
+    //
+    // Só `current_period_end` dava um mês de graça a quem foi cortado hoje: a
+    // Stripe deixa o fim do período no futuro mesmo depois de encerrar.
+    const fimDoPeriodo = assinaturaStripe.ended_at ?? assinaturaStripe.items?.data?.[0]?.current_period_end;
 
     const { error } = await comoServico.from('assinaturas').upsert(
       {
