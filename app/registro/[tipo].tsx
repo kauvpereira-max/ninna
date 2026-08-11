@@ -17,108 +17,49 @@ import { TextField } from '../../src/components/TextField';
 import { ChipGroup } from '../../src/components/ChipGroup';
 import { aplicarMascaraHora, horaAtual, horaParaData } from '../../src/lib/horario';
 import { AVISO_AO_SALVAR_SINTOMA } from '../../src/lib/copySaude';
+import { criarRegistro, iniciarSono } from '../../src/lib/registros';
 import {
-  criarAmamentacao,
-  criarFralda,
-  criarHumor,
-  criarMamadeira,
-  criarSintoma,
+  SCHEMAS,
   ehTipoRegistro,
-  iniciarSono,
-  HUMORES,
-  INTENSIDADES,
-  MOTIVOS_HUMOR,
-  SINTOMAS,
-  type TipoRegistro,
-} from '../../src/lib/registros';
-import type {
-  ConteudoFralda,
-  Humor,
-  Intensidade,
-  LadoSeio,
-  TipoLeite,
-} from '../../src/types/database';
+  resolverCampo,
+  validarRegistro,
+  type CampoSchema,
+  type ErrosRegistro,
+  type ValoresRegistro,
+} from '../../src/lib/registroSchema';
 import { colors, spacing, radius, typography } from '../../src/theme/tokens';
 
-type Copy = { titulo: string; subtitulo: string; labelHora: string; acao: string };
-
-const COPY: Record<TipoRegistro, Copy> = {
-  amamentar: {
-    titulo: 'Amamentação',
-    subtitulo: 'Anota rapidinho — dá pra ajustar depois.',
-    labelHora: 'Começou às',
-    acao: 'Salvar mamada',
-  },
-  mamadeira: {
-    titulo: 'Mamadeira',
-    subtitulo: 'Anota rapidinho — dá pra ajustar depois.',
-    labelHora: 'Começou às',
-    acao: 'Salvar mamadeira',
-  },
-  fralda: {
-    titulo: 'Troca de fralda',
-    subtitulo: 'Um toque e já volto pra Home.',
-    labelHora: 'Horário da troca',
-    acao: 'Salvar troca',
-  },
-  sono: {
-    titulo: 'Sono',
-    subtitulo: 'Deixo o sono correndo a partir desse horário — você encerra na Home quando acabar.',
-    labelHora: 'Começou às',
-    acao: 'Começar sono',
-  },
-  humor: {
-    titulo: 'Humor',
-    subtitulo: 'O estado do momento. Não saber o motivo também é uma resposta.',
-    labelHora: 'Horário',
-    acao: 'Salvar humor',
-  },
-  sintoma: {
-    titulo: 'Sintoma',
-    subtitulo: 'Anotar ajuda a enxergar o padrão depois — aqui não é diagnóstico.',
-    labelHora: 'Horário',
-    acao: 'Salvar sintoma',
-  },
-};
-
-const MAX_DURACAO_MIN = 180;
-
-/** Único valor de `symptom` que aceita descrição da mãe — e ela vai em `notes`, não na coluna. */
-const SINTOMA_OUTRO = 'other';
-
-type CampoErro =
-  | 'hora'
-  | 'lado'
-  | 'duracao'
-  | 'quantidade'
-  | 'leite'
-  | 'conteudo'
-  | 'humor'
-  | 'sintoma'
-  | 'descricao'
-  | 'form';
-type Erros = Partial<Record<CampoErro, string>>;
+/**
+ * A tela de registro — uma só, para todos os tipos.
+ *
+ * Ela não conhece amamentação, fralda nem sintoma. O que ela sabe fazer é
+ * desenhar os quatro tipos de campo que existem (hora, escolha, número, texto),
+ * e quais campos aparecem vem do `registroSchema.ts`.
+ *
+ * A consequência é o ponto do bloco 2: somar um tipo de registro passa a ser
+ * somar uma entrada no schema. Esta tela não muda, a validação não muda, a
+ * escrita não muda — e nenhum dos três pode ser esquecido, porque nenhum dos
+ * três é editado.
+ *
+ * A validação é a MESMA função do schema, não uma cópia com as mesmas regras.
+ * Uma cópia divergiria no primeiro campo novo, e a mãe veria "opcional"
+ * reprovando por obrigatório.
+ */
 
 export default function RegistroScreen() {
   const { tipo } = useLocalSearchParams<{ tipo: string }>();
   const router = useRouter();
   const { bebeAtivo } = useBaby();
 
-  const [hora, setHora] = useState(horaAtual());
-  const [lado, setLado] = useState<LadoSeio | null>(null);
-  const [duracao, setDuracao] = useState('');
-  const [quantidade, setQuantidade] = useState('');
-  const [leite, setLeite] = useState<TipoLeite | null>(null);
-  const [conteudo, setConteudo] = useState<ConteudoFralda | null>(null);
-  const [humor, setHumor] = useState<Humor | null>(null);
-  const [motivo, setMotivo] = useState<string | null>(null);
-  const [sintoma, setSintoma] = useState<string | null>(null);
-  const [intensidade, setIntensidade] = useState<Intensidade | null>(null);
-  const [observacao, setObservacao] = useState('');
-
-  const [erros, setErros] = useState<Erros>({});
+  const [valores, setValores] = useState<ValoresRegistro>({ hora: horaAtual() });
+  const [erros, setErros] = useState<ErrosRegistro>({});
+  const [erroForm, setErroForm] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [sintomaSalvo, setSintomaSalvo] = useState(false);
+
+  function definir(chave: string, valor: string | null) {
+    setValores((atuais) => ({ ...atuais, [chave]: valor }));
+  }
 
   function fechar() {
     // Na web o modal é uma rota comum, e ela pode ser aberta direto pela URL —
@@ -139,7 +80,7 @@ export default function RegistroScreen() {
     );
   }
 
-  const copy = COPY[tipo];
+  const schema = SCHEMAS[tipo];
 
   if (sintomaSalvo) {
     return (
@@ -162,97 +103,24 @@ export default function RegistroScreen() {
   async function handleSalvar() {
     if (!ehTipoRegistro(tipo) || !bebeAtivo) return;
 
-    const novosErros: Erros = {};
-
-    const momento = horaParaData(hora);
-    if (!momento) novosErros.hora = 'Coloca no formato HH:MM, ex.: 14:20.';
-
-    let duracaoSegundos: number | null = null;
-    if (tipo === 'amamentar') {
-      if (!lado) novosErros.lado = 'De qual lado foi?';
-      if (duracao.trim()) {
-        const minutos = Number(duracao);
-        if (!Number.isFinite(minutos) || minutos < 1 || minutos > MAX_DURACAO_MIN) {
-          novosErros.duracao = `Duração em minutos, de 1 a ${MAX_DURACAO_MIN}.`;
-        } else {
-          duracaoSegundos = minutos * 60;
-        }
-      }
-    }
-
-    let quantidadeMl = 0;
-    if (tipo === 'mamadeira') {
-      quantidadeMl = Number(quantidade);
-      if (!quantidade.trim() || !Number.isFinite(quantidadeMl) || quantidadeMl < 5 || quantidadeMl > 500) {
-        novosErros.quantidade = 'Quantidade em ml, ex.: 90.';
-      }
-      if (!leite) novosErros.leite = 'Era leite materno ou fórmula?';
-    }
-
-    if (tipo === 'fralda' && !conteudo) novosErros.conteudo = 'O que tinha na fralda?';
-
-    if (tipo === 'humor' && !humor) novosErros.humor = 'Qual estado você percebeu?';
-
-    if (tipo === 'sintoma') {
-      if (!sintoma) novosErros.sintoma = 'O que você notou?';
-      // Sem descrição, um registro 'other' não diz nada nem pra mãe nem pro motor.
-      else if (sintoma === SINTOMA_OUTRO && !observacao.trim()) {
-        novosErros.descricao = 'Me conta em poucas palavras o que você notou.';
-      }
-    }
-
+    const novosErros = validarRegistro(tipo, valores, (texto) => horaParaData(texto) !== null);
     setErros(novosErros);
+    setErroForm(null);
     if (Object.keys(novosErros).length > 0) return;
 
-    const ocorridoEm = (momento as Date).toISOString();
-    const notes = observacao.trim() ? observacao.trim() : null;
+    // Já validada acima — o `as Date` é o que a validação acabou de garantir.
+    const ocorridoEm = (horaParaData(valores.hora ?? '') as Date).toISOString();
 
     setSalvando(true);
-    let error: string | null = null;
-
-    if (tipo === 'amamentar') {
-      ({ error } = await criarAmamentacao(bebeAtivo.id, {
-        side: lado as LadoSeio,
-        duration_seconds: duracaoSegundos,
-        started_at: ocorridoEm,
-        notes,
-      }));
-    } else if (tipo === 'mamadeira') {
-      ({ error } = await criarMamadeira(bebeAtivo.id, {
-        amount_ml: quantidadeMl,
-        bottle_type: leite as TipoLeite,
-        started_at: ocorridoEm,
-        notes,
-      }));
-    } else if (tipo === 'fralda') {
-      ({ error } = await criarFralda(bebeAtivo.id, {
-        content: conteudo as ConteudoFralda,
-        recorded_at: ocorridoEm,
-        notes,
-      }));
-    } else if (tipo === 'humor') {
-      ({ error } = await criarHumor(bebeAtivo.id, {
-        mood: humor as Humor,
-        probable_reason: motivo,
-        recorded_at: ocorridoEm,
-        notes,
-      }));
-    } else if (tipo === 'sintoma') {
-      // `symptom` só recebe slug da lista; o que a mãe escreveu fica em `notes`.
-      ({ error } = await criarSintoma(bebeAtivo.id, {
-        symptom: sintoma as string,
-        intensity: intensidade,
-        recorded_at: ocorridoEm,
-        notes,
-      }));
-    } else {
-      ({ error } = await iniciarSono(bebeAtivo.id, ocorridoEm));
-    }
-
+    // Sono é o único que não passa pela escrita genérica: ele fica em aberto, e
+    // a regra de "só um por vez" precisa consultar o banco antes de inserir.
+    const { error } = SCHEMAS[tipo].emAberto
+      ? await iniciarSono(bebeAtivo.id, ocorridoEm)
+      : await criarRegistro(tipo, bebeAtivo.id, valores, ocorridoEm);
     setSalvando(false);
 
     if (error) {
-      setErros({ form: error });
+      setErroForm(error);
       return;
     }
 
@@ -267,6 +135,71 @@ export default function RegistroScreen() {
     fechar();
   }
 
+  function desenhar(bruto: CampoSchema) {
+    // Resolvido, e não cru: é o mesmo campo que a validação vai ler. Em sintoma
+    // "Outro", a observação já chega aqui com o rótulo e a exigência trocados.
+    const campo = resolverCampo(bruto, valores);
+    const valor = valores[campo.chave] ?? '';
+    const erro = erros[campo.chave];
+
+    if (campo.entrada === 'hora') {
+      return (
+        <TextField
+          key={campo.chave}
+          label={campo.rotulo}
+          value={valor}
+          onChangeText={(texto) => definir(campo.chave, aplicarMascaraHora(texto))}
+          placeholder="HH:MM"
+          keyboardType="number-pad"
+          maxLength={5}
+          error={erro}
+        />
+      );
+    }
+
+    if (campo.entrada === 'escolha') {
+      return (
+        <ChipGroup<string>
+          key={campo.chave}
+          label={campo.rotulo}
+          value={valores[campo.chave] ?? null}
+          onChange={(escolhido) => definir(campo.chave, escolhido)}
+          options={campo.opcoes}
+          error={erro}
+        />
+      );
+    }
+
+    if (campo.entrada === 'numero') {
+      return (
+        <TextField
+          key={campo.chave}
+          label={campo.rotulo}
+          value={valor}
+          onChangeText={(texto) =>
+            definir(campo.chave, texto.replace(/\D/g, '').slice(0, campo.digitos))
+          }
+          placeholder={campo.placeholder}
+          keyboardType="number-pad"
+          error={erro}
+        />
+      );
+    }
+
+    return (
+      <TextField
+        key={campo.chave}
+        label={campo.rotulo}
+        value={valor}
+        onChangeText={(texto) => definir(campo.chave, texto)}
+        placeholder={campo.placeholder}
+        maxLength={campo.max}
+        multiline={campo.linhas}
+        error={erro}
+      />
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -276,8 +209,8 @@ export default function RegistroScreen() {
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.titulo}>{copy.titulo}</Text>
-              <Text style={styles.subtitulo}>{copy.subtitulo}</Text>
+              <Text style={styles.titulo}>{schema.titulo}</Text>
+              <Text style={styles.subtitulo}>{schema.subtitulo}</Text>
             </View>
             <Pressable
               onPress={fechar}
@@ -290,141 +223,12 @@ export default function RegistroScreen() {
           </View>
 
           <View style={styles.form}>
-            <TextField
-              label={copy.labelHora}
-              value={hora}
-              onChangeText={(texto) => setHora(aplicarMascaraHora(texto))}
-              placeholder="HH:MM"
-              keyboardType="number-pad"
-              maxLength={5}
-              error={erros.hora}
-            />
+            {schema.campos.map(desenhar)}
 
-            {tipo === 'amamentar' ? (
-              <>
-                <ChipGroup<LadoSeio>
-                  label="Lado"
-                  value={lado}
-                  onChange={setLado}
-                  options={[
-                    { value: 'left', label: 'Esquerdo' },
-                    { value: 'right', label: 'Direito' },
-                    { value: 'both', label: 'Os dois' },
-                  ]}
-                  error={erros.lado}
-                />
-                <TextField
-                  label="Duração em minutos (opcional)"
-                  value={duracao}
-                  onChangeText={(t) => setDuracao(t.replace(/\D/g, '').slice(0, 3))}
-                  placeholder="ex.: 12"
-                  keyboardType="number-pad"
-                  error={erros.duracao}
-                />
-              </>
-            ) : null}
-
-            {tipo === 'mamadeira' ? (
-              <>
-                <TextField
-                  label="Quantidade (ml)"
-                  value={quantidade}
-                  onChangeText={(t) => setQuantidade(t.replace(/\D/g, '').slice(0, 3))}
-                  placeholder="ex.: 90"
-                  keyboardType="number-pad"
-                  error={erros.quantidade}
-                />
-                <ChipGroup<TipoLeite>
-                  label="O que tinha na mamadeira"
-                  value={leite}
-                  onChange={setLeite}
-                  options={[
-                    { value: 'breast_milk', label: 'Leite materno' },
-                    { value: 'formula', label: 'Fórmula' },
-                  ]}
-                  error={erros.leite}
-                />
-              </>
-            ) : null}
-
-            {tipo === 'fralda' ? (
-              <ChipGroup<ConteudoFralda>
-                label="O que tinha na fralda"
-                value={conteudo}
-                onChange={setConteudo}
-                options={[
-                  { value: 'pee', label: 'Xixi' },
-                  { value: 'poop', label: 'Cocô' },
-                  { value: 'both', label: 'Os dois' },
-                ]}
-                error={erros.conteudo}
-              />
-            ) : null}
-
-            {tipo === 'humor' ? (
-              <>
-                {/* Substantivos, nunca adjetivos: o app não sabe o gênero do bebê. */}
-                <ChipGroup<Humor>
-                  label="Estado"
-                  value={humor}
-                  onChange={setHumor}
-                  options={HUMORES}
-                  error={erros.humor}
-                />
-                <ChipGroup<string>
-                  label="O que pode ter causado (opcional)"
-                  value={motivo}
-                  onChange={setMotivo}
-                  options={MOTIVOS_HUMOR}
-                />
-              </>
-            ) : null}
-
-            {tipo === 'sintoma' ? (
-              <>
-                <ChipGroup<string>
-                  label="O que você notou"
-                  value={sintoma}
-                  onChange={setSintoma}
-                  options={SINTOMAS}
-                  error={erros.sintoma}
-                />
-                <ChipGroup<Intensidade>
-                  label="Intensidade (opcional)"
-                  value={intensidade}
-                  onChange={setIntensidade}
-                  options={INTENSIDADES}
-                />
-              </>
-            ) : null}
-
-            {/* sleep_records é a única tabela de registro sem coluna de observação.
-                Em sintoma "Outro" esse mesmo campo vira a descrição — é o que vai
-                pra `notes`, porque texto livre nunca entra na coluna `symptom`. */}
-            {tipo !== 'sono' ? (
-              <TextField
-                label={
-                  sintoma === SINTOMA_OUTRO && tipo === 'sintoma'
-                    ? 'O que você notou?'
-                    : 'Observação (opcional)'
-                }
-                value={observacao}
-                onChangeText={setObservacao}
-                placeholder={
-                  sintoma === SINTOMA_OUTRO && tipo === 'sintoma'
-                    ? 'Descreve com suas palavras'
-                    : 'Algo que você queira lembrar depois'
-                }
-                maxLength={280}
-                multiline
-                error={erros.descricao}
-              />
-            ) : null}
-
-            {erros.form ? <Text style={styles.erroForm}>{erros.form}</Text> : null}
+            {erroForm ? <Text style={styles.erroForm}>{erroForm}</Text> : null}
 
             <Button
-              label={copy.acao}
+              label={schema.acao}
               onPress={handleSalvar}
               loading={salvando}
               style={{ marginTop: spacing.sm }}

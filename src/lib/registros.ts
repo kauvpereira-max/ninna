@@ -8,6 +8,22 @@ import { supabase } from './supabase';
 import { formatarDuracaoMin, formatarMomento, minutosEntre } from './horario';
 import { paginar, type CursorRegistro, type Pagina } from './paginacao';
 import type { TipoEvento } from './consultas';
+import {
+  CONTEUDOS_FRALDA,
+  INTENSIDADES,
+  HUMORES,
+  LADOS,
+  LEITES,
+  MOTIVOS_HUMOR,
+  SCHEMAS,
+  SINTOMAS,
+  SINTOMAS_APOSENTADOS,
+  TIPOS_REGISTRO,
+  linhaParaBanco,
+  rotularValor,
+  type TipoRegistro,
+  type ValoresRegistro,
+} from './registroSchema.ts';
 
 export type { CursorRegistro } from './paginacao';
 import type {
@@ -35,17 +51,21 @@ type Resultado<T> = { data: T; error: string | null };
 const ERRO_SALVAR = 'Não consegui salvar esse registro agora. Tenta de novo em instantes.';
 const ERRO_LISTAR = 'Não consegui buscar os últimos registros agora.';
 
-/** Os 6 atalhos da Home. Vale também como parâmetro da rota /registro/[tipo]. */
-export type TipoRegistro = 'amamentar' | 'mamadeira' | 'fralda' | 'sono' | 'humor' | 'sintoma';
-
-export const TIPOS_REGISTRO: TipoRegistro[] = [
-  'amamentar',
-  'mamadeira',
-  'fralda',
-  'sono',
-  'humor',
-  'sintoma',
-];
+/**
+ * A declaração dos tipos mora em `registroSchema.ts` — este módulo é o lado que
+ * fala com o banco. Reexportado aqui porque as telas já importavam daqui, e
+ * mover o import de 6 arquivos não é o trabalho que o bloco 2 se propôs.
+ */
+export {
+  TIPOS_REGISTRO,
+  ehTipoRegistro,
+  HUMORES,
+  MOTIVOS_HUMOR,
+  SINTOMAS,
+  INTENSIDADES,
+  SINTOMA_OUTRO,
+  type TipoRegistro,
+} from './registroSchema.ts';
 
 /**
  * Trava contra deriva com `consultas.ts`.
@@ -59,96 +79,9 @@ type SaoIguais<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : fals
 const _uniaoConfere: SaoIguais<TipoRegistro, TipoEvento> = true;
 void _uniaoConfere;
 
-export function ehTipoRegistro(valor: string | undefined): valor is TipoRegistro {
-  return TIPOS_REGISTRO.includes(valor as TipoRegistro);
-}
-
-/**
- * Tipo do app → tabela do banco. Amamentar e mamadeira caem na mesma tabela: quem
- * separa os dois é a coluna `type`, não a tabela.
- */
-const TABELA: Record<TipoRegistro, string> = {
-  amamentar: 'feeding_records',
-  mamadeira: 'feeding_records',
-  fralda: 'diaper_records',
-  sono: 'sleep_records',
-  humor: 'mood_records',
-  sintoma: 'symptom_records',
-};
-
-/** Coluna que ancora o registro na linha do tempo — varia por tabela. */
-const COLUNA_TEMPO: Record<TipoRegistro, 'started_at' | 'recorded_at'> = {
-  amamentar: 'started_at',
-  mamadeira: 'started_at',
-  fralda: 'recorded_at',
-  sono: 'started_at',
-  humor: 'recorded_at',
-  sintoma: 'recorded_at',
-};
-
-// ============================================================
-// VOCABULÁRIO FECHADO
-// O que a mãe toca são rótulos em PT-BR; o que vai pro banco são estes slugs.
-// Manter fechado é o que deixa o dado agregável pro motor de personalização.
-// ============================================================
-
-/**
- * Rótulos de humor são SUBSTANTIVOS, nunca adjetivos: `sex` é nullable e o app
- * não sabe o gênero do bebê. "Agitação", nunca "agitado(a)".
- */
-export const HUMORES: { value: Humor; label: string }[] = [
-  { value: 'happy', label: 'Alegria' },
-  { value: 'calm', label: 'Tranquilidade' },
-  { value: 'crying', label: 'Choro' },
-  { value: 'sleepy', label: 'Com sono' },
-  { value: 'agitated', label: 'Agitação' },
-  { value: 'irritated', label: 'Incômodo' },
-];
-
-/**
- * Motivo provável do humor. 'unknown' ("Não sei") é resposta de primeira classe:
- * a mãe não precisa ter explicação pro que o bebê sente.
- */
-export const MOTIVOS_HUMOR: { value: string; label: string }[] = [
-  { value: 'hunger', label: 'Fome' },
-  { value: 'sleep', label: 'Sono' },
-  { value: 'diaper', label: 'Fralda' },
-  { value: 'colic', label: 'Cólica' },
-  { value: 'holding', label: 'Colo' },
-  { value: 'unknown', label: 'Não sei' },
-];
-
-/**
- * A coluna `symptom` não tem check no banco, mas o app trata como se tivesse:
- * texto livre nunca entra aqui. Os 3 primeiros vêm da convenção comentada na
- * migration; o resto é o que mais aparece em bebê. 'other' guarda a descrição
- * da mãe em `notes`.
- */
-export const SINTOMAS: { value: string; label: string }[] = [
-  { value: 'fever', label: 'Febre' },
-  { value: 'runny_nose', label: 'Coriza' },
-  { value: 'cough', label: 'Tosse' },
-  { value: 'vomit', label: 'Vômito' },
-  { value: 'diarrhea', label: 'Diarreia' },
-  { value: 'colic', label: 'Cólica' },
-  { value: 'rash', label: 'Manchas na pele' },
-  { value: 'other', label: 'Outro' },
-];
-
-/**
- * Fora dos chips, mas ainda com rótulo: 'irritability' saiu da lista porque colide
- * com o humor 'irritated' ("Incômodo") — irritação é humor, não sintoma. O banco não
- * foi tocado, então registro antigo continua legível na lista.
- */
-const SINTOMAS_APOSENTADOS: { value: string; label: string }[] = [
-  { value: 'irritability', label: 'Irritação' },
-];
-
-export const INTENSIDADES: { value: Intensidade; label: string }[] = [
-  { value: 'mild', label: 'Leve' },
-  { value: 'moderate', label: 'Moderada' },
-  { value: 'high', label: 'Forte' },
-];
+/** Tabela e coluna de tempo saem do schema — não há segunda tabela de verdade. */
+const TABELA = (tipo: TipoRegistro) => SCHEMAS[tipo].tabela;
+const COLUNA_TEMPO = (tipo: TipoRegistro) => SCHEMAS[tipo].colunaTempo;
 
 /** Linha já pronta pra lista "Últimos registros" — as 5 tabelas normalizadas num formato só. */
 export type RegistroRecente = {
@@ -180,89 +113,36 @@ export type PaginaRegistros = Pagina<RegistroRecente>;
 // ESCRITA
 // ============================================================
 
-export async function criarAmamentacao(
+/**
+ * Grava um registro qualquer.
+ *
+ * Uma função no lugar de cinco. O que variava entre elas — tabela, colunas
+ * fixas, coluna de tempo, quais campos existem — está declarado no schema, e o
+ * que sobra é idêntico: montar a linha, inserir, e traduzir falha em frase.
+ *
+ * A validação NÃO acontece aqui: quem valida é a tela, com a mesma
+ * `validarRegistro` do schema, antes de chegar neste ponto. Validar de novo
+ * criaria um segundo lugar para as regras discordarem — e o vocabulário fechado
+ * já é garantido lá, com a frase certa ao lado do campo certo.
+ *
+ * Sono não passa por aqui: ele abre em aberto e tem a regra de "só um por vez",
+ * que precisa consultar o banco. Ver `iniciarSono`.
+ */
+export async function criarRegistro(
+  tipo: TipoRegistro,
   babyId: string,
-  dados: NovaAmamentacao
-): Promise<Resultado<FeedingRecord | null>> {
-  const { data, error } = await supabase
-    .from('feeding_records')
-    .insert({ ...dados, baby_id: babyId, type: 'breast' })
-    .select()
-    .single();
+  valores: ValoresRegistro,
+  ocorridoEm: string
+): Promise<{ error: string | null }> {
+  const { error } = await supabase
+    .from(TABELA(tipo))
+    .insert({ ...linhaParaBanco(tipo, valores, ocorridoEm), baby_id: babyId });
 
   if (error) {
-    console.warn('[registros] falha ao salvar amamentação:', error.message);
-    return { data: null, error: ERRO_SALVAR };
+    console.warn(`[registros] falha ao salvar ${tipo}:`, error.message);
+    return { error: ERRO_SALVAR };
   }
-  return { data: data as FeedingRecord, error: null };
-}
-
-export async function criarMamadeira(
-  babyId: string,
-  dados: NovaMamadeira
-): Promise<Resultado<FeedingRecord | null>> {
-  const { data, error } = await supabase
-    .from('feeding_records')
-    .insert({ ...dados, baby_id: babyId, type: 'bottle' })
-    .select()
-    .single();
-
-  if (error) {
-    console.warn('[registros] falha ao salvar mamadeira:', error.message);
-    return { data: null, error: ERRO_SALVAR };
-  }
-  return { data: data as FeedingRecord, error: null };
-}
-
-export async function criarFralda(
-  babyId: string,
-  dados: NovaFralda
-): Promise<Resultado<DiaperRecord | null>> {
-  const { data, error } = await supabase
-    .from('diaper_records')
-    .insert({ ...dados, baby_id: babyId })
-    .select()
-    .single();
-
-  if (error) {
-    console.warn('[registros] falha ao salvar fralda:', error.message);
-    return { data: null, error: ERRO_SALVAR };
-  }
-  return { data: data as DiaperRecord, error: null };
-}
-
-export async function criarHumor(
-  babyId: string,
-  dados: NovoHumor
-): Promise<Resultado<MoodRecord | null>> {
-  const { data, error } = await supabase
-    .from('mood_records')
-    .insert({ ...dados, baby_id: babyId })
-    .select()
-    .single();
-
-  if (error) {
-    console.warn('[registros] falha ao salvar humor:', error.message);
-    return { data: null, error: ERRO_SALVAR };
-  }
-  return { data: data as MoodRecord, error: null };
-}
-
-export async function criarSintoma(
-  babyId: string,
-  dados: NovoSintoma
-): Promise<Resultado<SymptomRecord | null>> {
-  const { data, error } = await supabase
-    .from('symptom_records')
-    .insert({ ...dados, baby_id: babyId })
-    .select()
-    .single();
-
-  if (error) {
-    console.warn('[registros] falha ao salvar sintoma:', error.message);
-    return { data: null, error: ERRO_SALVAR };
-  }
-  return { data: data as SymptomRecord, error: null };
+  return { error: null };
 }
 
 /**
@@ -352,7 +232,7 @@ export async function apagarRegistro(
   tipo: TipoRegistro,
   id: string
 ): Promise<{ apagado: boolean; error: string | null }> {
-  const { data, error } = await supabase.from(TABELA[tipo]).delete().eq('id', id).select('id');
+  const { data, error } = await supabase.from(TABELA(tipo)).delete().eq('id', id).select('id');
 
   if (error) {
     console.warn(`[registros] falha ao apagar ${tipo}:`, error.message);
@@ -373,36 +253,13 @@ export async function apagarRegistro(
 // LEITURA
 // ============================================================
 
-const LADO: Record<LadoSeio, string> = {
-  left: 'Peito esquerdo',
-  right: 'Peito direito',
-  both: 'Os dois peitos',
-};
-
-const LEITE: Record<TipoLeite, string> = {
-  breast_milk: 'leite materno',
-  formula: 'fórmula',
-};
-
-const FRALDA: Record<ConteudoFralda, string> = {
-  pee: 'Xixi',
-  poop: 'Cocô',
-  both: 'Xixi e cocô',
-};
-
-function rotular(lista: { value: string; label: string }[], valor: string | null): string | null {
-  if (!valor) return null;
-  // Registro antigo com valor fora da lista não some da tela: cai no próprio slug.
-  return lista.find((item) => item.value === valor)?.label ?? valor;
-}
-
 function resumirAlimentacao(r: FeedingRecord): string {
   if (r.type === 'bottle') {
-    const leite = r.bottle_type ? ` de ${LEITE[r.bottle_type]}` : '';
+    const leite = r.bottle_type ? ` de ${rotularValor(LEITES, r.bottle_type)}` : '';
     return r.amount_ml ? `${r.amount_ml} ml${leite}` : `Mamadeira${leite}`;
   }
 
-  const lado = r.side ? LADO[r.side] : 'Peito';
+  const lado = (r.side ? rotularValor(LADOS, r.side) : null) ?? 'Peito';
   if (!r.duration_seconds) return lado;
   return `${lado} · ${formatarDuracaoMin(Math.round(r.duration_seconds / 60))}`;
 }
@@ -423,8 +280,8 @@ function resumirSono(r: SleepRecord, agora: Date): string {
 }
 
 function resumirHumor(r: MoodRecord): string {
-  const humor = rotular(HUMORES, r.mood) ?? r.mood;
-  const motivo = rotular(MOTIVOS_HUMOR, r.probable_reason);
+  const humor = rotularValor(HUMORES, r.mood) ?? r.mood;
+  const motivo = rotularValor(MOTIVOS_HUMOR, r.probable_reason);
   if (!motivo) return humor;
   // 'unknown' vira "motivo não identificado", não "por Não sei".
   if (r.probable_reason === 'unknown') return `${humor} · motivo não identificado`;
@@ -436,8 +293,8 @@ function resumirSintoma(r: SymptomRecord): string {
   const nome =
     r.symptom === 'other' && r.notes?.trim()
       ? r.notes.trim()
-      : rotular([...SINTOMAS, ...SINTOMAS_APOSENTADOS], r.symptom) ?? r.symptom;
-  const intensidade = rotular(INTENSIDADES, r.intensity);
+      : rotularValor([...SINTOMAS, ...SINTOMAS_APOSENTADOS], r.symptom) ?? r.symptom;
+  const intensidade = rotularValor(INTENSIDADES, r.intensity);
   if (!intensidade) return nome;
   return `${nome} · ${intensidade.toLowerCase()}`;
 }
@@ -467,7 +324,7 @@ function camposDe(tipo: TipoRegistro, linha: any, agora: Date): CampoDetalhe[] {
 
   if (tipo === 'amamentar') {
     const r = linha as FeedingRecord;
-    push('Lado', r.side ? LADO[r.side] : null);
+    push('Lado', r.side ? rotularValor(LADOS, r.side) : null);
     push(
       'Duração',
       r.duration_seconds ? formatarDuracaoMin(Math.round(r.duration_seconds / 60)) : null
@@ -476,7 +333,7 @@ function camposDe(tipo: TipoRegistro, linha: any, agora: Date): CampoDetalhe[] {
   } else if (tipo === 'mamadeira') {
     const r = linha as FeedingRecord;
     push('Quantidade', r.amount_ml ? `${r.amount_ml} ml` : null);
-    push('Tipo de leite', r.bottle_type ? LEITE[r.bottle_type] : null);
+    push('Tipo de leite', r.bottle_type ? rotularValor(LEITES, r.bottle_type) : null);
     push('Início', formatarMomento(r.started_at, agora));
   } else if (tipo === 'sono') {
     const r = linha as SleepRecord;
@@ -490,23 +347,23 @@ function camposDe(tipo: TipoRegistro, linha: any, agora: Date): CampoDetalhe[] {
     }
   } else if (tipo === 'fralda') {
     const r = linha as DiaperRecord;
-    push('Conteúdo', FRALDA[r.content]);
+    push('Conteúdo', (rotularValor(CONTEUDOS_FRALDA, r.content) ?? r.content));
     push('Quando', formatarMomento(r.recorded_at, agora));
   } else if (tipo === 'humor') {
     const r = linha as MoodRecord;
-    push('Estado', rotular(HUMORES, r.mood) ?? r.mood);
+    push('Estado', rotularValor(HUMORES, r.mood) ?? r.mood);
     // 'unknown' vira frase, não "Não sei" pendurado num rótulo de motivo.
     push(
       'Motivo provável',
       r.probable_reason === 'unknown'
         ? 'não identificado'
-        : rotular(MOTIVOS_HUMOR, r.probable_reason)
+        : rotularValor(MOTIVOS_HUMOR, r.probable_reason)
     );
     push('Quando', formatarMomento(r.recorded_at, agora));
   } else if (tipo === 'sintoma') {
     const r = linha as SymptomRecord;
-    push('Sintoma', rotular([...SINTOMAS, ...SINTOMAS_APOSENTADOS], r.symptom) ?? r.symptom);
-    push('Intensidade', rotular(INTENSIDADES, r.intensity));
+    push('Sintoma', rotularValor([...SINTOMAS, ...SINTOMAS_APOSENTADOS], r.symptom) ?? r.symptom);
+    push('Intensidade', rotularValor(INTENSIDADES, r.intensity));
     push('Quando', formatarMomento(r.recorded_at, agora));
   }
 
@@ -526,7 +383,7 @@ export async function buscarRegistro(
   agora: Date = new Date()
 ): Promise<Resultado<DetalheRegistro | null>> {
   const { data, error } = await supabase
-    .from(TABELA[tipo])
+    .from(TABELA(tipo))
     .select('*')
     .eq('id', id)
     .maybeSingle();
@@ -543,7 +400,7 @@ export async function buscarRegistro(
     tipo === 'sono'
       ? resumirSono(data as SleepRecord, agora)
       : tipo === 'fralda'
-        ? FRALDA[(data as DiaperRecord).content]
+        ? (rotularValor(CONTEUDOS_FRALDA, (data as DiaperRecord).content) ?? (data as DiaperRecord).content)
         : tipo === 'humor'
           ? resumirHumor(data as MoodRecord)
           : tipo === 'sintoma'
@@ -554,7 +411,7 @@ export async function buscarRegistro(
     data: {
       id: data.id,
       tipo,
-      ocorridoEm: data[COLUNA_TEMPO[tipo]],
+      ocorridoEm: data[COLUNA_TEMPO(tipo)],
       resumo,
       emAndamento,
       campos: camposDe(tipo, data, agora),
@@ -741,7 +598,7 @@ export async function listarRegistros(
       id: r.id,
       tipo: 'fralda' as TipoRegistro,
       ocorridoEm: r.recorded_at,
-      resumo: FRALDA[r.content],
+      resumo: (rotularValor(CONTEUDOS_FRALDA, r.content) ?? r.content),
       emAndamento: false,
     })),
     ...((humor.data ?? []) as MoodRecord[]).map((r) => ({

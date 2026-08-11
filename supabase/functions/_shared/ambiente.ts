@@ -27,6 +27,15 @@
  * são chaves de API, e log é lugar que muita gente lê.
  */
 
+/**
+ * O `Deno` global, declarado só para o `tsc` do projeto.
+ *
+ * Este módulo é o único de `_shared` que o teste do Node importa, e o `tsc`
+ * roda sobre a árvore inteira — sem esta linha ele não conhece `Deno`. Em
+ * tempo de execução nada muda: `declare` é apagado, e no Deno o global é real.
+ */
+declare const Deno: { env: { get(nome: string): string | undefined } };
+
 /** Só o nome e o que sobrava — nunca o valor. */
 function avisar(nome: string, bruto: string, limpo: string): void {
   const sobra = bruto.length - limpo.length;
