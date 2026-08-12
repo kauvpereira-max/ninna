@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
 import { BabyProvider, useBaby } from '../src/contexts/BabyContext';
 import { BannerInstalar } from '../src/components/BannerInstalar';
 import { CAMINHO_NOVA_SENHA } from '../src/lib/urls';
+import { guardarIndicacao, refDaUrl } from '../src/lib/indicacao';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -16,6 +17,21 @@ function RootNavigator() {
   const segments = useSegments();
   const pathname = usePathname();
   const router = useRouter();
+
+  /**
+   * O `?ref=` da afiliada, capturado ANTES de qualquer redirecionamento.
+   *
+   * Fica aqui, e não na tela de cadastro, por uma razão de ordem: o link da
+   * afiliada aponta para a raiz do app, e a raiz redireciona para o login em
+   * milissegundos. Se a leitura morasse no `signup.tsx`, o `?ref=` já teria sido
+   * descartado pela navegação antes de alguém olhar para ele.
+   *
+   * Efeito nenhum quando não há `ref` — e é o caso da esmagadora maioria das
+   * aberturas do app, inclusive todas as da mãe que já é usuária.
+   */
+  useEffect(() => {
+    void guardarIndicacao(refDaUrl());
+  }, []);
 
   useEffect(() => {
     if (authLoading) return;

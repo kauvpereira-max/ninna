@@ -3,6 +3,7 @@ import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { limparBebeAtivo } from '../lib/preferencias';
 import { traduzirErroAuth } from '../lib/mensagens-auth';
+import { consumirIndicacao } from '../lib/indicacao';
 import { urlRetornoResetSenha, retornoDeRecuperacaoNaUrl } from '../lib/urls';
 
 type AuthContextValue = {
@@ -82,6 +83,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       options: { data: { nome: nome.trim() } },
     });
     if (error) return { error: traduzirErroAuth(error), precisaConfirmarEmail: false };
+
+    /**
+     * A indicação, se houver — e ela NUNCA atrapalha o cadastro.
+     *
+     * Fica depois do `if (error)` porque só há o que atribuir se a conta nasceu.
+     * E o resultado é ignorado de propósito: o banco decide sozinho se o código
+     * vale (`registrar_indicacao` na migration 008), e a mãe que está criando a
+     * conta não tem nada a ver com um link de afiliada quebrado.
+     *
+     * Sem `await` bloqueando o retorno: comissão é assunto do programa de
+     * afiliadas, o cadastro é da mãe, e o segundo não espera pelo primeiro.
+     */
+    void (async () => {
+      const codigo = await consumirIndicacao();
+      if (!codigo) return;
+      const { error: erroRef } = await supabase.rpc('registrar_indicacao', {
+        codigo_ref: codigo,
+      });
+      if (erroRef) console.warn('[indicacao] falha ao registrar origem:', erroRef.message);
+    })();
 
     // No beta a confirmação de e-mail está DESLIGADA no painel do Supabase, então o
     // signUp já devolve sessão e o RootNavigator leva a mãe direto pro cadastro do
