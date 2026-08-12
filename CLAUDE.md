@@ -273,7 +273,9 @@ Todos puros, rodando no Node sem banco — exceto os quatro últimos:
 - `teste-registros-sql.ts` — reprova se a `005` divergir do gerador
 - `teste-horario.ts`, `teste-paginacao.ts`
 - `teste-rls-delete.mjs` — contra o banco real. Prova que A não apaga registro de
-  B. **Obrigatório depois de qualquer mexida em policy**
+  B, e que medicação recusa edição no banco (gatilho da `007`) enquanto fralda
+  continua editável — o controle que impede um gatilho genérico de quebrar o
+  encerrar sono. **Obrigatório depois de qualquer mexida em policy ou gatilho**
 - `teste-motor-banco.ts` — o motor contra a massa semeada
 - `teste-lista-banco.ts` — a lista paginada contra o **PostgREST**, não contra um
   array. Metade do cursor desceu para o banco no bloco 3, e Node não tem

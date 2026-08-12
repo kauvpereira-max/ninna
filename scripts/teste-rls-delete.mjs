@@ -642,6 +642,12 @@ async function main() {
     `RLS correta em leitura, edição e exclusão — ${TIPOS.length} casos sobre ` +
       `${TABELAS_DE_REGISTRO.length} tabelas. Dados de teste removidos.`
   );
+  // A imutabilidade não é RLS e não entra na contagem acima. Dizer só "N casos
+  // sobre M tabelas" deixaria de fora a única coisa aqui que prova um gatilho —
+  // e resumo que não conta tudo que rodou é resumo que engana quem confia nele.
+  console.log(
+    'E o gatilho da 007: medicação recusa edição no banco, fralda continua editável.'
+  );
   console.log(
     `\nAs duas contas de auth continuam no projeto (apagá-las exigiria service_role,` +
       ` que este script se recusa a usar). São sempre as mesmas:\n` +
