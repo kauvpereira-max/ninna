@@ -94,10 +94,11 @@ reprovavam o `OPTIONS` e o navegador cancelava o POST antes de enviá-lo. Do lad
 da mãe: "não consegui abrir a tela de pagamento". Do lado do log: nenhum erro da
 Stripe, porque o corpo da função nunca rodou — só `OPTIONS → 405` e nenhum POST.
 
-Duas perguntas, então, e não uma:
+Três perguntas, então, e não uma:
 
 1. este teste falha quando o código quebra? (regra 2)
-2. este teste roda onde a falha mora?
+2. este teste roda onde a falha mora? (regra 2b)
+3. este teste **roda**? (regra 2c)
 
 O que a nº 2 cobre e a nº 1 não: CORS, service worker, `expo export` vs Metro,
 iOS instalado vs aba do Safari, Deno vs Node. `expo export --platform web` já
@@ -108,6 +109,35 @@ Para as funções, a prova mora em `curl` contra o que está no ar, **com contro
 preflight de origem conhecida volta 204 **com** `Allow-Origin`, e de origem
 desconhecida volta 204 **sem** ele. Sem o segundo caso, `*` passaria pelo
 primeiro e a lista de origens não estaria provada.
+
+### 2c. A terceira irmã: teste que não roda também não defende nada
+
+A 2 é sobre teste que passa vazio. A 2b é sobre teste rigoroso no runtime
+errado. Esta é sobre o caso que não ocorre a ninguém, porque parece cedo demais
+para dar errado: **o teste nem carrega.**
+
+Em 12/08/2026, o `teste-registro-schema` estourava com `ERR_MODULE_NOT_FOUND`
+antes da primeira asserção — e estava assim desde `ae86d1b`, quando o
+`src/theme/categorias.ts` nasceu, no bloco 3. Duas causas empilhadas, as duas a
+mesma convenção violada:
+
+- `import { colors } from './tokens'`, sem a extensão `.ts` que Node e Deno
+  exigem e só o Metro perdoa;
+- `import { Ionicons }` como valor, arrastando o `@expo/vector-icons` inteiro
+  para dentro do Node — quando ele só aparece em `keyof typeof
+  Ionicons.glyphMap`, ou seja, posição de tipo. Virou `import type`.
+
+O que torna isso diferente das outras duas: **o `tsc` passou o tempo todo**,
+porque para o TypeScript `'./tokens'` resolve. E o `expo export` também, porque
+o Metro resolve. Os três do fechamento de bloco existem justamente porque cada
+um enxerga o que os outros não enxergam — e aqui só o segundo enxergou.
+
+E o dano não é o teste quebrado: é que o `CLAUDE.md` afirmava, nesse período,
+que aquele teste defendia "o que cada tipo pergunta, grava e mostra". A
+afirmação esteve falsa por vários commits e ninguém tinha como saber.
+
+> Suíte que não é rodada inteira não é suíte — é uma lista de arquivos.
+> Rodar todos, e ler o resultado de cada um, faz parte de fechar bloco.
 
 ### 3. Push a cada bloco fechado, não acumulado
 
@@ -390,6 +420,14 @@ previsões → canal nativo.
   de "parece travado". Sobra a hipótese do `setInterval` estrangulado pelo
   Safari, que nenhum teste de Node alcança — regra 2b. O procedimento de 3
   minutos que separa as duas está em `docs/teste-manual-tick-do-sono.md`
+- **Onze imports relativos de runtime sem `.ts`** em `src/hooks/` e `src/lib/`
+  (`useHistorico`, `usePadroes`, `useRegistrosRecentes`, `afiliadas`,
+  `assinatura`, `assistente`, `babies`, `registros`). Não quebram nada hoje
+  **porque esses módulos importam `./supabase`**, que arrasta AsyncStorage, e
+  por isso nenhum teste do Node os carrega. É a mesma bomba da regra 2c com o
+  pino no lugar: o dia em que alguém escrever um teste puro para `assinatura.ts`
+  ou `afiliadas.ts`, ela vai parecer mistério novo em vez de dívida conhecida.
+  Consertar é limpeza — commit separado, nunca de carona
 - `padroes.ts` ainda chama os campos de entrada de `started_at`/`ended_at`, nomes
   das colunas que a `006` vai apagar. São o contrato do módulo puro, não do
   banco: `listarParaPadroes` e `consultas.ts` traduzem. Renomear é limpeza, e não
