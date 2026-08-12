@@ -156,7 +156,9 @@ o corolário do "nome de par" estão no `PRODUTO.md` §8-bis.
 
 ## Decisões já tomadas — não reabrir sem necessidade
 
-- **20 tipos de registro** — 19 no ar desde 12/08/2026; falta só **Habilidade**,
+- **20 tipos de registro** — 19 no ar e CONFERIDOS NO NAVEGADOR em 12/08/2026
+  (atalhos, tela "Mais", campo decimal com vírgula, confirmação da medicação,
+  ausência do editar em saúde, e a frase de comparação de peso); falta só **Habilidade**,
   que não é o último da fila e sim decisão de produto em aberto (PRODUTO.md §3.4,
   "Habilidade — o tipo que ficou"): a LISTA de marcos é a norma, e mostrá-la é a
   comparação acontecendo sem o app escrever uma palavra. Os 20: Amamentação, Mamadeira,

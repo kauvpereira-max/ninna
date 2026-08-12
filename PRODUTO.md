@@ -801,7 +801,7 @@ assistente de último para primeiro. Agora o canal nativo desce de segundo para
 | 1c | **Virada para modo live** | 0,5 dia | conta Stripe | Meio dia que não pode acontecer no dia do lançamento — detalhe abaixo |
 | 1b | Painel de afiliadas (§3.5) | 1,5–2 sem | — | Depende do webhook da Stripe do bloco 1 — antes dele, seria construir duas vezes |
 | 2 | Refatorar registro (schema-driven) | 1,5 sem | — | Bloqueia o bloco 3 e paga a si mesmo no quinto tipo |
-| 3 | Monitoramento ampliado (14 tipos) | 3–4 sem | — | **Bloqueado por uma decisão de banco** — `docs/decisao-tabela-de-registros.md`. Cada tipo alarga a superfície de consulta do assistente |
+| 3 | ~~Monitoramento ampliado~~ | — | — | ✅ **FEITO em 11–12/08/2026.** 19 tipos no ar e conferidos no navegador. Falta Habilidade, que não é o último da fila — ver o fim do §3.4 |
 | 4 | Notificações (Web Push) | 2–3 sem | 1 sem | Funciona em PWA instalada; o agendador é o mesmo que o nativo usaria |
 | 5 | Previsões | 2–3 sem | 4+ sem | Precisa do histórico acumulado pelos blocos 2–3 para o backtesting ter o que testar |
 | 6 | **Canal nativo** | 2–3 sem | 1–3 sem | Último, e em paralelo a mães já usando e já pagando |

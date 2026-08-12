@@ -39,5 +39,19 @@ e não o app; refaz o passo a passo.
 antes, vai precisar entrar de novo lá dentro — funciona igual, mas é um login a
 mais sem motivo.
 
+## Se algum dia você esquecer a senha
+
+Na tela de entrar tem **"Esqueci minha senha"**. Você escreve seu e-mail e chega
+um link para escolher outra.
+
+**Duas coisas que valem saber antes de precisar:**
+
+- **Se não chegar em um minuto, olha na caixa de spam.** O e-mail da Ninna vem de
+  um endereço novo, e caixas de e-mail costumam desconfiar de quem elas ainda não
+  conhecem. Achando lá, toca em **"não é spam"** — assim os próximos vêm direto
+  pra caixa de entrada.
+- **O link vale por 1 hora.** Depois disso ele para de funcionar e aparece "link
+  expirado". Não é erro: é só pedir outro na mesma tela.
+
 Qualquer coisa travando, me chama. Não tem pergunta boba aqui: se ficou confuso
 pra você, está confuso mesmo, e é isso que eu preciso saber.
