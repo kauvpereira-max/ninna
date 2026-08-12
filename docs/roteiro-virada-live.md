@@ -167,6 +167,42 @@ compara. A saída não tem segredo dentro: pode colar no chat inteira.
 > adiantou — o caminho seguro era mais trabalhoso que o inseguro. Um script não
 > é lembrete: é o caminho seguro passando a ser o mais curto.
 
+#### São DOIS scripts, e os dois existem de propósito
+
+| Arquivo | Shell | Onde é usado |
+|---|---|---|
+| `scripts/conferir-secret.sh` | Git Bash | é o shell que roda os testes deste projeto |
+| `scripts/conferir-secret.ps1` | PowerShell | é o terminal de trabalho |
+
+Não é redundância por descuido. Em 12/08/2026 o `.sh` foi escrito, provado, e
+mesmo assim **não foi usado quatro vezes seguidas** — a linha voltava sem saída
+nenhuma, e a causa era que PowerShell não executa `.sh`.
+
+> O script certo, no shell errado, é um script que não existe.
+
+É o raciocínio do próprio `.sh` um nível abaixo: não adianta o caminho seguro ser
+o mais curto se ele não abre.
+
+**O preço disso é a deriva**, e ele é real: duas cópias divergem na primeira
+correção que só uma receber — a mesma razão pela qual `scripts/varredura.ts` é
+extrator único. Aqui a duplicação se aceita porque os dois shells são usados de
+verdade, e o antídoto é a calibração: os dois se conferem contra um `price_id`,
+que é público e tem digest conhecido dos dois lados. Mexeu num, calibre os dois.
+
+#### O que foi provado de cada um, e o que não foi
+
+- **`.sh` — ponta a ponta.** Rodado inteiro contra `STRIPE_PRICE_MENSAL` com o
+  `price_1U3ixx…` alimentado por pipe: `BATE`. Hash, leitura do digest do
+  servidor e comparação, tudo exercitado.
+- **`.ps1` — as duas metades, separadas.** O hash local e a leitura do servidor
+  foram rodados com as mesmas expressões do arquivo e deram o mesmo digest do
+  `.sh`. **A exceção é o `Read-Host -AsSecureString`**, que ignora pipe e espera
+  console de verdade — travou até ser morto. Ele exige um humano, e por isso é a
+  única linha do arquivo que nenhuma automação prova.
+
+Isso importa porque ferramenta de conferência que quebra em vez de conferir não
+diz "NAO BATE": ela estoura, e o susto chega no lugar errado.
+
 #### ⚠️ E o defeito de digitação que responde "Finished"
 
 ```
@@ -402,6 +438,50 @@ o `STRIPE_WEBHOOK_SECRET` agora é outro. Isso é desejado, e é a razão de o
 ensaio vir antes.
 
 **Conferir:** ferramenta **D**, com a régua já calibrada.
+
+### ✅ Feito em 12/08/2026 — e o que foi conferido de qual jeito
+
+Os quatro secrets gravados às `21:17:32–44Z`, redeploy às `21:25:19Z`
+(`assinatura` v16, `stripe-webhook` v17). A ordem importa e está certa: o deploy
+é 8 minutos depois do último `secrets set`, então as instâncias no ar nasceram
+com o ambiente live.
+
+| O quê | Como foi provado |
+|---|---|
+| Os quatro `updated_at` | `secrets list`, todos de minutos antes |
+| Os dois `price_id` | digest SHA-256, e cruzados com a ferramenta B |
+| `STRIPE_API_KEY`, `STRIPE_WEBHOOK_SECRET` | **não conferidos por digest** — ver abaixo |
+| Os quatro presentes na instância nova | prova de runtime nº 4 (400, não 500) |
+
+**A conferência por digest dos dois secretos foi deliberadamente pulada**, e a
+troca é defensável: o *Send test event* do painel live prova o
+`STRIPE_WEBHOOK_SECRET` **melhor** que o digest, porque prova numa entrega real
+assinada pela Stripe — e de quebra prova o `constructEventAsync`, que nenhuma
+assinatura forjada distingue do `constructEvent`.
+
+Escolha o tipo de evento **fora dos seis** (`payment_intent.succeeded` serve). A
+verificação de assinatura roda **antes** do `EVENTOS.has`, então:
+
+- **200 `ignorado`** = segredo certo, entrega real verificada, e **nada escrito
+  no banco**;
+- **400** = segredo errado, descoberto agora e não na primeira mãe pagante.
+
+O que continua sem prova é o `STRIPE_API_KEY`, e ela é o passo 6: nenhuma
+requisição daqui chega a tocar a Stripe.
+
+### As provas de runtime, e por que são sete e não cinco
+
+Rodadas contra o que está no ar, depois do redeploy. As três que carregam a prova:
+
+- **`OPTIONS` de origem desconhecida → 204 SEM `Allow-Origin`.** Sem este
+  controle, `*` passaria no caso de origem conhecida e a lista de origens não
+  estaria provada.
+- **`POST` com a anon key → `{"erro":"sem sessão"}`.** Sem `Authorization` o 401
+  vem do gateway (`verify_jwt`), antes de a função existir — não prova nada sobre
+  o código. Com a anon key o gateway libera e o corpo responde com o texto
+  **dele**. É o `respondeuDeVerdade` aplicado a uma função.
+- **Webhook sem `stripe-signature` → 400, não 500.** A checagem de ambiente vem
+  antes da de assinatura, então 500 seria secret faltando ou vazio.
 
 ---
 

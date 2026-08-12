@@ -5,9 +5,13 @@
 // três cópias do mesmo mapa é como um tipo de registro acaba com cor diferente
 // em cada tela.
 
-import { Ionicons } from '@expo/vector-icons';
+// `import type`, e não import comum: `Ionicons` só aparece em posição de tipo
+// (`keyof typeof Ionicons.glyphMap`). Como valor, ele arrastaria o
+// `@expo/vector-icons` inteiro — que não resolve no Node — para dentro de
+// qualquer teste que importe este módulo.
+import type { Ionicons } from '@expo/vector-icons';
 import type { TipoRegistro } from '../lib/registros';
-import { colors } from './tokens';
+import { colors } from './tokens.ts';
 
 export type Categoria = {
   key: TipoRegistro;
