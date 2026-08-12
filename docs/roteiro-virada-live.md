@@ -487,9 +487,78 @@ Rodadas contra o que está no ar, depois do redeploy. As três que carregam a pr
 
 ## Passo 6 · A primeira fatura em BRL, de verdade (🧑 você)
 
-Assinar com **cartão real seu**, plano mensal, e cancelar depois.
+### ⏸️ PENDENTE POR DECISÃO — 12/08/2026. Não é esquecimento.
 
-O que olhar na fatura, que nenhum passo anterior mostra:
+**Decidido: não assinar com cartão próprio para ensaiar.** O passo 6 fecha na
+**primeira assinante real**.
+
+O raciocínio, para quem ler isto sem o contexto do dia:
+
+- o ciclo completo já foi provado **duas vezes hoje** — no sandbox e no modo
+  teste da conta — e o **código é o mesmo**. Nada nas funções distingue live de
+  teste: a diferença inteira mora nos quatro secrets;
+- o que sobra sem prova é **uma** coisa: se o `whsec_` gravado é o do endpoint
+  `ninna-live`, e não o de outro lugar;
+- e essa falha tem **sintoma visível e conserto de um comando**, o que a torna
+  aceitável de descobrir em produção.
+
+Não foi possível provar antes porque **o envio de evento de teste não existe no
+painel live** — procurado em quatro lugares (página do destino, menu de três
+pontos, "Entregas de eventos" e a aba "Eventos" do Workbench). O menu de três
+pontos oferece só *Desativar*, *Substituir segredo* e *Excluir*. Há a hipótese
+de a Stripe não permitir evento fabricado em live por princípio, mas ela **não
+foi confirmada** e não deve ser citada como se fosse.
+
+### 🚨 O que fazer se a primeira entrega der 400
+
+**Onde olhar, e quando:** a aba *Entregas de eventos* do `ninna-live`
+(`/acct_1U3FlcB5ktEdfFnD/workbench/webhooks/we_1U3j5JB5ktEdfFnDeRhGDR0H/events`),
+**nos minutos seguintes** à primeira assinatura. Hoje ela está em zero entregas,
+então a primeira linha que aparecer é a que importa.
+
+| O que aparece | O que significa |
+|---|---|
+| `customer.subscription.created` **200** | está tudo certo, e o passo 6 fechou |
+| `customer.subscription.created` **400** | `whsec_` errado — corrigir agora |
+| **nenhuma entrega** | não é o segredo: é o endpoint não assinado ou o Checkout não concluído |
+
+O conserto, e ele é o de sempre:
+
+```
+npx supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_... --project-ref hzjcimgutccsfrxuuhrl
+npx supabase functions deploy stripe-webhook assinatura --project-ref hzjcimgutccsfrxuuhrl
+```
+
+Atenção ao **espaço antes de `--project-ref`** — sem ele o valor grava
+corrompido e o comando ainda responde `Finished`. Confira por digest depois
+(`.\scripts\conferir-secret.ps1 STRIPE_WEBHOOK_SECRET`).
+
+**Depois de corrigir, reentregar:** a Stripe reentrega sozinha por até 3 dias,
+mas não se espera por isso com uma mãe pagando. Na linha da entrega falhada há
+*Reenviar*. Reentrega com o segredo certo grava a assinatura como se tivesse
+chegado na hora — o `stripe-webhook` é idempotente por `ultimo_evento_em`.
+
+### ⚠️ E o custo honesto dessa decisão, que é de produto e não técnico
+
+Se o `whsec_` estiver errado, **uma mãe paga e não recebe acesso** até alguém
+notar. A tela dela não trava — depois de 30 segundos ela lê:
+
+> "A confirmação ainda não chegou. Se o pagamento saiu, a assinatura entra
+> sozinha — pode fechar e voltar daqui a pouco."
+
+E aqui está a parte que precisa estar escrita: **essa frase é uma promessa que
+um `whsec_` errado transforma em mentira.** "Entra sozinha" pressupõe que a
+reentrega da Stripe vai funcionar — e ela não vai, porque toda reentrega falha
+na mesma verificação de assinatura. A copy que torna a falha suportável é a
+mesma que a torna invisível: a mãe vai embora tranquila, e ninguém é avisado.
+
+Por isso o "olhar nos minutos seguintes" acima não é zelo — é a única detecção
+que existe. Não há alerta, não há e-mail, e o gráfico de "Malsucedidos" do
+painel é semanal.
+
+### O que olhar na fatura quando ela vier
+
+O que nenhum passo anterior mostra:
 
 - **moeda BRL** e valor R$ 24,90;
 - o **descritivo na fatura do cartão** — sai como `NINNA BR`
@@ -562,6 +631,19 @@ vier primeiro.
 Gatilho, porque a data é generosa demais: no instante em que a primeira fatura
 real for conferida, este roteiro passa a descrever um estado que não existe mais
 e a informar decisões erradas ("monte o modo teste da conta" já foi feito).
+
+**Desde 12/08/2026 o gatilho tem dono definido:** o passo 6 fecha na primeira
+assinante real, não num ensaio com cartão próprio. Ou seja, este arquivo morre
+quando a primeira entrega de `customer.subscription.created` voltar 200.
+
+⚠️ **Uma parte dele precisa sobreviver, e não é onde está hoje.** O runbook do
+400 no passo 6 vale *depois* de o roteiro morrer — ele descreve o que fazer
+numa falha que só pode acontecer em produção, com uma mãe pagando. No dia de
+apagar, **mova o runbook para o `PRODUTO.md` §7 antes**, e só então apague.
+
+> Vencimento não é permissão para perder o que ainda serve. A regra 4 manda
+> apagar o que descreve uma transição concluída — não o que descreve como
+> consertar o estado que sobrou dela.
 
 No dia, **apagar, não renomear.** O que sobrevive dele — os dois `acct_`, a
 conferência do `enabled_events`, o corolário do sandbox — já está no
