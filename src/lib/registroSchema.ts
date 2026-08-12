@@ -52,7 +52,10 @@ export type TipoRegistro =
   | 'banho'
   | 'passeio'
   | 'leitura'
-  | 'atividade';
+  | 'atividade'
+  | 'comida'
+  | 'hidratacao'
+  | 'extracao';
 
 export const TIPOS_REGISTRO: TipoRegistro[] = [
   'amamentar',
@@ -65,6 +68,9 @@ export const TIPOS_REGISTRO: TipoRegistro[] = [
   'passeio',
   'leitura',
   'atividade',
+  'comida',
+  'hidratacao',
+  'extracao',
 ];
 
 export function ehTipoRegistro(valor: string | undefined): valor is TipoRegistro {
@@ -156,6 +162,28 @@ export const INTENSIDADES: OpcaoCampo[] = [
   { value: 'mild', label: 'Leve' },
   { value: 'moderate', label: 'Moderada' },
   { value: 'high', label: 'Forte' },
+];
+
+/**
+ * Quanto da comida foi. Não é avaliação — é quantidade.
+ *
+ * Os rótulos de resumo são VERBO, não adjetivo: "comeu metade" não tem gênero, e
+ * o app não sabe o do bebê. E nenhum deles julga: "Nada" vira "não quis", que é
+ * o que aconteceu, e não "recusou", que soa como falta.
+ */
+export const ACEITACAO: OpcaoCampo[] = [
+  { value: 'all', label: 'Tudo', noResumo: 'Comeu tudo' },
+  { value: 'half', label: 'Metade', noResumo: 'Comeu metade' },
+  { value: 'little', label: 'Pouco', noResumo: 'Comeu pouco' },
+  { value: 'none', label: 'Nada', noResumo: 'Não quis' },
+];
+
+/** O que tinha no copo. Fechado, como todo vocabulário que o motor vai somar. */
+export const LIQUIDOS: OpcaoCampo[] = [
+  { value: 'water', label: 'Água', noResumo: 'água' },
+  { value: 'tea', label: 'Chá', noResumo: 'chá' },
+  { value: 'juice', label: 'Suco', noResumo: 'suco' },
+  { value: 'other', label: 'Outro' },
 ];
 
 /**
@@ -307,6 +335,37 @@ export const MAX_DURACAO_MIN = 180;
  * O dia em que um tipo precisar de faixa própria, a saída é chave própria
  * (`duracao_leitura_s`) ou faixa condicionada ao tipo. Não é reduzir esta.
  */
+/**
+ * O campo de mililitros, compartilhado — e a faixa é a mesma pela mesma razão da
+ * duração: `amount_ml` é UMA coluna gerada.
+ *
+ * ⚠️ A colisão que o pré-requisito 3 previu para este grupo **não aconteceu**, e
+ * vale registrar por quê em vez de comemorar. Mamadeira, Hidratação e Extração
+ * cabem todas em 5–500 ml de verdade: meio litro é um teto de sanidade para as
+ * três, não um número escolhido para caber. O gerador aceita porque as faixas
+ * concordam — é o caso `DEVE_PASSAR` do teste, e compartilhar coluna é o
+ * desenho, não o erro.
+ *
+ * O dia em que uma delas precisar de faixa própria — e Extração é a candidata,
+ * se um dia se quiser somar produção diária —, a saída é chave própria, não
+ * alargar esta. Alargar para caber é como a faixa deixa de significar alguma
+ * coisa.
+ */
+const MILILITROS = (rotulo: string, erroFalta: string): CampoSchema => ({
+  entrada: 'numero',
+  chave: 'quantidade',
+  coluna: 'amount_ml',
+  rotulo,
+  placeholder: 'ex.: 90',
+  min: 5,
+  max: 500,
+  escala: 1,
+  digitos: 3,
+  obrigatorio: true,
+  erroFalta,
+  erroFaixa: erroFalta,
+});
+
 const DURACAO = (rotulo: string, placeholder: string): CampoSchema => ({
   entrada: 'numero',
   chave: 'duracao',
@@ -549,6 +608,96 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
         erroFalta: 'O que vocês fizeram?',
       },
       DURACAO('Duração em minutos (opcional)', 'ex.: 15'),
+      OBSERVACAO,
+    ],
+  },
+
+  // ============================================================
+  // ALIMENTAÇÃO — bloco 3, segunda leva
+  //
+  // Também sem campo de tipo novo: `escolha` e `numero` bastam. O que este grupo
+  // trouxe foi a primeira coluna gerada COMPARTILHADA de verdade — três tipos
+  // escrevendo em `amount_ml` — e a armadilha de motor da Extração.
+  // ============================================================
+
+  comida: {
+    tipo: 'comida',
+    titulo: 'Comida',
+    subtitulo: 'O que deu pra comer, e quanto foi.',
+    acao: 'Salvar refeição',
+    campos: [
+      HORA('Horário'),
+      {
+        entrada: 'escolha',
+        chave: 'aceitacao',
+        coluna: 'acceptance',
+        rotulo: 'Quanto comeu',
+        opcoes: ACEITACAO,
+        obrigatorio: true,
+        erroFalta: 'Quanto comeu?',
+      },
+      {
+        ...OBSERVACAO,
+        rotulo: 'O que foi (opcional)',
+        placeholder: 'Banana amassada, papinha de legumes…',
+      },
+    ],
+  },
+
+  hidratacao: {
+    tipo: 'hidratacao',
+    titulo: 'Hidratação',
+    subtitulo: 'Água, chá ou suco — fora das mamadas.',
+    acao: 'Salvar',
+    campos: [
+      HORA('Horário'),
+      {
+        entrada: 'escolha',
+        chave: 'liquido',
+        coluna: 'liquid',
+        rotulo: 'O que tinha no copo',
+        opcoes: LIQUIDOS,
+        obrigatorio: true,
+        erroFalta: 'Era água, chá ou suco?',
+      },
+      MILILITROS('Quantidade (ml)', 'Quantidade em ml, ex.: 50.'),
+      OBSERVACAO,
+    ],
+  },
+
+  /**
+   * ⚠️ EXTRAÇÃO É DA MÃE, NÃO DO BEBÊ — e é a única entrada do schema que
+   * registra algo que aconteceu com ela.
+   *
+   * O leite extraído pode nunca ter sido oferecido, ou ter sido horas depois — e
+   * aí quem conta como alimentação é a mamadeira, não isto. Somá-la ao alvo
+   * `mamada` do assistente faria a Ninna descrever uma rotina que não existe.
+   *
+   * O `teste-consultas.ts` já trava essa linha desde antes deste tipo existir, e
+   * o motor está protegido por fora: `listarParaPadroes` lê por tipo, e nunca
+   * pediu este.
+   *
+   * A linha continua pendurada no `baby_id` porque não existe entidade "mãe" no
+   * banco, e criar uma para um tipo é caro. Fica registrado como o que é: uma
+   * modelagem de conveniência, não uma afirmação de que a extração é do bebê.
+   */
+  extracao: {
+    tipo: 'extracao',
+    titulo: 'Extração',
+    subtitulo: 'O leite que você tirou — só seu, não entra na conta das mamadas.',
+    acao: 'Salvar extração',
+    campos: [
+      HORA('Começou às'),
+      MILILITROS('Quantidade (ml)', 'Quantidade em ml, ex.: 120.'),
+      {
+        entrada: 'escolha',
+        chave: 'lado',
+        coluna: 'side',
+        rotulo: 'Lado (opcional)',
+        opcoes: LADOS,
+        obrigatorio: false,
+      },
+      DURACAO('Duração em minutos (opcional)', 'ex.: 20'),
       OBSERVACAO,
     ],
   },
@@ -1054,6 +1203,71 @@ export const LEITURA: Record<TipoRegistro, LeituraDoTipo> = {
       const bruto = texto(l, 'activity');
       return listar([
         ['Atividade', rotularValor(ATIVIDADES, bruto) ?? bruto],
+        ['Duração', minutosDe(numero(l, 'duration_seconds'))],
+        ['Começou', formatarMomento(texto(l, 'ocorrido_em') ?? '', agora)],
+      ]);
+    },
+  },
+
+  // Alimentação. O resumo da comida é o VERBO ("Comeu metade"), porque é o que
+  // ela quer ler de relance — não "Comida · metade", que obriga a montar a frase
+  // de cabeça.
+  comida: {
+    resumir: (l) => {
+      const bruto = texto(l, 'acceptance');
+      return rotularValor(ACEITACAO, bruto) ?? bruto ?? 'Comida';
+    },
+    detalhar: (l, agora) => {
+      const bruto = texto(l, 'acceptance');
+      return listar([
+        ['Quanto comeu', bruto ? (ACEITACAO.find((o) => o.value === bruto)?.label ?? bruto) : null],
+        ['Quando', formatarMomento(texto(l, 'ocorrido_em') ?? '', agora)],
+      ]);
+    },
+  },
+
+  hidratacao: {
+    /**
+     * Os dois rótulos do mesmo valor, e é aqui que a distinção paga.
+     *
+     * `noResumo` é minúsculo porque existe para entrar no meio de uma frase —
+     * "50 ml de água". Sozinho na lista, o resumo é o começo da linha e precisa
+     * do `label`: "Chá", não "chá". Ler `noResumo` nos dois casos foi o primeiro
+     * jeito que eu escrevi, e o teste pegou.
+     */
+    resumir: (l) => {
+      const bruto = texto(l, 'liquid');
+      const ml = numero(l, 'amount_ml');
+      const naFrase = rotularValor(LIQUIDOS, bruto);
+      if (ml && naFrase) return `${ml} ml de ${naFrase.toLowerCase()}`;
+      if (ml) return `${ml} ml`;
+      if (!bruto) return 'Hidratação';
+      return LIQUIDOS.find((o) => o.value === bruto)?.label ?? bruto;
+    },
+    detalhar: (l, agora) => {
+      const ml = numero(l, 'amount_ml');
+      const bruto = texto(l, 'liquid');
+      return listar([
+        ['Quantidade', ml ? `${ml} ml` : null],
+        ['O que era', bruto ? (LIQUIDOS.find((o) => o.value === bruto)?.label ?? bruto) : null],
+        ['Quando', formatarMomento(texto(l, 'ocorrido_em') ?? '', agora)],
+      ]);
+    },
+  },
+
+  extracao: {
+    resumir: (l) => {
+      const ml = numero(l, 'amount_ml');
+      const lado = rotularValor(LADOS, texto(l, 'side'));
+      if (ml && lado) return `${ml} ml · ${lado.toLowerCase()}`;
+      if (ml) return `${ml} ml`;
+      return 'Extração';
+    },
+    detalhar: (l, agora) => {
+      const ml = numero(l, 'amount_ml');
+      return listar([
+        ['Quantidade', ml ? `${ml} ml` : null],
+        ['Lado', rotularValor(LADOS, texto(l, 'side'))],
         ['Duração', minutosDe(numero(l, 'duration_seconds'))],
         ['Começou', formatarMomento(texto(l, 'ocorrido_em') ?? '', agora)],
       ]);

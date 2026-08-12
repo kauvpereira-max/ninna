@@ -54,6 +54,11 @@ export const CATEGORIA_POR_TIPO: Record<TipoRegistro, Categoria> = {
   passeio: { key: 'passeio', label: 'Passeio', icon: 'walk', bg: colors.categoriaLavanda },
   leitura: { key: 'leitura', label: 'Leitura', icon: 'book', bg: colors.categoriaAmarelo },
   atividade: { key: 'atividade', label: 'Atividade', icon: 'color-palette', bg: colors.rosa500 },
+  // Alimentação. Comida e Hidratação puxam a paleta de alimentação que já existe
+  // (mamadeira); Extração é da mãe, e por isso não veste a cor do bebê.
+  comida: { key: 'comida', label: 'Comida', icon: 'restaurant', bg: colors.categoriaMenta },
+  hidratacao: { key: 'hidratacao', label: 'Hidratação', icon: 'water-outline', bg: colors.categoriaLavanda },
+  extracao: { key: 'extracao', label: 'Extração', icon: 'medical', bg: colors.neutro500 },
 };
 
 /**
@@ -74,6 +79,9 @@ export const TODOS_OS_TIPOS: TipoRegistro[] = [
   'passeio',
   'leitura',
   'atividade',
+  'comida',
+  'hidratacao',
+  'extracao',
 ];
 
 /**

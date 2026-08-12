@@ -245,6 +245,10 @@ const AGORA = local(SP, '2026-08-06', 17, 0);
     { tipo: 'passeio' as const, ocorridoEm: local(SP, '2026-08-06', 14) },
     { tipo: 'leitura' as const, ocorridoEm: local(SP, '2026-08-06', 15) },
     { tipo: 'atividade' as const, ocorridoEm: local(SP, '2026-08-06', 16) },
+    { tipo: 'comida' as const, ocorridoEm: local(SP, '2026-08-06', 17) },
+    { tipo: 'hidratacao' as const, ocorridoEm: local(SP, '2026-08-06', 15, 30) },
+    // A armadilha, agora presente de verdade na massa.
+    { tipo: 'extracao' as const, ocorridoEm: local(SP, '2026-08-06', 16, 30) },
   ];
 
   const m = responder(
@@ -261,7 +265,7 @@ const AGORA = local(SP, '2026-08-06', 17, 0);
   // E o controle: cada alvo novo do bloco 3 enxerga exatamente o seu, senão a
   // asserção acima passaria também num mapa em que os tipos novos não chegaram
   // a lugar nenhum.
-  for (const alvo of ['banho', 'passeio', 'leitura', 'atividade'] as const) {
+  for (const alvo of ['banho','passeio','leitura','atividade','comida','hidratacao','extracao'] as const) {
     const r = responder({ nome: 'contagem_do_dia', alvo, dia: 'hoje' }, umDeCada, ctx(AGORA));
     conferir(
       `o alvo ${alvo} conta o seu, e um só`,

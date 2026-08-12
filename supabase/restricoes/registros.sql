@@ -48,7 +48,7 @@ alter table registros add column if not exists amount_ml int generated always as
 alter table registros drop constraint if exists registros_tipo_check;
 alter table registros drop constraint if exists tipo_conhecido;
 alter table registros add  constraint tipo_conhecido check (
-  tipo in ('amamentar', 'mamadeira', 'fralda', 'sono', 'humor', 'sintoma', 'banho', 'passeio', 'leitura', 'atividade')
+  tipo in ('amamentar', 'mamadeira', 'fralda', 'sono', 'humor', 'sintoma', 'banho', 'passeio', 'leitura', 'atividade', 'comida', 'hidratacao', 'extracao')
 );
 
 -- ============================================================
@@ -147,18 +147,53 @@ alter table registros add  constraint exige_atividade_activity check (
   tipo <> 'atividade' or dados ? 'activity'
 );
 
+alter table registros drop constraint if exists vocab_comida_acceptance;
+alter table registros add  constraint vocab_comida_acceptance check (
+  tipo <> 'comida' or dados->>'acceptance' in ('all', 'half', 'little', 'none')
+);
+
+alter table registros drop constraint if exists exige_comida_acceptance;
+alter table registros add  constraint exige_comida_acceptance check (
+  tipo <> 'comida' or dados ? 'acceptance'
+);
+
+alter table registros drop constraint if exists vocab_hidratacao_liquid;
+alter table registros add  constraint vocab_hidratacao_liquid check (
+  tipo <> 'hidratacao' or dados->>'liquid' in ('water', 'tea', 'juice', 'other')
+);
+
+alter table registros drop constraint if exists exige_hidratacao_liquid;
+alter table registros add  constraint exige_hidratacao_liquid check (
+  tipo <> 'hidratacao' or dados ? 'liquid'
+);
+
+alter table registros drop constraint if exists exige_hidratacao_amount_ml;
+alter table registros add  constraint exige_hidratacao_amount_ml check (
+  tipo <> 'hidratacao' or dados ? 'amount_ml'
+);
+
+alter table registros drop constraint if exists exige_extracao_amount_ml;
+alter table registros add  constraint exige_extracao_amount_ml check (
+  tipo <> 'extracao' or dados ? 'amount_ml'
+);
+
+alter table registros drop constraint if exists vocab_extracao_side;
+alter table registros add  constraint vocab_extracao_side check (
+  tipo <> 'extracao' or dados->>'side' is null or dados->>'side' in ('left', 'right', 'both')
+);
+
 -- ============================================================
 -- CONFERÊNCIA — rodar depois
 -- ============================================================
 --
 -- 1 · As restrições esperadas estão todas lá?
---     Esperado: 18 linhas, nenhuma com faltando = true.
+--     Esperado: 25 linhas, nenhuma com faltando = true.
 --
 -- select nome, not exists (
 --          select 1 from pg_constraint
 --          where conrelid = 'registros'::regclass and conname = nome
 --        ) as faltando
--- from unnest(array['tipo_conhecido', 'faixa_duration_seconds', 'faixa_amount_ml', 'vocab_amamentar_side', 'exige_amamentar_side', 'exige_mamadeira_amount_ml', 'vocab_mamadeira_bottle_type', 'exige_mamadeira_bottle_type', 'vocab_fralda_content', 'exige_fralda_content', 'vocab_humor_mood', 'exige_humor_mood', 'vocab_humor_probable_reason', 'vocab_sintoma_symptom', 'exige_sintoma_symptom', 'vocab_sintoma_intensity', 'vocab_atividade_activity', 'exige_atividade_activity']) as nome
+-- from unnest(array['tipo_conhecido', 'faixa_duration_seconds', 'faixa_amount_ml', 'vocab_amamentar_side', 'exige_amamentar_side', 'exige_mamadeira_amount_ml', 'vocab_mamadeira_bottle_type', 'exige_mamadeira_bottle_type', 'vocab_fralda_content', 'exige_fralda_content', 'vocab_humor_mood', 'exige_humor_mood', 'vocab_humor_probable_reason', 'vocab_sintoma_symptom', 'exige_sintoma_symptom', 'vocab_sintoma_intensity', 'vocab_atividade_activity', 'exige_atividade_activity', 'vocab_comida_acceptance', 'exige_comida_acceptance', 'vocab_hidratacao_liquid', 'exige_hidratacao_liquid', 'exige_hidratacao_amount_ml', 'exige_extracao_amount_ml', 'vocab_extracao_side']) as nome
 -- order by faltando desc, nome;
 --
 -- 2 · Sobrou alguma que o schema não declara mais?
@@ -169,4 +204,4 @@ alter table registros add  constraint exige_atividade_activity check (
 -- from pg_constraint
 -- where conrelid = 'registros'::regclass
 --   and contype = 'c'
---   and conname <> all (array['tipo_conhecido', 'faixa_duration_seconds', 'faixa_amount_ml', 'vocab_amamentar_side', 'exige_amamentar_side', 'exige_mamadeira_amount_ml', 'vocab_mamadeira_bottle_type', 'exige_mamadeira_bottle_type', 'vocab_fralda_content', 'exige_fralda_content', 'vocab_humor_mood', 'exige_humor_mood', 'vocab_humor_probable_reason', 'vocab_sintoma_symptom', 'exige_sintoma_symptom', 'vocab_sintoma_intensity', 'vocab_atividade_activity', 'exige_atividade_activity']);
+--   and conname <> all (array['tipo_conhecido', 'faixa_duration_seconds', 'faixa_amount_ml', 'vocab_amamentar_side', 'exige_amamentar_side', 'exige_mamadeira_amount_ml', 'vocab_mamadeira_bottle_type', 'exige_mamadeira_bottle_type', 'vocab_fralda_content', 'exige_fralda_content', 'vocab_humor_mood', 'exige_humor_mood', 'vocab_humor_probable_reason', 'vocab_sintoma_symptom', 'exige_sintoma_symptom', 'vocab_sintoma_intensity', 'vocab_atividade_activity', 'exige_atividade_activity', 'vocab_comida_acceptance', 'exige_comida_acceptance', 'vocab_hidratacao_liquid', 'exige_hidratacao_liquid', 'exige_hidratacao_amount_ml', 'exige_extracao_amount_ml', 'vocab_extracao_side']);

@@ -75,7 +75,10 @@ export type TipoEvento =
   | 'banho'
   | 'passeio'
   | 'leitura'
-  | 'atividade';
+  | 'atividade'
+  | 'comida'
+  | 'hidratacao'
+  | 'extracao';
 
 // ------------------------------------------------------------------
 // Entrada
@@ -111,7 +114,13 @@ export type Alvo =
   | 'banho'
   | 'passeio'
   | 'leitura'
-  | 'atividade';
+  | 'atividade'
+  | 'comida'
+  | 'hidratacao'
+  // Alvo PRÓPRIO, e é isso que o mantém fora de `mamada`. Ver o aviso do
+  // `TIPOS_DO_ALVO`: extração é da mãe, e somá-la às mamadas do bebê faria a
+  // Ninna descrever uma rotina que não existe.
+  | 'extracao';
 
 export const ALVOS: Alvo[] = [
   'mamada',
@@ -123,6 +132,9 @@ export const ALVOS: Alvo[] = [
   'passeio',
   'leitura',
   'atividade',
+  'comida',
+  'hidratacao',
+  'extracao',
 ];
 
 /**
@@ -147,6 +159,10 @@ const TIPOS_DO_ALVO: Record<Alvo, TipoEvento[]> = {
   passeio: ['passeio'],
   leitura: ['leitura'],
   atividade: ['atividade'],
+  comida: ['comida'],
+  hidratacao: ['hidratacao'],
+  // Extração tem alvo PRÓPRIO, e nunca entra em `mamada` — ver o aviso acima.
+  extracao: ['extracao'],
 };
 
 export type Contexto = {

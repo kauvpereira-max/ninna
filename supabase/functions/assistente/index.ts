@@ -136,6 +136,11 @@ const TIPOS_CONHECIDOS = new Set<string>([
   'passeio',
   'leitura',
   'atividade',
+  // Alimentação. Extração entra como tipo conhecido — ela É registro do bebê no
+  // banco —, mas com alvo próprio: nunca dentro de `mamada`.
+  'comida',
+  'hidratacao',
+  'extracao',
 ]);
 
 /**

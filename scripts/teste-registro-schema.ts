@@ -282,6 +282,9 @@ const VALORES_CHEIOS: Record<TipoRegistro, ValoresRegistro> = {
   passeio: { hora: HORA_OK, duracao: '40', observacao: 'na praça' },
   leitura: { hora: HORA_OK, duracao: '15', observacao: 'O Grúfalo' },
   atividade: { hora: HORA_OK, atividade: 'tummy_time', duracao: '10', observacao: 'aguentou bem' },
+  comida: { hora: HORA_OK, aceitacao: 'half', observacao: 'papinha de legumes' },
+  hidratacao: { hora: HORA_OK, liquido: 'water', quantidade: '50', observacao: 'no copo' },
+  extracao: { hora: HORA_OK, quantidade: '120', lado: 'left', duracao: '20', observacao: 'de manhã' },
 };
 
 checar(
@@ -541,6 +544,57 @@ checar(
     new Set(comDuracao.map((c) => `${c.min}|${c.max}|${c.escala}`)).size === 1,
   `${comDuracao.length} tipos, ${new Set(comDuracao.map((c) => `${c.min}|${c.max}|${c.escala}`)).size} faixa(s) — ` +
     'uma coluna gerada tem uma faixa só'
+);
+
+console.log('\n— alimentação: os três do segundo grupo —\n');
+
+checar(
+  'comida se conta pelo verbo, não pelo rótulo do chip',
+  resumir('comida', linhaDoBanco({ acceptance: 'half' })) === 'Comeu metade',
+  '"Comida · metade" obrigaria a montar a frase de cabeça'
+);
+checar(
+  'e "Nada" não vira acusação',
+  resumir('comida', linhaDoBanco({ acceptance: 'none' })) === 'Não quis',
+  'o que aconteceu, não o que faltou'
+);
+checar(
+  'hidratação junta quantidade e líquido',
+  resumir('hidratacao', linhaDoBanco({ amount_ml: 50, liquid: 'water' })) === '50 ml de água'
+);
+checar(
+  'e sem quantidade fica só o líquido',
+  resumir('hidratacao', linhaDoBanco({ liquid: 'tea' })) === 'Chá'
+);
+checar(
+  'extração mostra quanto saiu, e de qual lado',
+  resumir('extracao', linhaDoBanco({ amount_ml: 120, side: 'left' })) === '120 ml · peito esquerdo'
+);
+checar(
+  'extração sem lado é só a quantidade',
+  resumir('extracao', linhaDoBanco({ amount_ml: 120 })) === '120 ml'
+);
+
+/**
+ * A faixa de `amount_ml` é COMPARTILHADA por três tipos, e a colisão que o
+ * pré-requisito 3 previu para este grupo **não aconteceu**.
+ *
+ * Isso não é o guarda falhando — é o caso `DEVE_PASSAR` dele. Mamadeira,
+ * Hidratação e Extração cabem em 5–500 ml de verdade; meio litro é teto de
+ * sanidade para as três, não um número escolhido para caber.
+ *
+ * Esta asserção é o que impede a resposta preguiçosa no dia em que uma delas
+ * quiser mais: alargar a faixa para caber faria o teste continuar passando e a
+ * faixa deixar de significar alguma coisa. Mudar aqui obriga a mudar o número
+ * escrito abaixo, que é o mesmo que dizer "isto foi decidido".
+ */
+const comMl = TIPOS_REGISTRO.map((t) => SCHEMAS[t].campos.find((c) => c.coluna === 'amount_ml'))
+  .filter((c): c is Extract<CampoSchema, { entrada: 'numero' }> => c?.entrada === 'numero');
+
+checar(
+  'os três tipos que escrevem em amount_ml declaram a MESMA faixa',
+  comMl.length === 3 && new Set(comMl.map((c) => `${c.min}|${c.max}`)).size === 1,
+  `${comMl.length} tipos, faixa ${comMl[0]?.min}–${comMl[0]?.max} ml — uma coluna gerada tem uma faixa só`
 );
 
 console.log('\n— os atalhos da Home, e o teto que eles têm —\n');

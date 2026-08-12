@@ -371,6 +371,27 @@ const ROTULO_ALVO: Record<Alvo, RotuloAlvo> = {
     plural: 'atividades',
     registrada: 'registrada',
   },
+  comida: {
+    ultimo: 'A última refeição',
+    ultimaEAnterior: 'a última refeição e a anterior',
+    singular: 'refeição',
+    plural: 'refeições',
+    registrada: 'registrada',
+  },
+  hidratacao: {
+    ultimo: 'A última vez que bebeu água',
+    ultimaEAnterior: 'a última vez que bebeu água e a anterior',
+    singular: 'registro de hidratação',
+    plural: 'registros de hidratação',
+    registrada: 'registrado',
+  },
+  extracao: {
+    ultimo: 'A última extração',
+    ultimaEAnterior: 'a última extração e a anterior',
+    singular: 'extração',
+    plural: 'extrações',
+    registrada: 'registrada',
+  },
 };
 
 /** Horário de relógio, exato — recall não arredonda (ver a emenda acima). */
