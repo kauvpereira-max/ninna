@@ -798,8 +798,8 @@ assistente de último para primeiro. Agora o canal nativo desce de segundo para
 |---|---|---:|---:|---|
 | 0 | Fechar o que está aberto | 1 sem | DNS | Semeador, SMTP (§11.2), projeto antigo, tela do assistente |
 | 1 | **Cobrança por Stripe** | 1 sem | — | O assistente tem custo marginal; cada dia grátis no ar é dinheiro saindo |
-| 1c | **Virada para modo live** | 0,5 dia | conta Stripe | Meio dia que não pode acontecer no dia do lançamento — detalhe abaixo |
-| 1b | Painel de afiliadas (§3.5) | 1,5–2 sem | — | Depende do webhook da Stripe do bloco 1 — antes dele, seria construir duas vezes |
+| 1c | **Virada para modo live** | 0,5 dia | 🕐 **em análise na Stripe desde 12/08/2026** | Meio dia que não pode acontecer no dia do lançamento — detalhe abaixo |
+| 1b | Painel de afiliadas (§3.5) | 1,5–2 sem | — | 🔨 **em construção desde 12/08/2026.** Depende do webhook da Stripe do bloco 1 — antes dele, seria construir duas vezes |
 | 2 | Refatorar registro (schema-driven) | 1,5 sem | — | Bloqueia o bloco 3 e paga a si mesmo no quinto tipo |
 | 3 | ~~Monitoramento ampliado~~ | — | — | ✅ **FEITO em 11–12/08/2026.** 19 tipos no ar e conferidos no navegador. Falta Habilidade, que não é o último da fila — ver o fim do §3.4 |
 | 4 | Notificações (Web Push) | 2–3 sem | 1 sem | Funciona em PWA instalada; o agendador é o mesmo que o nativo usaria |
@@ -811,6 +811,34 @@ Cobrando a partir da **semana 2**.
 
 O nativo soma 2–3 semanas de trabalho depois disso, mas o relógio dele deixa de
 importar — ninguém fica esperando.
+
+### 🕐 Bloco 1c — EM ANÁLISE NA STRIPE desde 12/08/2026
+
+**Conta enviada para ativação em 12/08/2026.** Categoria **Software**, descrição
+como SaaS de assinatura para acompanhamento de rotina de bebês — **sem linguagem
+de saúde**, que é a redação certa: descrever o produto como saúde convida uma
+análise mais longa e uma categoria de risco que a Ninna não é.
+
+O relógio agora é deles. **O que falta, para quando aprovar:**
+
+1. **Recriar produto e preços em modo live.** Modo teste e modo live são catálogos
+   separados na Stripe — nada do que existe hoje atravessa. Os `price_id` novos
+   entram por secret, não por commit: eles saíram do código de propósito, e é isso
+   que faz a virada não ser um deploy;
+2. **Criar o endpoint de webhook live**, com os mesmos 5 eventos. O `whsec_` é
+   outro: o de teste não atende o live;
+3. **Trocar os quatro secrets no Supabase** — e conferir com
+   `npx supabase secrets list`, não pela tela;
+4. **Conferir a primeira fatura em BRL** — moeda, imposto e o descritivo que
+   aparece na fatura do cartão dela. Descritivo errado vira contestação, e
+   contestação de R$24,90 custa mais que R$24,90.
+
+Os meios de pagamento no painel live são configuração à parte da de teste; Pix
+entra sem tocar em código, porque `payment_method_types` ficou de fora de
+propósito (ver o comentário na `assinatura/index.ts`).
+
+**Enquanto está em análise, nada bloqueia.** O app segue cobrando em modo teste,
+e o único custo de a análise demorar é o assistente rodando sem receita.
 
 ### Bloco 1c — a virada para modo live, e por que ela tem linha própria
 
