@@ -1,5 +1,20 @@
 # Proposta — os 14 tipos restantes
 
+> ## ✅ Executada em 11–12/08/2026 — 13 tipos, não 14
+>
+> Os quatro grupos estão em produção: eventos simples, alimentação, crescimento
+> (só registrar) e saúde. **19 tipos no app.**
+>
+> **E o título deste documento está errado.** Ele diz 14 porque copiou a frase do
+> `PRODUTO.md` §3.4 — que dizia 14 e listava 13 numa tabela de quatro grupos. O
+> que faltava era **Habilidade**, e eu herdei a tabela sem conferir a soma.
+>
+> Nenhum teste pegaria isso: os treze estão certos, e "falta um" não é afirmação
+> sobre código. Foi a pergunta *"onde o bloco 3 fecha?"* que achou.
+>
+> Habilidade não entrou por engano e ficou de fora por razão — ela é decisão de
+> outra natureza, e está no fim do §3.4 do `PRODUTO.md`.
+
 Escrita em 11/08/2026, depois do bloco 2 (schema) e da migração para `registros`.
 Fonte de escopo: `PRODUTO.md` §3.4 e §7.
 

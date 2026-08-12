@@ -358,7 +358,19 @@ novo é um eixo a mais sobre o qual a Ninna pode falar da Liz com a Liz. O
 assistente responde sobre o que existe registrado; a superfície de consulta
 cresce automaticamente com cada tipo.
 
-São os 14 restantes:
+São os 14 restantes — e **esta tabela lista 13**.
+
+> ⚠️ **Corrigido em 12/08/2026, depois de os 13 estarem em produção.** A frase
+> dizia 14, os quatro grupos somavam 13, e o que faltava era **Habilidade**. Ela
+> existe na lista de 20 tipos do `CLAUDE.md` e sumiu daqui — provavelmente porque
+> não coube em nenhum dos quatro grupos, que é o sintoma, não a causa.
+>
+> A `docs/proposta-14-tipos.md` herdou a tabela sem conferir a soma, e o bloco
+> inteiro foi construído sobre ela. Nenhum teste pegaria isso: os treze tipos
+> estão certos, e "falta um" não é uma afirmação sobre código.
+>
+> **Habilidade não é o décimo quarto item de uma fila** — é decisão de outra
+> natureza, e está no fim desta seção.
 
 | Grupo | Tipos | O que exige além da tabela |
 |---|---|---|
@@ -392,6 +404,46 @@ vez de tabela própria.
    obriga a rodar o `teste-rls-delete.mjs` (§11.4), que hoje está bloqueado**.
 
 **Risco: baixo**, exceto medicação, vacina e a curva de crescimento.
+
+---
+
+### Habilidade — o tipo que ficou, e por que ele não é "o último da fila"
+
+**Aberto em 12/08/2026, com os outros 13 em produção.**
+
+Marco de desenvolvimento — sorriu, sentou, engatinhou, primeira palavra. Ele é
+o lugar mais tentador do produto inteiro para a tese quebrar, e o risco não está
+em nenhuma frase: **está na lista.**
+
+Todo app concorrente mostra os marcos como uma sequência com idade esperada. No
+instante em que a Ninna desenha uma lista de habilidades, a mãe lê um checklist —
+e o que ela vê marcado é o que a filha já fez, e o que ela vê em branco é o que a
+filha **ainda não** fez. A comparação com a norma acontece na cabeça dela, sem o
+app escrever uma palavra. É o risco N8 sem precisar de deriva de copy.
+
+Isso o separa dos outros 19: eles registram algo que aconteceu, e a lista de
+opções é vocabulário. Aqui a lista de opções **é** a norma.
+
+**Três desenhos possíveis, e eles são produtos diferentes:**
+
+| | O que é | O que custa | O que arrisca |
+|---|---|---|---|
+| **Memória** | Texto livre + data: "o que ela fez pela primeira vez". Sem lista, sem sugestão | ~1 dia, e cabe no schema de hoje | Nada da tese. Também não responde "está na hora?" |
+| **Monitoramento** | Vocabulário fechado de marcos, com referência rotulada e desenhada, nunca narrada | Mesma conversa da curva da OMS | É o §0 inteiro. Precisa de fonte citada e de decisão consciente |
+| **Nenhum dos dois** | Habilidade sai da lista de 20 | Zero | Perde uma coisa que a mãe quer guardar |
+
+**O que a diferença revela:** o valor de "monitoramento" para a mãe é
+exatamente a comparação que a Ninna decidiu não fazer. Um checklist sem idade
+esperada não serve para nada; com idade esperada, é o concorrente.
+
+Já "memória" é legítimo, barato e compatível — mas é outra coisa. É guardar,
+não acompanhar, e talvez nem devesse aparecer entre uma fralda e uma mamada na
+Rotina.
+
+**Decisão pendente, e ela não bloqueia nada.** Os 19 tipos estão no ar; o bloco 3
+fecha sem Habilidade. Se ela for memória, entra quando houver espaço. Se for
+monitoramento, vai junto com a curva de crescimento, que é a outra conversa do
+§0 — e as duas merecem ser tomadas no mesmo dia, pelo mesmo raciocínio.
 
 ---
 
