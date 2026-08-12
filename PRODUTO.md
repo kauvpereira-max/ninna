@@ -894,6 +894,12 @@ Por isso o relógio subiu de 0,5 para 1 dia. **E não sobrou nenhum item com
 relógio de terceiro:** a aprovação era o único, e ela já veio. Tudo abaixo
 depende só de sentar e fazer.
 
+> 📋 **O roteiro executável está em `docs/roteiro-virada-live.md`** — seis passos
+> (a troca de secrets acontece **duas** vezes, porque um par de secrets = um
+> ambiente ativo), com a conferência de servidor de cada um, o que fazer com o
+> sandbox, e a divisão do que é clique seu e do que eu confiro. Ele vence quando
+> a primeira fatura real for conferida.
+
 1. **Recriar produto e preços na conta `ninna`.** Vale a pena montar o **modo
    teste dela primeiro** e repetir o teste ponta a ponta lá, antes do live: é o
    ensaio que separa "o preço novo está errado" de "o live está errado". Os
