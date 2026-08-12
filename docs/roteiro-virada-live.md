@@ -145,20 +145,40 @@ printf '%s' 'VALOR-QUE-VOCE-COLOU' | sha256sum
 Sem `\n` no fim — por isso `printf '%s'` e não `echo`. Se os dois batem, o
 Supabase tem exatamente o que você colou.
 
-#### ⚠️ Calibre a régua antes de usá-la
+#### ✅ A régua foi calibrada em 12/08/2026 — o digest é SHA-256 do valor cru
 
-Esse método assume que o digest é SHA-256 do valor cru. **A suposição não está
-provada**, e uma régua não calibrada que "não bate" não distingue *segredo
-errado* de *método errado*.
+Não é mais suposição. Os dois `price_id` são **públicos** (vão no bundle do
+checkout), então podiam ser calculados dos dois lados; os hashes bateram
+exatamente com o que o `secrets list` devolve. A régua foi provada num valor
+conhecido antes de ser usada num desconhecido.
 
-Calibre uma vez, de graça, com um valor que **não é segredo**: `price_id` é
-público (ele vai no bundle do checkout). Depois do passo 2, me mande o
-`price_...` do mensal em texto puro. Eu calculo o SHA-256 aqui, comparo com o
-digest do `secrets list`, e a partir daí a régua está provada — e as duas chaves
-de verdade podem ser conferidas só pelo hash.
+**Use o script, que faz isso sozinho e não deixa o valor sair do terminal:**
 
-Se não bater, o método morre e a alternativa é conferir por comportamento:
-chamar o checkout e ver se responde.
+```
+./scripts/conferir-secret.sh STRIPE_WEBHOOK_SECRET
+```
+
+Ele pede o valor sem ecoar, calcula o SHA-256, lê o digest do servidor e
+compara. A saída não tem segredo dentro: pode colar no chat inteira.
+
+> **Por que existe um script para três linhas de shell:** em 12/08/2026 três
+> chaves da Stripe foram coladas num chat em sequência, cada uma depois de a
+> anterior ter sido rolada por causa da exposição. O conselho estava certo e não
+> adiantou — o caminho seguro era mais trabalhoso que o inseguro. Um script não
+> é lembrete: é o caminho seguro passando a ser o mais curto.
+
+#### ⚠️ E o defeito de digitação que responde "Finished"
+
+```
+...VALOR --project-ref hzjci...     ← certo
+...VALOR--project-ref hzjci...      ← o valor gravado leva "--project-ref" colado
+```
+
+Sem o espaço, o `secrets set` **ainda responde `Finished supabase secrets set.`**
+— ele grava um valor corrompido e considera sucesso. Aconteceu no passo 2 e só
+apareceu porque o `updated_at` do `secrets list` continuava sendo do dia
+anterior. É mais uma razão para conferir por digest e não pela mensagem de
+saída.
 
 ---
 
