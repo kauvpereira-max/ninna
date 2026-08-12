@@ -372,13 +372,23 @@ live, a mãe pode escolher boleto **para uma assinatura** — e aí:
 Nada disso é defeito: é o boleto funcionando como boleto. Mas é uma decisão de
 produto que **não pode ser tomada por omissão**.
 
-Antes do passo 5, abra em **live**: Configurações → Pagamentos → Métodos de
-pagamento, e decida explicitamente o que fica ligado. O desenho atual do app —
-teste grátis de 7 dias, acesso imediato, comissão na primeira fatura — pressupõe
-pagamento instantâneo. **Cartão só** é a escolha coerente com ele.
+**Decidido em 12/08/2026: só cartão.** Em live, abra Configurações → Pagamentos →
+Métodos de pagamento e **desligue o boleto** — explicitamente, não por ele não
+ter aparecido.
 
-Pix tem a mesma pergunta e a mesma resposta por enquanto: entra quando for
-decidido, não quando aparecer sozinho no painel.
+A decisão e os três lugares onde o boleto quebra o desenho estão no `PRODUTO.md`
+§6, "em live, só cartão". O resumo operacional: oferecer boleto depois é
+**mudança de fluxo, não uma caixinha** — precisa de estado "aguardando
+pagamento" na tela da mãe, copy para ele, e uma decisão sobre o que a afiliada vê
+enquanto isso.
+
+**Conferir pelo servidor**, porque isto é configuração de painel:
+
+```
+curl.exe -s "https://api.stripe.com/v1/payment_method_configurations" -u "<chave live>:"
+```
+
+Confira que `boleto` está com `available: false` ou ausente, e `card` ativo.
 
 ---
 

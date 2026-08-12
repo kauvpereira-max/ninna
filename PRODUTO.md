@@ -729,6 +729,31 @@ quando houver acesso, ou por outro provedor (Mercado Pago, Pagar.me, Asaas) se a
 conversão pedir. **Pix Automático** (recorrência nativa em Pix) está chegando ao
 mercado em 2026 e vale reavaliar então — não vale esperar.
 
+### 💳 Decidido em 12/08/2026: em live, **só cartão**. E o boleto fica de fora por desenho
+
+A conta tem `boleto_payments: active` e o checkout não declara
+`payment_method_types` — de propósito, para Pix entrar um dia sem tocar em
+código. O efeito colateral disso é que **o painel decide sozinho**: bastaria o
+boleto estar ligado para ele aparecer, sem ninguém ter decidido nada.
+
+Foi decidido explicitamente que não. Boleto numa **assinatura** quebra o desenho
+em três lugares, e nenhum deles é a Stripe funcionando mal:
+
+| Onde quebra | O que acontece |
+|---|---|
+| **Acesso** | a assinatura nasce `incomplete` e só vira `active` quando o boleto for pago, dias depois. A mãe pagou na cabeça dela e não entrou |
+| **Teste grátis** | 7 dias que pressupõem cobrança instantânea no fim. Com boleto, o fim do trial vira o começo de uma espera |
+| **Comissão** | nasce no `invoice.paid`. Atrasa junto com o boleto — ou não nasce, se ele não for pago. A afiliada divulgou e ficou sem saber |
+
+> **Oferecer boleto depois é mudança de fluxo, não uma caixinha no painel.**
+> Exigiria estado de "aguardando pagamento" na tela da mãe, copy para ele, e uma
+> decisão sobre o que a afiliada vê enquanto isso. Quem for ligar a caixinha um
+> dia precisa saber que ela não é a mudança — é o começo dela.
+
+Pix, quando chegar, tem a mesma pergunta. O **Pix Automático** não tem: ele é
+recorrência instantânea, e por isso é o único dos três que entra sem mexer no
+fluxo.
+
 **RevenueCat sai do caminho crítico.** O `CLAUDE.md` o escolheu para resolver
 "Stripe puro não serve para assinatura dentro do app iOS", e isso continua
 verdade — **para o app iOS**, que agora é o último bloco. Para a PWA, Stripe
