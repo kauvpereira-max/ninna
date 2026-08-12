@@ -1265,7 +1265,53 @@ por hora. Estourado o limite, o erro que aparece é `email rate limit exceeded` 
 que não se parece em nada com a causa real. É o risco R2 se manifestando antes
 mesmo do piloto.
 
-### 11.2 SMTP próprio via Resend — 🕐 EM CURSO desde 11/08/2026
+### 11.2 SMTP próprio via Resend — ✅ FECHADO EM 12/08/2026
+
+**O que ficou provado, ponta a ponta:**
+
+- **SMTP funcionando.** Dois resets disparados, os dois `Delivered` pelo Resend,
+  remetente `"Ninna" <ninna@ninnaappbr.com.br>`, entrega no mesmo minuto do
+  envio. `Enable custom SMTP` ligado e conferido **depois de recarregar a
+  página** — host `smtp.resend.com`, porta 465, usuário `resend`, senha salva.
+- **Autenticação.** `SPF: PASS` · `DKIM: PASS` (`d=ninnaappbr.com.br`,
+  `s=resend`), lidos do cabeçalho da mensagem entregue, não do painel.
+- **DMARC publicado** (`v=DMARC1; p=none`) depois de o diagnóstico mostrar que
+  ele faltava.
+- **A allow-list de redirect está certa:** o link abre
+  `ninna-sigma.vercel.app/nova-senha`. O "link expirado" que aparece depois é o
+  token de 1h vencido, não erro de rota.
+
+**A armadilha da zona não aconteceu.** Consultados no autoritativo e em dois
+resolvedores públicos, os três registros resolvem pelo nome curto, e
+`send.ninnaappbr.com.br.ninnaappbr.com.br` devolve `Non-existent domain` — que é
+o resultado que se quer ver.
+
+#### ⚠️ A ressalva, e ela não é uma pendência
+
+**Os dois primeiros e-mails caíram no spam.** O motivo dado pelo Gmail foi
+*"semelhante a outras que já foram identificadas como spam"* — classificação por
+conteúdo e reputação, **não** falha de autenticação. Na hora, faltava o DMARC e o
+domínio tinha 23 horas de vida.
+
+Com o DMARC publicado, sobra o que não se resolve por configuração: **reputação
+de domínio novo leva tempo e volume.** Cair no spam nos primeiros envios não é
+falha de configuração e não reabre este item.
+
+**A consequência prática, e ela é da E1:** avisar a embaixadora, antes de ela
+precisar, que **se o e-mail de redefinir senha demorar, é para olhar o spam** — e
+marcar "não é spam" quando achar. Cada marcação dessas ensina o filtro, e é a
+única coisa que acelera reputação além de volume.
+
+O risco **R2** sai de "aberto" e passa a "mitigado, com acompanhamento": o
+encanamento está provado, o que resta é o filtro de terceiro, que ninguém
+controla.
+
+---
+
+**O histórico abaixo é de 11/08/2026 e fica como está** — é ele que explica por
+que cada passo existe.
+
+### 11.2 (histórico) SMTP próprio via Resend — 🕐 EM CURSO desde 11/08/2026
 
 **Estado apurado em 11/08/2026, e ele era pior do que "não confirmado":**
 

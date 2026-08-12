@@ -354,9 +354,11 @@ previsões → canal nativo.
 
 ## Dívidas conhecidas
 
-- **§11.2 / D3b — o e-mail.** Domínio `ninnaappbr.com.br` pedido no registro.br,
-  aguardando pagamento; Resend sem domínio; SMTP não configurado. É o único item
-  com relógio de terceiro, e o risco R2 (reset de senha em spam) segue aberto
+- **§11.2 / D3b — fechado em 12/08/2026.** SMTP no ar pelo Resend, SPF e DKIM
+  `PASS` lidos do cabeçalho entregue, DMARC publicado, e o link do reset abrindo
+  `/nova-senha`. **O que sobra não é configuração:** domínio novo não tem
+  reputação, e os primeiros envios podem cair no spam — a E1 precisa ser avisada
+  de olhar o spam e marcar "não é spam". O R2 passa de aberto a mitigado
 - `typography.caption` pede Medium (500), mas `NunitoSans-Medium.ttf` não está em
   `assets/fonts/` — está em Regular como paliativo
 - `tokens.ts` cita `src/theme/fonts.ts`, que não existe (fontes carregam no
