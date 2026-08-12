@@ -1,11 +1,51 @@
 # Teste ponta a ponta do programa de afiliadas
 
-Escrito em 12/08/2026, com as etapas 1 a 4 do bloco 1b no ar e a cobrança em
-**modo teste**.
+Escrito em 12/08/2026, com as etapas 1 a 4 do bloco 1b no ar e a cobrança no
+**sandbox** `acct_1U3FllPcpMk0DJ4d` (ver o passo 5 — não é o modo teste da
+conta).
 
 Prova a cadeia inteira: link → cadastro → assinatura → fatura paga → comissão
 creditada → painel. Nenhum teste automatizado alcança isso, porque metade dela
 mora na Stripe.
+
+---
+
+## ✅ RODADO E APROVADO EM 12/08/2026
+
+Cadeia inteira verde. O que ficou registrado:
+
+| Elo | Resultado |
+|---|---|
+| Atribuição (passo 3) | 1 indicação, código `teste`, 20% |
+| Assinatura (passo 4) | `trialing`, `cus_V3lSUkiOWX3rgY` |
+| Trial encerrado (passo 5) | `active`, período 12/08 → 12/09 |
+| `invoice.paid` entregue | 18:04:02 UTC, `evt_1U3gVOPcpMk0DJ4ds4IeyhAq`, **200 OK** |
+| Comissão (passo 5) | **498 centavos**, fatura `in_1U3gSAPcpMk0DJ4dRoEDCgwe` |
+| Painel (passo 6) | Disponível **R$ 0,00** · Esperando R$ 4,98 · Total R$ 4,98 · 1 cadastro · 1 assinatura · extrato com 1 linha |
+
+**Duas coisas quebraram no caminho, e as duas viraram seção neste arquivo:** o
+ambiente errado (passo 5, sandbox × conta) e o endpoint com 5 eventos em vez de 6
+(passo 5, o aviso em destaque). Nenhuma das duas era código.
+
+### O que este teste NÃO exercitou, mesmo passando
+
+A **carência** e o **estorno** só foram vistos por SQL manual (fim do passo 6),
+não por evento real da Stripe. E o ramo `23505 → 200` do webhook — o que impede a
+Stripe de reentregar para sempre — não rodou: só houve **uma** entrega de
+`invoice.paid`, porque a primeira fatura nasceu quando o endpoint ainda ouvia 5
+eventos e nunca foi entregue.
+
+O índice da `009` foi provado à parte, com um insert numa transação revertida:
+
+```
+ERROR: 23505: duplicate key value violates unique constraint "idx_comissoes_uma_por_indicacao"
+DETAIL:  Key (indicacao_id)=(ae934397-…) already exists.
+```
+
+Isso prova o **banco**, não o **handler**. Para fechar o handler, reenviar pela
+tela de Eventos o `invoice.paid` da primeira fatura (`evt_1U3f7zPcpMk0DJ4d6vm5tyCM`,
+16:35:42 UTC): tem que voltar **200**, e `comissoes` tem que continuar com uma
+linha só.
 
 ---
 
@@ -109,8 +149,28 @@ Esperado: `trialing`. **Ainda não há comissão** — e isso está certo.
 
 É o passo que empurra o relógio.
 
-Dashboard da Stripe (**modo teste**) → Customers → a cliente recém-criada →
-a assinatura → **Actions** → **End trial**.
+### ⚠️ Duas armadilhas, e as duas custaram tempo em 12/08/2026
+
+**1. Não é o modo teste da conta — é o SANDBOX.** A `STRIPE_API_KEY` aponta para
+o sandbox "Área restrita de ninna", `acct_1U3FllPcpMk0DJ4d`. O modo teste da
+conta `ninna` (`acct_1U3FlcB5ktEdfFnD`) está vazio e vai dizer *"Adicione seu
+primeiro cliente de teste"*, como se o checkout nunca tivesse rodado. Os ids
+diferem numa letra depois de `1U3Fl`. Ver `PRODUTO.md` §7.
+
+Ir direto, sem depender do seletor:
+
+```
+https://dashboard.stripe.com/acct_1U3FllPcpMk0DJ4d/test/customers/<cus_…>
+```
+
+**2. "End trial" não está mais no menu `…`.** O menu da assinatura só oferece
+pausar e cancelar — e cancelar é o que você NÃO quer. O caminho atual é
+**Atualizar assinatura** → rolar até **Dias de avaliação gratuita** → trocar `7`
+por `0` → **Atualizar assinatura** → **Imediatamente**.
+
+Antes de confirmar, a Prévia à direita tem que dizer **"Fatura imediatamente"** e
+`R$ 24,90`, e a linha "Teste gratuito" tem que ter sumido. Se ainda disser
+"7 dias restantes", o campo não pegou.
 
 A Stripe cobra na hora e emite `invoice.paid`. O webhook recebe, acha a
 indicação, calcula 20% e credita.
@@ -124,11 +184,38 @@ from comissoes c order by c.criada_em desc;
 
 Esperado: **uma linha**, `credito`, `498`.
 
-> Não apareceu? Stripe → Developers → Webhooks → o endpoint `ninna-assinaturas`
-> → aba de tentativas. Ele diz se `invoice.paid` foi entregue e com qual
-> resposta. Um `500` ali é o webhook pedindo reentrega porque a linha de
-> `assinaturas` ainda não existia — legítimo, e resolve sozinho na tentativa
-> seguinte.
+> Não apareceu? Stripe → Workbench → **Webhooks** → o endpoint
+> `ninna-assinaturas`. A coluna **"Ouvindo"** tem que dizer **6 eventos**. Se
+> disser 5, o `invoice.paid` não foi salvo, e nada mais adianta olhar.
+>
+> Depois disso, Workbench → **Eventos** → o `invoice.paid` da hora certa → as
+> tentativas de entrega. Um `500` ali é o webhook pedindo reentrega porque a
+> linha de `assinaturas` ainda não existia — legítimo, e resolve sozinho na
+> tentativa seguinte.
+
+### ⚠️ Foi isto que aconteceu em 12/08/2026, e o modo de falha é traiçoeiro
+
+O endpoint estava com **5 eventos**, não 6 — a marcação do `invoice.paid` não
+foi salva, embora a tela tivesse mostrado 6. Sintoma: a Stripe emitiu o
+`invoice.paid` normalmente (evento existe, valor certo), a assinatura virou
+`active`, **e a comissão simplesmente não nasceu**. Nenhum erro, em lugar
+nenhum — porque um evento não assinado não é uma entrega que falha, é uma
+entrega que não existe.
+
+O log da Edge Function é o que separa os dois casos em um olhar: se o
+`invoice.paid` tivesse sido entregue e falhado, haveria invocação. Não havia —
+só a do `customer.subscription.updated`.
+
+É a **regra nº 1** do `CLAUDE.md` na Stripe: configuração de painel se confere
+pelo servidor (aqui, a coluna "Ouvindo"), nunca pela tela em que você clicou.
+
+**E é o mesmo defeito que o `PRODUTO.md` §7 avisa para o endpoint live** —
+"endpoint que nascer sem ele credita zero comissão sem dar erro nenhum". O aviso
+estava certo; ele só aconteceu no sandbox primeiro, que é onde sair barato.
+
+**Consertar sem refazer o teste:** marcar `invoice.paid`, salvar, conferir que a
+coluna diz 6, e então **reenviar o evento** pela tela de Eventos. A `009` tem
+índice único por indicação, então reenviar não credita duas vezes.
 
 ---
 

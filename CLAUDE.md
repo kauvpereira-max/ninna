@@ -181,6 +181,15 @@ o corolário do "nome de par" estão no `PRODUTO.md` §8-bis.
 **Em produção:** `ninna-sigma.vercel.app`, PWA instalável, falando com o projeto
 Supabase `hzjcimgutccsfrxuuhrl` em **sa-east-1 (São Paulo)**.
 
+⚠️ **A cobrança roda num SANDBOX da Stripe, não no modo teste da conta.** O
+sandbox "Área restrita de ninna" é `acct_1U3FllPcpMk0DJ4d`; a conta `ninna` é
+`acct_1U3FlcB5ktEdfFnD` e o modo teste dela está **vazio**. Os ids diferem numa
+letra depois de `1U3Fl` — o sandbox tem `ll`, a conta tem `lc` —, e olhar o lugar
+errado custou uma hora em
+12/08/2026 — o painel abre, funciona, e diz "adicione seu primeiro cliente". A
+chave carrega o id: `sk_test_51<ID>…` → `acct_1<ID>`. Detalhe no `PRODUTO.md` §7,
+"Onde a cobrança mora hoje".
+
 ### O motor e a copy — o núcleo da tese
 
 - `src/lib/padroes.ts` — três métricas sobre *este* bebê: intervalo entre

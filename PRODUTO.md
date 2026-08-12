@@ -798,8 +798,8 @@ assistente de último para primeiro. Agora o canal nativo desce de segundo para
 |---|---|---:|---:|---|
 | 0 | Fechar o que está aberto | 1 sem | DNS | Semeador, SMTP (§11.2), projeto antigo, tela do assistente |
 | 1 | **Cobrança por Stripe** | 1 sem | — | O assistente tem custo marginal; cada dia grátis no ar é dinheiro saindo |
-| 1c | **Virada para modo live** | 0,5 dia | 🕐 **em análise na Stripe desde 12/08/2026** | Meio dia que não pode acontecer no dia do lançamento — detalhe abaixo |
-| 1b | Painel de afiliadas (§3.5) | 1,5–2 sem | — | 🔨 **em construção desde 12/08/2026.** Depende do webhook da Stripe do bloco 1 — antes dele, seria construir duas vezes |
+| 1c | **Virada para a conta live** | 1 dia | ⚠️ **aprovado em 12/08/2026, com pendência de conta em aberto** | Não é meio dia nem é "trocar de modo": troca de CONTA — detalhe abaixo |
+| 1b | Painel de afiliadas (§3.5) | 1,5–2 sem | — | ✅ **etapas 1–4 provadas ponta a ponta em 12/08/2026** (link → comissão → painel). Falta a etapa 5, o saque — ver abaixo |
 | 2 | Refatorar registro (schema-driven) | 1,5 sem | — | Bloqueia o bloco 3 e paga a si mesmo no quinto tipo |
 | 3 | ~~Monitoramento ampliado~~ | — | — | ✅ **FEITO em 11–12/08/2026.** 19 tipos no ar e conferidos no navegador. Falta Habilidade, que não é o último da fila — ver o fim do §3.4 |
 | 4 | Notificações (Web Push) | 2–3 sem | 1 sem | Funciona em PWA instalada; o agendador é o mesmo que o nativo usaria |
@@ -812,67 +812,121 @@ Cobrando a partir da **semana 2**.
 O nativo soma 2–3 semanas de trabalho depois disso, mas o relógio dele deixa de
 importar — ninguém fica esperando.
 
-### 🕐 Bloco 1c — EM ANÁLISE NA STRIPE desde 12/08/2026
+### ⚠️ ONDE A COBRANÇA MORA HOJE: um SANDBOX, que não é o modo teste da conta
 
-**Conta enviada para ativação em 12/08/2026.** Categoria **Software**, descrição
-como SaaS de assinatura para acompanhamento de rotina de bebês — **sem linguagem
-de saúde**, que é a redação certa: descrever o produto como saúde convida uma
+Descoberto em 12/08/2026. **Custou uma hora**, com o app funcionando o tempo
+todo — e o sintoma foi o pior tipo: o painel abre, responde, e mostra "Adicione
+seu primeiro cliente de teste", como se o checkout nunca tivesse rodado.
+
+| Onde | Id da conta | O que tem |
+|---|---|---|
+| **Sandbox "Área restrita de ninna"** | `acct_1U3FllPcpMk0DJ4d` | **tudo**: produtos, os dois preços, o endpoint `ninna-assinaturas`, os clientes |
+| Conta `ninna`, modo teste | `acct_1U3FlcB5ktEdfFnD` | **nada**: zero clientes, zero produtos, zero endpoints |
+| Conta `ninna`, modo live | o mesmo `acct_1U3FlcB5ktEdfFnD` | a conta de verdade, ainda por montar |
+
+**Os dois ids diferem numa letra só, depois de `1U3Fl`** — o sandbox tem `ll`, a
+conta tem `lc`. Lidos rápido, são o mesmo id. Foi exatamente isso que custou a
+hora: a `STRIPE_API_KEY` sempre apontou para o sandbox, e a tela aberta era a da
+conta.
+
+**Como conferir sem depender de tela** — a chave carrega o id dentro dela:
+
+```
+sk_test_51 U3FllPcpMk0DJ4d ...   →   acct_1U3FllPcpMk0DJ4d
+           └──── o id ────┘
+```
+
+Se o id embutido na chave não for o id na URL do painel, você está olhando o
+lugar errado. É a regra nº 1 do `CLAUDE.md` aplicada à Stripe: **confere pelo
+servidor, não pela tela.** E o comando que fecha a dúvida em um passo:
+
+```
+curl.exe -s https://api.stripe.com/v1/account -u "<chave>:"
+```
+
+Ele devolve o `id` e o `settings.dashboard.display_name` da conta a que a chave
+pertence. Não há como discordar disso.
+
+### ⚠️ Bloco 1c — APROVADO em 12/08/2026, com pendência de conta em aberto
+
+**Aprovado no mesmo dia do envio.** Categoria **Software**, descrição como SaaS
+de assinatura para acompanhamento de rotina de bebês — **sem linguagem de
+saúde**, que era a redação certa: descrever o produto como saúde convida uma
 análise mais longa e uma categoria de risco que a Ninna não é.
 
-O relógio agora é deles. **O que falta, para quando aprovar:**
+O que a Stripe devolve sobre a conta:
 
-1. **Recriar produto e preços em modo live.** Modo teste e modo live são catálogos
-   separados na Stripe — nada do que existe hoje atravessa. Os `price_id` novos
-   entram por secret, não por commit: eles saíram do código de propósito, e é isso
-   que faz a virada não ser um deploy;
-2. **Criar o endpoint de webhook live**, com os mesmos **6 eventos** — os 5 de
+```
+charges_enabled: true · payouts_enabled: true · details_submitted: true
+capabilities: card_payments, boleto_payments, transfers — todas active
+country BR · default_currency brl · statement_descriptor "NINNA BR"
+repasse: daily, delay_days 30
+```
+
+**Mas não está liberado.** O painel mostra uma faixa vermelha:
+
+> Vários recursos pausados — Uma tarefa obrigatória está vencida. Conclua-a para
+> habilitar os recursos de sua conta.
+
+Enquanto essa tarefa não for concluída, "aprovado" não quer dizer "cobra". O que
+ela pede ainda não foi lido.
+
+Dois detalhes que vieram junto e mudam decisão: **boleto está ativo** (o checkout
+não oferece — é decisão em aberto, não limitação), e o **repasse tem 30 dias de
+atraso**, o que por acaso empata com a carência da afiliada (`010`).
+
+#### ⚠️ A virada troca de CONTA, não de modo
+
+Este bloco dizia *"recriar produto e preços em modo live"*, assumindo que era o
+mesmo lugar mudando de chave. **É premissa errada**, e a tabela acima explica por
+quê: sandbox e conta são ambientes separados, com dados, chaves e endpoints
+próprios. O modo teste da conta de verdade **nunca foi montado** — não há de onde
+copiar "só mudando o modo".
+
+Por isso o relógio subiu de 0,5 para 1 dia. **O que falta:**
+
+1. **Concluir a tarefa vencida da conta** — é o único item com relógio de
+   terceiro, e é o que decide se o resto adianta;
+2. **Recriar produto e preços na conta `ninna`.** Vale a pena montar o **modo
+   teste dela primeiro** e repetir o teste ponta a ponta lá, antes do live: é o
+   ensaio que separa "o preço novo está errado" de "o live está errado". Os
+   `price_id` entram por secret, não por commit — eles saíram do código de
+   propósito, e é isso que faz a virada não ser um deploy;
+3. **Criar o endpoint de webhook**, com os mesmos **6 eventos** — os 5 de
    assinatura mais `invoice.paid`, que entrou em 12/08/2026 com a comissão de
-   afiliadas. O `whsec_` é
-   outro: o de teste não atende o live;
-3. **Trocar os quatro secrets no Supabase** — e conferir com
-   `npx supabase secrets list`, não pela tela;
-4. **Conferir a primeira fatura em BRL** — moeda, imposto e o descritivo que
+   afiliadas. O `whsec_` é outro: o do sandbox não atende ninguém fora dele;
+4. **Trocar os quatro secrets no Supabase** — e conferir com
+   `npx supabase secrets list`, não pela tela. O digest ali é SHA-256 do valor,
+   então dá para provar que a chave trocada é a chave certa sem lê-la;
+5. **Conferir a primeira fatura em BRL** — moeda, imposto e o descritivo que
    aparece na fatura do cartão dela. Descritivo errado vira contestação, e
    contestação de R$24,90 custa mais que R$24,90.
 
-Os meios de pagamento no painel live são configuração à parte da de teste; Pix
-entra sem tocar em código, porque `payment_method_types` ficou de fora de
-propósito (ver o comentário na `assinatura/index.ts`).
+Os meios de pagamento são configuração por ambiente; Pix entra sem tocar em
+código, porque `payment_method_types` ficou de fora de propósito (ver o
+comentário na `assinatura/index.ts`).
 
-**Enquanto está em análise, nada bloqueia.** O app segue cobrando em modo teste,
-e o único custo de a análise demorar é o assistente rodando sem receita.
+**Enquanto isso, nada bloqueia.** O app segue cobrando no sandbox, e o único
+custo de demorar é o assistente rodando sem receita.
 
-### Bloco 1c — a virada para modo live, e por que ela tem linha própria
+### Bloco 1c — por que a virada tem linha própria na tabela
 
-Meio dia de trabalho não merece uma linha na tabela. Este merece, e a razão é a
-mesma do D3: **item pequeno que não tem data some da fila**, e reaparece no pior
-dia possível. O D3b — o e-mail — está aberto desde o começo por exatamente isso.
+*A lista do que falta está acima. Aqui fica só o argumento de por que ela existe
+separada — que é o que some primeiro quando a fila é lida com pressa.*
 
-Hoje a cobrança inteira roda em **modo teste**, ponta a ponta verificada em
-11/08/2026. Virar para live é trocar quatro secrets, e isso é a parte fácil e
-sem risco: os price IDs saíram do código de propósito, então a virada **não é um
-commit**.
+Meio dia de trabalho não mereceria uma linha. Este merece, e a razão é a mesma do
+D3: **item pequeno que não tem data some da fila**, e reaparece no pior dia
+possível. O D3b — o e-mail — ficou aberto desde o começo por exatamente isso.
 
-O que não é secret, e por isso não vira sozinho:
+E o argumento ficou mais forte em 12/08/2026, não mais fraco. A estimativa de
+meio dia dizia "trocar quatro secrets" porque assumia que virar era trocar de
+**modo** dentro da mesma conta. Não é: tudo roda num **sandbox**, e a conta de
+verdade está vazia. O item parecia pequeno porque estava mal entendido — que é
+precisamente como item pequeno some da fila e volta grande.
 
-- **Ativar a conta na Stripe** — dados fiscais e bancários do Brasil, mais a
-  descrição do negócio. É análise do lado deles, com prazo que não controlamos;
-  é o único item aqui com relógio de terceiro;
-- **Meios de pagamento no painel**, em live — a conta live tem configuração
-  própria, separada da de teste. Pix entra sem tocar em código, porque
-  `payment_method_types` ficou de fora de propósito (ver o comentário na
-  `assinatura/index.ts`);
-- **Conferir a primeira fatura em BRL** — moeda, imposto e o descritivo que
-  aparece na fatura do cartão dela. Descritivo errado vira contestação, e
-  contestação de R$24,90 custa mais que R$24,90;
-- **Endpoint de webhook live**, com os mesmos **6 eventos** e um `whsec_` novo.
-  ⚠️ Eram 5 até 12/08/2026: `invoice.paid` entrou com o bloco 1b, e endpoint que
-  nascer sem ele credita zero comissão sem dar erro nenhum. O de
-  teste não atende o live.
-
-**Fazer isto no dia do lançamento é o erro.** Se a ativação da conta travar em
-análise, o lançamento trava junto — e aí a pressa leva ao atalho, que é ir ao ar
-em modo teste "só pra ver", cobrando ninguém.
+**Fazer isto no dia do lançamento é o erro.** Se a tarefa vencida da conta travar,
+o lançamento trava junto — e aí a pressa leva ao atalho, que é ir ao ar apontando
+para o sandbox "só pra ver": cobrando ninguém, e parecendo que cobra.
 
 **Uma consequência de calendário que vale explicitar:** a conta Apple custa
 US$99/ano e o relógio começa na compra, não no uso. Abri-la três meses antes do
