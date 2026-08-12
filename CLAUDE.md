@@ -187,8 +187,15 @@ sandbox "Área restrita de ninna" é `acct_1U3FllPcpMk0DJ4d`; a conta `ninna` é
 letra depois de `1U3Fl` — o sandbox tem `ll`, a conta tem `lc` —, e olhar o lugar
 errado custou uma hora em
 12/08/2026 — o painel abre, funciona, e diz "adicione seu primeiro cliente". A
-chave carrega o id: `sk_test_51<ID>…` → `acct_1<ID>`. Detalhe no `PRODUTO.md` §7,
-"Onde a cobrança mora hoje".
+chave carrega o id: `sk_test_51<ID>…` → `acct_1<ID>`.
+
+E o corolário, que custou um registro errado no mesmo dia: **pendência de sandbox
+não é pendência de conta.** A faixa vermelha "Vários recursos pausados" era do
+sandbox, pedindo o representante fictício que a própria Stripe preenche
+("Mark Andrews"); a conta real mostra 0 ação necessária. As duas telas são quase
+idênticas — mesmo layout, mesma faixa, mesma cor —, e a **única** diferença
+confiável é o `acct_` na URL. Detalhe no `PRODUTO.md` §7, "Onde a cobrança mora
+hoje".
 
 ### O motor e a copy — o núcleo da tese
 

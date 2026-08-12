@@ -798,7 +798,7 @@ assistente de último para primeiro. Agora o canal nativo desce de segundo para
 |---|---|---:|---:|---|
 | 0 | Fechar o que está aberto | 1 sem | DNS | Semeador, SMTP (§11.2), projeto antigo, tela do assistente |
 | 1 | **Cobrança por Stripe** | 1 sem | — | O assistente tem custo marginal; cada dia grátis no ar é dinheiro saindo |
-| 1c | **Virada para a conta live** | 1 dia | ⚠️ **aprovado em 12/08/2026, com pendência de conta em aberto** | Não é meio dia nem é "trocar de modo": troca de CONTA — detalhe abaixo |
+| 1c | **Virada para a conta live** | 1 dia | ✅ **conta APROVADA em 12/08/2026**, sem pendência | Não é meio dia nem é "trocar de modo": troca de CONTA — detalhe abaixo |
 | 1b | Painel de afiliadas (§3.5) | 1,5–2 sem | — | ✅ **etapas 1–4 provadas ponta a ponta em 12/08/2026** (link → comissão → painel). Falta a etapa 5, o saque — ver abaixo |
 | 2 | Refatorar registro (schema-driven) | 1,5 sem | — | Bloqueia o bloco 3 e paga a si mesmo no quinto tipo |
 | 3 | ~~Monitoramento ampliado~~ | — | — | ✅ **FEITO em 11–12/08/2026.** 19 tipos no ar e conferidos no navegador. Falta Habilidade, que não é o último da fila — ver o fim do §3.4 |
@@ -847,7 +847,7 @@ curl.exe -s https://api.stripe.com/v1/account -u "<chave>:"
 Ele devolve o `id` e o `settings.dashboard.display_name` da conta a que a chave
 pertence. Não há como discordar disso.
 
-### ⚠️ Bloco 1c — APROVADO em 12/08/2026, com pendência de conta em aberto
+### ✅ Bloco 1c — conta APROVADA em 12/08/2026
 
 **Aprovado no mesmo dia do envio.** Categoria **Software**, descrição como SaaS
 de assinatura para acompanhamento de rotina de bebês — **sem linguagem de
@@ -863,13 +863,20 @@ country BR · default_currency brl · statement_descriptor "NINNA BR"
 repasse: daily, delay_days 30
 ```
 
-**Mas não está liberado.** O painel mostra uma faixa vermelha:
+**Sem pendência.** A conta real mostra **0 ação necessária**.
 
-> Vários recursos pausados — Uma tarefa obrigatória está vencida. Conclua-a para
-> habilitar os recursos de sua conta.
-
-Enquanto essa tarefa não for concluída, "aprovado" não quer dizer "cobra". O que
-ela pede ainda não foi lido.
+> ⚠️ **Houve um susto aqui, e ele é o mesmo erro da seção acima.** A primeira
+> leitura registrou "aprovado **com pendência**", por causa de uma faixa vermelha
+> — *"Vários recursos pausados: uma tarefa obrigatória está vencida"* — lida sem
+> conferir em qual painel ela estava. Estava **no sandbox**, e a tarefa era
+> "Atualize seu representante da conta", com o representante preenchido como
+> **"Mark Andrews"**: nome fictício que a Stripe usa para simular. Dado de
+> ninguém, pendência de nada.
+>
+> **Pendência de sandbox não é pendência de conta**, e as duas telas são quase
+> idênticas — mesmo layout, mesma faixa, mesma cor. A única diferença confiável é
+> o `acct_` na URL. Vale para qualquer aviso da Stripe daqui em diante, não só
+> para este.
 
 Dois detalhes que vieram junto e mudam decisão: **boleto está ativo** (o checkout
 não oferece — é decisão em aberto, não limitação), e o **repasse tem 30 dias de
@@ -883,22 +890,24 @@ quê: sandbox e conta são ambientes separados, com dados, chaves e endpoints
 próprios. O modo teste da conta de verdade **nunca foi montado** — não há de onde
 copiar "só mudando o modo".
 
-Por isso o relógio subiu de 0,5 para 1 dia. **O que falta:**
+Por isso o relógio subiu de 0,5 para 1 dia. **E não sobrou nenhum item com
+relógio de terceiro:** a aprovação era o único, e ela já veio. Tudo abaixo
+depende só de sentar e fazer.
 
-1. **Concluir a tarefa vencida da conta** — é o único item com relógio de
-   terceiro, e é o que decide se o resto adianta;
-2. **Recriar produto e preços na conta `ninna`.** Vale a pena montar o **modo
+1. **Recriar produto e preços na conta `ninna`.** Vale a pena montar o **modo
    teste dela primeiro** e repetir o teste ponta a ponta lá, antes do live: é o
    ensaio que separa "o preço novo está errado" de "o live está errado". Os
    `price_id` entram por secret, não por commit — eles saíram do código de
    propósito, e é isso que faz a virada não ser um deploy;
-3. **Criar o endpoint de webhook**, com os mesmos **6 eventos** — os 5 de
+2. **Criar o endpoint de webhook**, com os mesmos **6 eventos** — os 5 de
    assinatura mais `invoice.paid`, que entrou em 12/08/2026 com a comissão de
-   afiliadas. O `whsec_` é outro: o do sandbox não atende ninguém fora dele;
-4. **Trocar os quatro secrets no Supabase** — e conferir com
+   afiliadas. O `whsec_` é outro: o do sandbox não atende ninguém fora dele.
+   ⚠️ E **conferir na coluna "Ouvindo" que diz 6**, não na tela em que você
+   clicou — foi assim que o sandbox ficou com 5 e a comissão não nasceu;
+3. **Trocar os quatro secrets no Supabase** — e conferir com
    `npx supabase secrets list`, não pela tela. O digest ali é SHA-256 do valor,
    então dá para provar que a chave trocada é a chave certa sem lê-la;
-5. **Conferir a primeira fatura em BRL** — moeda, imposto e o descritivo que
+4. **Conferir a primeira fatura em BRL** — moeda, imposto e o descritivo que
    aparece na fatura do cartão dela. Descritivo errado vira contestação, e
    contestação de R$24,90 custa mais que R$24,90.
 
@@ -924,9 +933,12 @@ meio dia dizia "trocar quatro secrets" porque assumia que virar era trocar de
 verdade está vazia. O item parecia pequeno porque estava mal entendido — que é
 precisamente como item pequeno some da fila e volta grande.
 
-**Fazer isto no dia do lançamento é o erro.** Se a tarefa vencida da conta travar,
-o lançamento trava junto — e aí a pressa leva ao atalho, que é ir ao ar apontando
-para o sandbox "só pra ver": cobrando ninguém, e parecendo que cobra.
+**Fazer isto no dia do lançamento continua sendo o erro**, mesmo agora que a
+aprovação já veio e nenhum relógio é de terceiro. O risco trocou de forma: não é
+mais "a Stripe demora", é montar catálogo e endpoint às pressas e ir ao ar
+apontando para o **sandbox** — que responde tudo com 200, emite fatura, mostra
+assinatura ativa, **e não cobra ninguém**. Parece que cobra. Foi exatamente esse
+o sintoma que custou uma hora em 12/08.
 
 **Uma consequência de calendário que vale explicitar:** a conta Apple custa
 US$99/ano e o relógio começa na compra, não no uso. Abri-la três meses antes do
