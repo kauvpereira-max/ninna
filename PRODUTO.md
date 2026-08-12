@@ -729,7 +729,7 @@ quando houver acesso, ou por outro provedor (Mercado Pago, Pagar.me, Asaas) se a
 conversão pedir. **Pix Automático** (recorrência nativa em Pix) está chegando ao
 mercado em 2026 e vale reavaliar então — não vale esperar.
 
-### 💳 Decidido em 12/08/2026: em live, **só cartão**. E o boleto fica de fora por desenho
+### 💳 Decidido em 12/08/2026: o critério é **cobrança instantânea**, não a palavra "cartão"
 
 A conta tem `boleto_payments: active` e o checkout não declara
 `payment_method_types` — de propósito, para Pix entrar um dia sem tocar em
@@ -750,9 +750,28 @@ em três lugares, e nenhum deles é a Stripe funcionando mal:
 > decisão sobre o que a afiliada vê enquanto isso. Quem for ligar a caixinha um
 > dia precisa saber que ela não é a mudança — é o começo dela.
 
-Pix, quando chegar, tem a mesma pergunta. O **Pix Automático** não tem: ele é
-recorrência instantânea, e por isso é o único dos três que entra sem mexer no
-fluxo.
+#### O critério não é "cartão" — e a diferença importa para o que vier depois
+
+Em live ficaram ligados **cartão, Apple Pay e Link**. Isso não é exceção à
+decisão: é a decisão escrita direito.
+
+> **A pergunta é "cobra na hora?", não "é um cartão?".** Carteira lastreada em
+> cartão — Apple Pay, Google Pay, Link — cobra no mesmo instante, a assinatura
+> nasce `active`, o trial fecha como deve e a comissão nasce junto. Para o
+> desenho da Ninna, elas *são* cartão; só mudam a tela onde a mãe confirma.
+
+Escrito como critério, e não como lista, porque lista envelhece: a próxima
+carteira que a Stripe ligar sozinha no painel não estará em lista nenhuma, e a
+pergunta certa continua respondendo por ela.
+
+O que o critério **reprova**, hoje e no futuro: boleto, transferência, débito em
+conta, "pague depois" — tudo que separa *a mãe decidir pagar* de *o dinheiro
+existir*. É exatamente nesse intervalo que os três defeitos da tabela acima
+moram.
+
+Pix comum cai no lado reprovado enquanto for confirmação manual por cobrança. O
+**Pix Automático** cai no lado aprovado, e por isso é o único dos três que entra
+sem mexer no fluxo.
 
 **RevenueCat sai do caminho crítico.** O `CLAUDE.md` o escolheu para resolver
 "Stripe puro não serve para assinatura dentro do app iOS", e isso continua
