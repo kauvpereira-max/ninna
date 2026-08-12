@@ -1446,3 +1446,13 @@ configurações de painel — foi refeita, não herdada.
 As duas entradas precisam existir na allow-list, e **o P5 não fecha enquanto a de
 produção não entrar**. Não dá para verificar de fora: só abrindo o link de um
 e-mail real e vendo onde ele cai — o que amarra esta conferência ao D3b.
+
+✅ **FECHADO EM 12/08/2026, pelo D3b.** O link do e-mail entregue abriu
+`ninna-sigma.vercel.app/nova-senha` — a allow-list aceita o `redirectTo` e não
+caiu no Site URL. O "link expirado" que aparece depois é o token de 1h vencido,
+não erro de rota.
+
+**Este item fechou junto com o §11.2 porque nunca teve como fechar sozinho**, e
+o parágrafo acima já dizia isso: a única prova possível era um e-mail de verdade.
+Vale registrar que a amarração funcionou — o D3b fechou dois itens, e o segundo
+teria passado despercebido se ninguém tivesse olhado onde o link caiu.
