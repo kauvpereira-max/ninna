@@ -81,7 +81,10 @@ export type TipoEvento =
   | 'extracao'
   | 'peso'
   | 'altura'
-  | 'circunferencia';
+  | 'circunferencia'
+  | 'medicacao'
+  | 'vitamina'
+  | 'vacina';
 
 // ------------------------------------------------------------------
 // Entrada

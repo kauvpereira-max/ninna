@@ -146,8 +146,44 @@ export function montarSql(
 const geradas = new Map<string, ColunaGerada>();
 const restricoes: Restricao[] = [];
 
+/**
+ * Chave do `dados` → que FORMA ela tem, e quem a declarou assim.
+ *
+ * ⚠️ Um guarda irmão do de faixa, e este pega o que aquele não vê.
+ *
+ * A mesma chave em dois tipos é a mesma chave no jsonb. Se um tipo a declara
+ * como `numero` e outro como `escolha`, o gerador produz as duas coisas ao mesmo
+ * tempo: uma coluna gerada com `(dados->>'chave')::int` E um check de
+ * vocabulário com palavras. A primeira linha com a palavra explode no cast, com
+ * erro 22P02, e nada aponta para cá.
+ *
+ * Foi encontrado desenhando o grupo de saúde: medicação queria `dose` como
+ * número (2,5 ml) e vacina queria `dose` como escolha (primeira, reforço). Não
+ * são o mesmo campo — têm o mesmo nome em português e nada mais.
+ *
+ * A saída é a mesma da colisão de faixa: chave própria. Aqui `etapa` para a
+ * vacina, e `dose` continua sendo número.
+ */
+const formaDaChave = new Map<string, { entrada: string; tipo: string }>();
+
 for (const tipo of tipos) {
   for (const campo of schemas[tipo].campos) {
+    const chave = chaveNoJson(campo);
+    if (chave) {
+      const jaVista = formaDaChave.get(chave);
+      if (jaVista && jaVista.entrada !== campo.entrada) {
+        throw new Error(
+          `A chave '${chave}' é declarada com formas diferentes:\n` +
+            `  ${jaVista.tipo} a declara como '${jaVista.entrada}'\n` +
+            `  ${tipo} a declara como '${campo.entrada}'\n\n` +
+            `Mesma chave é a mesma chave no jsonb, e o gerador produziria uma\n` +
+            `coluna com cast para int E um check de vocabulário sobre ela.\n` +
+            `Saída: chave própria. Nome igual em português não é o mesmo campo.`
+        );
+      }
+      if (!jaVista) formaDaChave.set(chave, { entrada: campo.entrada, tipo });
+    }
+
     const vocab = checkDeVocabulario(tipo, campo);
     if (vocab) restricoes.push(vocab);
 

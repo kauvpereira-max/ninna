@@ -9,6 +9,7 @@ import {
   ehTipoRegistro,
   type DetalheRegistro,
 } from '../../../src/lib/registros';
+import { SCHEMAS } from '../../../src/lib/registroSchema';
 import { CATEGORIA_POR_TIPO } from '../../../src/theme/categorias';
 import { colors, spacing, radius, typography } from '../../../src/theme/tokens';
 
@@ -170,8 +171,17 @@ export default function DetalheRegistroScreen() {
         {erro ? <Text style={styles.erro}>{erro}</Text> : null}
 
         {/* Editar some enquanto ela confirma o apagar: duas ações concorrentes
-            no mesmo instante é como se toca a errada. */}
-        {confirmando ? null : (
+            no mesmo instante é como se toca a errada.
+
+            E some de vez nos tipos IMUTÁVEIS — medicação, vitamina e vacina. É
+            o que sustenta a mãe conferindo "já dei o remédio?": histórico que se
+            reescreve não serve para isso. Aqui é só a tela; a defesa está no
+            trigger da `007`, porque regra de tela se contorna pela URL.
+
+            Apagar continua disponível, e é decisão: apagar é deliberado e não
+            deixa meia-verdade; editar troca o conteúdo mantendo a aparência de
+            registro conferido. */}
+        {confirmando || SCHEMAS[registro.tipo].imutavel ? null : (
           <Pressable
             onPress={() => router.push(`/registro/${registro.tipo}?id=${registro.id}`)}
             accessibilityRole="button"

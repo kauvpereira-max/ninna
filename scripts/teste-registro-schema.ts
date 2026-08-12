@@ -288,6 +288,9 @@ const VALORES_CHEIOS: Record<TipoRegistro, ValoresRegistro> = {
   peso: { hora: HORA_OK, peso: '4,350', observacao: 'na consulta' },
   altura: { hora: HORA_OK, altura: '52,5', observacao: 'na consulta' },
   circunferencia: { hora: HORA_OK, circunferencia: '38,2', observacao: 'na consulta' },
+  medicacao: { hora: HORA_OK, medicamento: 'Dipirona', dose: '2,5', unidade: 'ml', observacao: 'febre' },
+  vitamina: { hora: HORA_OK, medicamento: 'Vitamina D', dose: '4', unidade: 'drops', observacao: '' },
+  vacina: { hora: HORA_OK, vacina: 'Pentavalente', etapa: 'first', observacao: 'braço esquerdo' },
 };
 
 checar(
@@ -342,10 +345,19 @@ checar(
   'e os dois tipos de mamada deixam de depender de uma coluna fixa',
   tipoDaLinha({ tipo: 'mamadeira' }) === 'mamadeira'
 );
+/**
+ * O exemplo aqui era `'vacina'`, e ele parou de servir no dia em que Vacina
+ * virou tipo — o teste reprovou, corretamente, sobre um tipo que agora existe.
+ *
+ * Trocado por um valor SINTÉTICO, que nenhum bloco vai criar. O caso que ele
+ * defende não é "vacina não existe", é "linha de um tipo que este binário não
+ * conhece não derruba a lista" — e isso continua valendo depois dos 20 tipos,
+ * porque um PWA em cache pode receber linha gravada por uma versão mais nova.
+ */
 checar(
-  'tipo que este app ainda não conhece devolve null, não quebra',
-  tipoDaLinha({ tipo: 'vacina' }) === null,
-  'é o que faz um dos 14 que faltam sumir da lista em vez de derrubá-la'
+  'tipo que este app não conhece devolve null, não quebra',
+  tipoDaLinha({ tipo: 'tipo-de-uma-versao-mais-nova' }) === null,
+  'PWA em cache lendo linha gravada por versão nova — a linha some, a lista fica'
 );
 checar('linha sem tipo devolve null', tipoDaLinha({}) === null);
 
@@ -688,6 +700,84 @@ checar(
   'só os três tipos de crescimento declaram comparação',
   TIPOS_REGISTRO.filter((t) => LEITURA[t].compararComAnterior).join(',') ===
     'peso,altura,circunferencia'
+);
+
+console.log('\n— saúde: as duas defesas que só ela tem —\n');
+
+const DE_SAUDE: TipoRegistro[] = ['medicacao', 'vitamina', 'vacina'];
+
+checar(
+  'os três de saúde confirmam antes de salvar',
+  DE_SAUDE.every((t) => Boolean(SCHEMAS[t].confirmaAntesDeSalvar)),
+  'atrito onde ele protege — dose errada é a única coisa aqui em que o erro é dano'
+);
+checar(
+  'e NENHUM outro tipo confirma',
+  TIPOS_REGISTRO.filter((t) => SCHEMAS[t].confirmaAntesDeSalvar).join(',') === DE_SAUDE.join(','),
+  'registrar continua sendo ação de segundos nos outros treze'
+);
+checar(
+  'os três são imutáveis, e nenhum outro é',
+  TIPOS_REGISTRO.filter((t) => SCHEMAS[t].imutavel).join(',') === DE_SAUDE.join(',')
+);
+
+/**
+ * ⚠️ A ASSERÇÃO QUE PROTEGE O ENCERRAR SONO.
+ *
+ * O gatilho da `007` recusa `update` nos tipos imutáveis. Encerrar um sono É um
+ * `update` — é assim que `terminou_em` deixa de ser nulo.
+ *
+ * Marcar um tipo em andamento como imutável quebraria o encerrar, e o sintoma
+ * seria a mãe presa às 3h da manhã com um sono que não fecha. Esta asserção
+ * falha no schema, aqui, antes de o gatilho chegar perto do banco.
+ */
+checar(
+  'nenhum tipo imutável fica em aberto',
+  TIPOS_REGISTRO.filter((t) => SCHEMAS[t].imutavel).every((t) => !SCHEMAS[t].emAberto),
+  'encerrar sono é um update — imutável e em aberto juntos travam a mãe'
+);
+
+checar(
+  'a dose aparece no resumo, junto do nome',
+  resumir('medicacao', linhaDoBanco({ medicine: 'Dipirona', dose: 25, dose_unit: 'ml' })) ===
+    'Dipirona · 2,5 ml',
+  '"já dei, e quanto?" tem que caber na linha da lista'
+);
+checar(
+  'dose inteira não ganha vírgula à toa',
+  resumir('vitamina', linhaDoBanco({ medicine: 'Vitamina D', dose: 40, dose_unit: 'drops' })) ===
+    'Vitamina D · 4 gotas'
+);
+checar(
+  'vacina mostra o nome e qual dose foi',
+  resumir('vacina', linhaDoBanco({ vaccine: 'Pentavalente', stage: 'first' })) ===
+    'Pentavalente · 1ª dose'
+);
+
+/**
+ * A faixa da dose é SANIDADE DE DIGITAÇÃO, não farmacologia. Estas duas
+ * asserções fixam isso nos dois sentidos: ela aceita valores clínicos legítimos
+ * bem distantes entre si, e recusa o dedo que escorregou no zero.
+ */
+iguais(
+  '500 mg passa — o app não sabe de bula e não finge saber',
+  validar('medicacao', { hora: HORA_OK, medicamento: 'X', dose: '500', unidade: 'mg' }),
+  {}
+);
+iguais(
+  '0,5 gota também passa',
+  validar('medicacao', { hora: HORA_OK, medicamento: 'X', dose: '0,5', unidade: 'drops' }),
+  {}
+);
+iguais(
+  'e 5000 reprova — é o zero a mais, não a dose',
+  validar('medicacao', { hora: HORA_OK, medicamento: 'X', dose: '5000', unidade: 'mg' }),
+  { dose: 'Dose de 0,1 a 1000.' }
+);
+iguais(
+  'a unidade é obrigatória: "2,5" sozinho não é dose de nada',
+  validar('medicacao', { hora: HORA_OK, medicamento: 'X', dose: '2,5' }),
+  { unidade: 'Em que unidade?' }
 );
 
 console.log('\n— os atalhos da Home, e o teto que eles têm —\n');

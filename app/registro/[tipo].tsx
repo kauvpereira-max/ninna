@@ -81,6 +81,7 @@ export default function RegistroScreen() {
   const [erroForm, setErroForm] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [sintomaSalvo, setSintomaSalvo] = useState(false);
+  const [confirmando, setConfirmando] = useState(false);
 
   const abrir = useCallback(async () => {
     if (!id || !ehTipoRegistro(tipo)) return;
@@ -162,21 +163,45 @@ export default function RegistroScreen() {
     );
   }
 
-  async function handleSalvar() {
+  /**
+   * O toque no botão principal: VALIDA, e só então decide se salva ou confirma.
+   *
+   * A ordem importa. Confirmar primeiro e validar depois mostraria "confere
+   * antes de salvar" sobre um formulário que vai reprovar — a mãe confirmaria
+   * uma dose e receberia um erro de campo, sem entender qual das duas coisas
+   * aconteceu.
+   *
+   * Editar NÃO pede confirmação: os tipos que confirmam são imutáveis, então
+   * este caminho não existe para eles. Se um dia existir tipo que confirma e
+   * pode ser editado, a decisão volta para cá.
+   */
+  function handleSalvar() {
     if (!ehTipoRegistro(tipo) || !bebeAtivo) return;
-
-    // A hora é lida de um jeito para criar e de outro para editar — ver o
-    // cabeçalho. A validação usa a MESMA função que a gravação vai usar, senão
-    // ela aprovaria um horário que a gravação não consegue montar.
-    const dia = ocorridoEm ? new Date(ocorridoEm) : null;
-    const lerHora = (texto: string) => (dia ? horaNoDia(texto, dia) : horaParaData(texto));
 
     const novosErros = validarRegistro(tipo, valores, (texto) => lerHora(texto) !== null);
     setErros(novosErros);
     setErroForm(null);
     if (Object.keys(novosErros).length > 0) return;
 
-    // Já validado acima — o `as Date` é o que a validação acabou de garantir.
+    if (SCHEMAS[tipo].confirmaAntesDeSalvar && !editando) {
+      setConfirmando(true);
+      return;
+    }
+    void salvar();
+  }
+
+  // A hora é lida de um jeito para criar e de outro para editar — ver o
+  // cabeçalho. A validação usa a MESMA função que a gravação vai usar, senão
+  // ela aprovaria um horário que a gravação não consegue montar.
+  function lerHora(texto: string) {
+    const dia = ocorridoEm ? new Date(ocorridoEm) : null;
+    return dia ? horaNoDia(texto, dia) : horaParaData(texto);
+  }
+
+  async function salvar() {
+    if (!ehTipoRegistro(tipo) || !bebeAtivo) return;
+
+    // Já validado pelo `handleSalvar` — o `as Date` é o que ele garantiu.
     const instante = (lerHora(valores.hora ?? '') as Date).toISOString();
 
     setSalvando(true);
@@ -190,6 +215,9 @@ export default function RegistroScreen() {
     setSalvando(false);
 
     if (error) {
+      // Volta ao formulário: a mensagem fica visível ao lado dos campos, e ela
+      // pode corrigir sem passar pela confirmação de novo às cegas.
+      setConfirmando(false);
       setErroForm(error);
       return;
     }
@@ -304,19 +332,52 @@ export default function RegistroScreen() {
 
             {erroForm ? <Text style={styles.erroForm}>{erroForm}</Text> : null}
 
-            <Button
-              label={editando ? 'Salvar alterações' : schema.acao}
-              onPress={handleSalvar}
-              loading={salvando}
-              style={{ marginTop: spacing.sm }}
-            />
-            <Button
-              label="Cancelar"
-              variant="secondary"
-              onPress={fechar}
-              disabled={salvando}
-              style={{ marginTop: spacing.sm }}
-            />
+            {/* ------------------------------------------------------------
+                A CONFIRMAÇÃO EM DUAS ETAPAS — só o grupo de saúde.
+
+                Ela não é modal e não é `Alert`: o react-native-web não
+                implementa `Alert.alert` com dois botões, e `window.confirm`
+                bloqueia a página inteira. É o mesmo padrão inline do "apagar"
+                da tela de detalhe, e funciona igual na web e no nativo.
+
+                O formulário CONTINUA VISÍVEL acima dela. Uma confirmação que
+                esconde o que está sendo confirmado não é confirmação — é um
+                segundo toque. A mãe precisa poder reler a dose que digitou.
+                ------------------------------------------------------------ */}
+            {confirmando ? (
+              <View style={styles.confirmacao}>
+                <Text style={styles.confirmacaoTexto}>{schema.confirmaAntesDeSalvar}</Text>
+                <Button
+                  label={salvando ? 'Salvando…' : 'Confirmar e salvar'}
+                  onPress={salvar}
+                  loading={salvando}
+                  style={{ marginTop: spacing.sm }}
+                />
+                <Button
+                  label="Voltar e corrigir"
+                  variant="secondary"
+                  onPress={() => setConfirmando(false)}
+                  disabled={salvando}
+                  style={{ marginTop: spacing.sm }}
+                />
+              </View>
+            ) : (
+              <>
+                <Button
+                  label={editando ? 'Salvar alterações' : schema.acao}
+                  onPress={handleSalvar}
+                  loading={salvando}
+                  style={{ marginTop: spacing.sm }}
+                />
+                <Button
+                  label="Cancelar"
+                  variant="secondary"
+                  onPress={fechar}
+                  disabled={salvando}
+                  style={{ marginTop: spacing.sm }}
+                />
+              </>
+            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -340,6 +401,13 @@ const styles = StyleSheet.create({
   },
   form: { marginTop: spacing.xl },
   centro: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  confirmacao: {
+    marginTop: spacing.md,
+    backgroundColor: colors.neutro0,
+    borderRadius: radius.md,
+    padding: spacing.md,
+  },
+  confirmacaoTexto: { ...typography.body, color: colors.neutro700 },
   erroForm: { ...typography.caption, color: colors.coral600, marginBottom: spacing.sm },
   // Superfície calma de propósito: coral aqui viraria alerta, e alarmar não é o papel.
   pediatraCard: {

@@ -40,6 +40,7 @@ alter table registros add column if not exists amount_ml int generated always as
 alter table registros add column if not exists peso_g int generated always as ((dados->>'peso_g')::int) stored;
 alter table registros add column if not exists altura_mm int generated always as ((dados->>'altura_mm')::int) stored;
 alter table registros add column if not exists circunferencia_mm int generated always as ((dados->>'circunferencia_mm')::int) stored;
+alter table registros add column if not exists dose int generated always as ((dados->>'dose')::int) stored;
 
 -- ============================================================
 -- O TIPO
@@ -51,7 +52,7 @@ alter table registros add column if not exists circunferencia_mm int generated a
 alter table registros drop constraint if exists registros_tipo_check;
 alter table registros drop constraint if exists tipo_conhecido;
 alter table registros add  constraint tipo_conhecido check (
-  tipo in ('amamentar', 'mamadeira', 'fralda', 'sono', 'humor', 'sintoma', 'banho', 'passeio', 'leitura', 'atividade', 'comida', 'hidratacao', 'extracao', 'peso', 'altura', 'circunferencia')
+  tipo in ('amamentar', 'mamadeira', 'fralda', 'sono', 'humor', 'sintoma', 'banho', 'passeio', 'leitura', 'atividade', 'comida', 'hidratacao', 'extracao', 'peso', 'altura', 'circunferencia', 'medicacao', 'vitamina', 'vacina')
 );
 
 -- ============================================================
@@ -81,6 +82,11 @@ alter table registros add  constraint faixa_altura_mm check (
 alter table registros drop constraint if exists faixa_circunferencia_mm;
 alter table registros add  constraint faixa_circunferencia_mm check (
   circunferencia_mm is null or circunferencia_mm between 250 and 600
+);
+
+alter table registros drop constraint if exists faixa_dose;
+alter table registros add  constraint faixa_dose check (
+  dose is null or dose between 1 and 10000
 );
 
 -- ============================================================
@@ -215,18 +221,73 @@ alter table registros add  constraint exige_circunferencia_circunferencia_mm che
   tipo <> 'circunferencia' or dados ? 'circunferencia_mm'
 );
 
+alter table registros drop constraint if exists exige_medicacao_medicine;
+alter table registros add  constraint exige_medicacao_medicine check (
+  tipo <> 'medicacao' or dados ? 'medicine'
+);
+
+alter table registros drop constraint if exists exige_medicacao_dose;
+alter table registros add  constraint exige_medicacao_dose check (
+  tipo <> 'medicacao' or dados ? 'dose'
+);
+
+alter table registros drop constraint if exists vocab_medicacao_dose_unit;
+alter table registros add  constraint vocab_medicacao_dose_unit check (
+  tipo <> 'medicacao' or dados->>'dose_unit' in ('ml', 'mg', 'drops', 'ui')
+);
+
+alter table registros drop constraint if exists exige_medicacao_dose_unit;
+alter table registros add  constraint exige_medicacao_dose_unit check (
+  tipo <> 'medicacao' or dados ? 'dose_unit'
+);
+
+alter table registros drop constraint if exists exige_vitamina_medicine;
+alter table registros add  constraint exige_vitamina_medicine check (
+  tipo <> 'vitamina' or dados ? 'medicine'
+);
+
+alter table registros drop constraint if exists exige_vitamina_dose;
+alter table registros add  constraint exige_vitamina_dose check (
+  tipo <> 'vitamina' or dados ? 'dose'
+);
+
+alter table registros drop constraint if exists vocab_vitamina_dose_unit;
+alter table registros add  constraint vocab_vitamina_dose_unit check (
+  tipo <> 'vitamina' or dados->>'dose_unit' in ('ml', 'mg', 'drops', 'ui')
+);
+
+alter table registros drop constraint if exists exige_vitamina_dose_unit;
+alter table registros add  constraint exige_vitamina_dose_unit check (
+  tipo <> 'vitamina' or dados ? 'dose_unit'
+);
+
+alter table registros drop constraint if exists exige_vacina_vaccine;
+alter table registros add  constraint exige_vacina_vaccine check (
+  tipo <> 'vacina' or dados ? 'vaccine'
+);
+
+alter table registros drop constraint if exists vocab_vacina_stage;
+alter table registros add  constraint vocab_vacina_stage check (
+  tipo <> 'vacina' or dados->>'stage' in ('first', 'second', 'third', 'booster', 'single')
+);
+
+alter table registros drop constraint if exists exige_vacina_stage;
+alter table registros add  constraint exige_vacina_stage check (
+  tipo <> 'vacina' or dados ? 'stage'
+);
+
 -- ============================================================
 -- CONFERÊNCIA — rodar depois
 -- ============================================================
 --
 -- 1 · As restrições esperadas estão todas lá?
---     Esperado: 31 linhas, nenhuma com faltando = true.
+--     Esperado: 43 linhas, nenhuma com faltando = true.
 --
 -- select nome, not exists (
 --          select 1 from pg_constraint
 --          where conrelid = 'registros'::regclass and conname = nome
 --        ) as faltando
--- from unnest(array['tipo_conhecido', 'faixa_duration_seconds', 'faixa_amount_ml', 'faixa_peso_g', 'faixa_altura_mm', 'faixa_circunferencia_mm', 'vocab_amamentar_side', 'exige_amamentar_side', 'exige_mamadeira_amount_ml', 'vocab_mamadeira_bottle_type', 'exige_mamadeira_bottle_type', 'vocab_fralda_content', 'exige_fralda_content', 'vocab_humor_mood', 'exige_humor_mood', 'vocab_humor_probable_reason', 'vocab_sintoma_symptom', 'exige_sintoma_symptom', 'vocab_sintoma_intensity', 'vocab_atividade_activity', 'exige_atividade_activity', 'vocab_comida_acceptance', 'exige_comida_acceptance', 'vocab_hidratacao_liquid', 'exige_hidratacao_liquid', 'exige_hidratacao_amount_ml', 'exige_extracao_amount_ml', 'vocab_extracao_side', 'exige_peso_peso_g', 'exige_altura_altura_mm', 'exige_circunferencia_circunferencia_mm']) as nome
+-- from unnest(array['tipo_conhecido', 'faixa_duration_seconds', 'faixa_amount_ml', 'faixa_peso_g', 'faixa_altura_mm', 'faixa_circunferencia_mm', 'faixa_dose', 'vocab_amamentar_side', 'exige_amamentar_side', 'exige_mamadeira_amount_ml', 'vocab_mamadeira_bottle_type', 'exige_mamadeira_bottle_type', 'vocab_fralda_content', 'exige_fralda_content', 'vocab_humor_mood', 'exige_humor_mood', 'vocab_humor_probable_reason', 'vocab_sintoma_symptom', 'exige_sintoma_symptom', 'vocab_sintoma_intensity', 'vocab_atividade_activity', 'exige_atividade_activity', 'vocab_comida_acceptance', 'exige_comida_acceptance', 'vocab_hidratacao_liquid', 'exige_hidratacao_liquid', 'exige_hidratacao_amount_ml', 'exige_extracao_amount_ml', 'vocab_extracao_side', 'exige_peso_peso_g', 'exige_altura_altura_mm', 'exige_circunferencia_circunferencia_mm', 'exige_medicacao_medicine', 'exige_medicacao_dose', 'vocab_medicacao_dose_unit', 'exige_medicacao_dose_unit', 'exige_vitamina_medicine', 'exige_vitamina_dose', 'vocab_vitamina_dose_unit', 'exige_vitamina_dose_unit', 'exige_vacina_vaccine', 'vocab_vacina_stage', 'exige_vacina_stage']) as nome
 -- order by faltando desc, nome;
 --
 -- 2 · Sobrou alguma que o schema não declara mais?
@@ -237,4 +298,4 @@ alter table registros add  constraint exige_circunferencia_circunferencia_mm che
 -- from pg_constraint
 -- where conrelid = 'registros'::regclass
 --   and contype = 'c'
---   and conname <> all (array['tipo_conhecido', 'faixa_duration_seconds', 'faixa_amount_ml', 'faixa_peso_g', 'faixa_altura_mm', 'faixa_circunferencia_mm', 'vocab_amamentar_side', 'exige_amamentar_side', 'exige_mamadeira_amount_ml', 'vocab_mamadeira_bottle_type', 'exige_mamadeira_bottle_type', 'vocab_fralda_content', 'exige_fralda_content', 'vocab_humor_mood', 'exige_humor_mood', 'vocab_humor_probable_reason', 'vocab_sintoma_symptom', 'exige_sintoma_symptom', 'vocab_sintoma_intensity', 'vocab_atividade_activity', 'exige_atividade_activity', 'vocab_comida_acceptance', 'exige_comida_acceptance', 'vocab_hidratacao_liquid', 'exige_hidratacao_liquid', 'exige_hidratacao_amount_ml', 'exige_extracao_amount_ml', 'vocab_extracao_side', 'exige_peso_peso_g', 'exige_altura_altura_mm', 'exige_circunferencia_circunferencia_mm']);
+--   and conname <> all (array['tipo_conhecido', 'faixa_duration_seconds', 'faixa_amount_ml', 'faixa_peso_g', 'faixa_altura_mm', 'faixa_circunferencia_mm', 'faixa_dose', 'vocab_amamentar_side', 'exige_amamentar_side', 'exige_mamadeira_amount_ml', 'vocab_mamadeira_bottle_type', 'exige_mamadeira_bottle_type', 'vocab_fralda_content', 'exige_fralda_content', 'vocab_humor_mood', 'exige_humor_mood', 'vocab_humor_probable_reason', 'vocab_sintoma_symptom', 'exige_sintoma_symptom', 'vocab_sintoma_intensity', 'vocab_atividade_activity', 'exige_atividade_activity', 'vocab_comida_acceptance', 'exige_comida_acceptance', 'vocab_hidratacao_liquid', 'exige_hidratacao_liquid', 'exige_hidratacao_amount_ml', 'exige_extracao_amount_ml', 'vocab_extracao_side', 'exige_peso_peso_g', 'exige_altura_altura_mm', 'exige_circunferencia_circunferencia_mm', 'exige_medicacao_medicine', 'exige_medicacao_dose', 'vocab_medicacao_dose_unit', 'exige_medicacao_dose_unit', 'exige_vitamina_medicine', 'exige_vitamina_dose', 'vocab_vitamina_dose_unit', 'exige_vitamina_dose_unit', 'exige_vacina_vaccine', 'vocab_vacina_stage', 'exige_vacina_stage']);

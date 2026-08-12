@@ -251,6 +251,78 @@ checar(
     : 'compartilhar coluna é o desenho, não o erro'
 );
 
+console.log('\n— e a mesma chave com FORMAS diferentes também reprova —\n');
+
+/**
+ * O guarda irmão, encontrado desenhando o grupo de saúde.
+ *
+ * Medicação queria `dose` como número (2,5 ml) e vacina queria `dose` como
+ * escolha (1ª dose, reforço). Não são o mesmo campo — têm o mesmo nome em
+ * português e nada mais.
+ *
+ * O guarda de faixa NÃO pega isso: ele só compara `min`/`max` entre campos
+ * numéricos, e aqui um dos dois nem é numérico. O gerador produziria uma coluna
+ * com `(dados->>'dose')::int` **e** um check de vocabulário com palavras sobre a
+ * mesma chave — e a primeira vacina salva explodiria no cast, com 22P02, sem
+ * nada apontar para o gerador.
+ */
+const escolha = (coluna: string): SchemaRegistro['campos'][number] => ({
+  entrada: 'escolha',
+  chave: 'dose',
+  coluna,
+  rotulo: 'Dose',
+  obrigatorio: true,
+  erroFalta: 'falta',
+  opcoes: [{ value: 'first', label: '1ª dose' }],
+});
+
+const tipoComEscolha = (nome: string, coluna: string): SchemaRegistro =>
+  ({
+    tipo: nome,
+    titulo: nome,
+    subtitulo: '',
+    acao: 'Salvar',
+    campos: [escolha(coluna)],
+  }) as unknown as SchemaRegistro;
+
+const FORMAS_DIFERENTES = montarEsperandoErro(
+  {
+    medicacao: tipoFalso('medicacao', 'dose', 1000),
+    vacina: tipoComEscolha('vacina', 'dose'),
+  },
+  ['medicacao', 'vacina']
+);
+
+checar(
+  'número num tipo e escolha noutro, na mesma chave, param o gerador',
+  FORMAS_DIFERENTES !== null && FORMAS_DIFERENTES.includes('dose'),
+  FORMAS_DIFERENTES
+    ? FORMAS_DIFERENTES.split('\n')[0]
+    : 'passou — o cast da coluna gerada explodiria na primeira linha'
+);
+checar(
+  'e o erro diz as duas formas, senão não dá para agir',
+  FORMAS_DIFERENTES !== null &&
+    FORMAS_DIFERENTES.includes('numero') &&
+    FORMAS_DIFERENTES.includes('escolha')
+);
+
+// O controle: a mesma chave com a MESMA forma continua sendo compartilhamento
+// legítimo, e é o que `duration_seconds` faz em quatro tipos.
+const MESMA_FORMA = montarEsperandoErro(
+  {
+    vacina: tipoComEscolha('vacina', 'stage'),
+    reforco: tipoComEscolha('reforco', 'stage'),
+  },
+  ['vacina', 'reforco']
+);
+
+checar(
+  'e a mesma chave com a mesma forma continua passando',
+  MESMA_FORMA === null,
+  MESMA_FORMA ? `reprovou o caso bom: ${MESMA_FORMA.split('\n')[0]}` : ''
+);
+
 console.log(
   falhas === 0
     ? '\nRestrições em dia com o schema, idempotentes, e a colisão travada.\n'

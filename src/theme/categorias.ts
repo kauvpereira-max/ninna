@@ -64,6 +64,11 @@ export const CATEGORIA_POR_TIPO: Record<TipoRegistro, Categoria> = {
   peso: { key: 'peso', label: 'Peso', icon: 'scale', bg: colors.categoriaCoral },
   altura: { key: 'altura', label: 'Altura', icon: 'resize', bg: colors.categoriaCoral },
   circunferencia: { key: 'circunferencia', label: 'Perímetro cefálico', icon: 'ellipse-outline', bg: colors.categoriaCoral },
+  // Saúde. `warning` e o token semântico de atenção, o mesmo do sintoma — e é o
+  // que estes três são: registro que ela vai reler para conferir.
+  medicacao: { key: 'medicacao', label: 'Medicação', icon: 'medkit', bg: colors.warning },
+  vitamina: { key: 'vitamina', label: 'Vitamina', icon: 'nutrition', bg: colors.warning },
+  vacina: { key: 'vacina', label: 'Vacina', icon: 'shield-checkmark', bg: colors.warning },
 };
 
 /**
@@ -90,6 +95,9 @@ export const TODOS_OS_TIPOS: TipoRegistro[] = [
   'peso',
   'altura',
   'circunferencia',
+  'medicacao',
+  'vitamina',
+  'vacina',
 ];
 
 /**

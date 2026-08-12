@@ -58,7 +58,10 @@ export type TipoRegistro =
   | 'extracao'
   | 'peso'
   | 'altura'
-  | 'circunferencia';
+  | 'circunferencia'
+  | 'medicacao'
+  | 'vitamina'
+  | 'vacina';
 
 export const TIPOS_REGISTRO: TipoRegistro[] = [
   'amamentar',
@@ -77,6 +80,9 @@ export const TIPOS_REGISTRO: TipoRegistro[] = [
   'peso',
   'altura',
   'circunferencia',
+  'medicacao',
+  'vitamina',
+  'vacina',
 ];
 
 export function ehTipoRegistro(valor: string | undefined): valor is TipoRegistro {
@@ -193,6 +199,34 @@ export const LIQUIDOS: OpcaoCampo[] = [
 ];
 
 /**
+ * A unidade da dose. Ela muda o SIGNIFICADO do número, e por isso é obrigatória.
+ *
+ * "2,5" sozinho não é dose de nada. E o app não sabe qual unidade cada remédio
+ * usa — ele registra o que a mãe leu na receita, não valida contra a bula.
+ */
+export const UNIDADES_DOSE: OpcaoCampo[] = [
+  { value: 'ml', label: 'ml' },
+  { value: 'mg', label: 'mg' },
+  { value: 'drops', label: 'gotas', noResumo: 'gotas' },
+  { value: 'ui', label: 'UI' },
+];
+
+/**
+ * Qual dose da vacina foi. Fechado, e curto.
+ *
+ * ⚠️ Registrar qual dose foi tomada é REGISTRO. Dizer qual vem a seguir é
+ * orientação de saúde, e a Ninna não faz — ver `PRODUTO.md` §3.4. Não existe
+ * calendário aqui, e a ausência dele é o desenho.
+ */
+export const ETAPAS_VACINA: OpcaoCampo[] = [
+  { value: 'first', label: '1ª dose' },
+  { value: 'second', label: '2ª dose' },
+  { value: 'third', label: '3ª dose' },
+  { value: 'booster', label: 'Reforço' },
+  { value: 'single', label: 'Dose única' },
+];
+
+/**
  * O que a Atividade foi. Vocabulário fechado, e não texto livre, pela mesma
  * razão de sempre: dado agregável é requisito do motor. "Atividade" sozinha, sem
  * dizer qual, é uma linha que não responde nada depois.
@@ -298,6 +332,28 @@ export type SchemaRegistro = {
   titulo: string;
   subtitulo: string;
   acao: string;
+  /**
+   * Pede confirmação antes de salvar, com a frase que a mãe lê.
+   *
+   * Só o grupo de saúde usa. Dose errada é a única coisa neste app em que o erro
+   * é dano físico, e uma etapa a mais no caminho é o preço certo — atrito onde
+   * ele protege, e em lugar nenhum mais. Registrar continua sendo ação de
+   * segundos para os outros treze tipos.
+   */
+  confirmaAntesDeSalvar?: string;
+  /**
+   * O registro não pode ser editado depois de salvo.
+   *
+   * É o que sustenta a mãe conferindo "já dei o remédio?": um histórico que se
+   * reescreve não serve para isso. A flag esconde o botão de editar, e a defesa
+   * de verdade está no banco — trigger na `007`, porque regra de tela se contorna
+   * pela URL.
+   *
+   * ⚠️ APAGAR CONTINUA POSSÍVEL, e é decisão. Apagar é ação deliberada, com
+   * confirmação e sem deixar meia-verdade para trás; editar troca o conteúdo
+   * mantendo a aparência de registro conferido, que é o que estraga a conferência.
+   */
+  imutavel?: boolean;
   /**
    * `true` quando o registro fica correndo até a mãe encerrar. Quem cuida disso
    * é `registros.ts`: a regra de "só um por vez" precisa consultar o banco.
@@ -410,6 +466,45 @@ const MEDIDA = (opcoes: {
   erroFalta: opcoes.erro,
   erroFaixa: opcoes.erro,
 });
+
+/**
+ * A dose, e a faixa dela é SANIDADE DE DIGITAÇÃO — não farmacologia.
+ *
+ * 0,1 a 1000 cobre gota, mililitro, miligrama e UI ao mesmo tempo, e é por isso
+ * que ela é larga: a unidade muda o significado do número, e o app não sabe qual
+ * remédio a mãe está dando. Recusar "500" para um mg legítimo seria o app fingir
+ * que sabe de medicina; aceitar 50000 seria não fazer nada. Esta faixa pega o
+ * dedo que escorregou no zero, e nada além disso.
+ *
+ * A defesa de verdade é a confirmação em duas etapas: ela lê o que digitou.
+ */
+const DOSE: CampoSchema = {
+  entrada: 'numero',
+  chave: 'dose',
+  coluna: 'dose',
+  rotulo: 'Dose',
+  placeholder: 'ex.: 2,5',
+  min: 0.1,
+  max: 1000,
+  // A coluna guarda em DÉCIMOS: 2,5 ml vira 25. É o mesmo mecanismo do peso, e
+  // existe porque a coluna gerada é inteira.
+  escala: 10,
+  decimais: 1,
+  digitos: 4,
+  obrigatorio: true,
+  erroFalta: 'Qual foi a dose?',
+  erroFaixa: 'Dose de 0,1 a 1000.',
+};
+
+const UNIDADE: CampoSchema = {
+  entrada: 'escolha',
+  chave: 'unidade',
+  coluna: 'dose_unit',
+  rotulo: 'Unidade',
+  opcoes: UNIDADES_DOSE,
+  obrigatorio: true,
+  erroFalta: 'Em que unidade?',
+};
 
 const DURACAO = (rotulo: string, placeholder: string): CampoSchema => ({
   entrada: 'numero',
@@ -835,6 +930,115 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
       OBSERVACAO,
     ],
   },
+
+  // ============================================================
+  // SAÚDE — bloco 3, última leva, e a única onde erro é dano físico
+  //
+  // Dois comportamentos que nenhum outro grupo tem, e os dois foram pedidos pelo
+  // §3.4 antes de existir código:
+  //
+  //   · CONFIRMAÇÃO EM DUAS ETAPAS. Atrito onde ele protege, e em lugar nenhum
+  //     mais — os outros treze tipos continuam salvando de primeira.
+  //   · HISTÓRICO NÃO EDITÁVEL. É o que sustenta a mãe conferindo "já dei?".
+  //     A flag esconde o botão; a defesa está no trigger da `007`.
+  //
+  // ⚠️ E UMA COISA QUE O APP NÃO FAZ: validar dose contra bula. A faixa aqui é
+  // sanidade de digitação (0,1 a 1000), não conhecimento farmacológico. Recusar
+  // "500" para um mg legítimo seria o app fingir que sabe de medicina — e
+  // aceitar 50000 sem piscar seria não fazer nada. A defesa real é a mãe ler o
+  // que digitou, e é para isso que a confirmação existe.
+  // ============================================================
+
+  medicacao: {
+    tipo: 'medicacao',
+    titulo: 'Medicação',
+    subtitulo: 'O que foi dado, e quanto.',
+    acao: 'Salvar medicação',
+    confirmaAntesDeSalvar: 'Confere antes de salvar — depois este registro não pode ser editado.',
+    imutavel: true,
+    campos: [
+      HORA('Horário'),
+      {
+        entrada: 'texto',
+        chave: 'medicamento',
+        // Texto livre, e não vocabulário: nome de medicamento é lista infinita e
+        // muda. É a exceção que a convenção do `symptom` prevê — coluna sem check
+        // não é convite a texto livre, mas aqui não existe vocabulário possível.
+        coluna: 'medicine',
+        rotulo: 'Qual medicamento',
+        placeholder: 'Como está escrito na receita',
+        max: 120,
+        linhas: false,
+        obrigatorio: true,
+        erroFalta: 'Qual foi o medicamento?',
+      },
+      DOSE,
+      UNIDADE,
+      OBSERVACAO,
+    ],
+  },
+
+  vitamina: {
+    tipo: 'vitamina',
+    titulo: 'Vitamina',
+    subtitulo: 'A suplementação do dia.',
+    acao: 'Salvar vitamina',
+    confirmaAntesDeSalvar: 'Confere antes de salvar — depois este registro não pode ser editado.',
+    imutavel: true,
+    campos: [
+      HORA('Horário'),
+      {
+        entrada: 'texto',
+        chave: 'medicamento',
+        coluna: 'medicine',
+        rotulo: 'Qual vitamina',
+        placeholder: 'Vitamina D, ferro…',
+        max: 120,
+        linhas: false,
+        obrigatorio: true,
+        erroFalta: 'Qual foi a vitamina?',
+      },
+      DOSE,
+      UNIDADE,
+      OBSERVACAO,
+    ],
+  },
+
+  vacina: {
+    tipo: 'vacina',
+    titulo: 'Vacina',
+    subtitulo: 'O que foi aplicado, como está na caderneta.',
+    acao: 'Salvar vacina',
+    confirmaAntesDeSalvar: 'Confere antes de salvar — depois este registro não pode ser editado.',
+    imutavel: true,
+    campos: [
+      HORA('Horário'),
+      {
+        entrada: 'texto',
+        chave: 'vacina',
+        coluna: 'vaccine',
+        rotulo: 'Qual vacina',
+        placeholder: 'Como está escrito na caderneta',
+        max: 120,
+        linhas: false,
+        obrigatorio: true,
+        erroFalta: 'Qual foi a vacina?',
+      },
+      {
+        entrada: 'escolha',
+        // `etapa`, e NÃO `dose`: medicação declara `dose` como número, e a mesma
+        // chave com formas diferentes faria a coluna gerada tentar converter
+        // "primeira" em int. O gerador para nisso desde hoje.
+        chave: 'etapa',
+        coluna: 'stage',
+        rotulo: 'Qual dose',
+        opcoes: ETAPAS_VACINA,
+        obrigatorio: true,
+        erroFalta: 'Qual dose foi?',
+      },
+      OBSERVACAO,
+    ],
+  },
 };
 
 // ============================================================
@@ -1211,6 +1415,37 @@ type LeituraDoTipo = {
   compararComAnterior?: (linha: LinhaRegistro, anterior: LinhaRegistro) => string | null;
 };
 
+/**
+ * Dose em palavra: o número na unidade que a mãe digitou, com a unidade colada.
+ *
+ * A coluna guarda décimos (2,5 ml → 25), então a divisão por 10 acontece aqui —
+ * e o `toFixed` some com o ",0" de dose inteira: "5 ml", não "5,0 ml".
+ */
+function doseEmPalavra(decimos: number, unidade: string | null): string {
+  const valor = decimos / 10;
+  const numeroEscrito = valor.toFixed(valor % 1 === 0 ? 0 : 1).replace('.', ',');
+  const rotulo = unidade ? (UNIDADES_DOSE.find((o) => o.value === unidade)?.label ?? unidade) : null;
+  return rotulo ? `${numeroEscrito} ${rotulo}` : numeroEscrito;
+}
+
+/** "Dipirona · 2,5 ml" — o nome sem a dose não responde "já dei, e quanto?". */
+function resumoDeDose(linha: LinhaRegistro): string {
+  const nome = texto(linha, 'medicine');
+  const decimos = numero(linha, 'dose');
+  const dose = decimos === null ? null : doseEmPalavra(decimos, texto(linha, 'dose_unit'));
+  if (nome && dose) return `${nome} · ${dose}`;
+  return nome ?? dose ?? 'Medicação';
+}
+
+function detalheDeDose(linha: LinhaRegistro, rotulo: string, agora: Date): CampoDetalhe[] {
+  const decimos = numero(linha, 'dose');
+  return listar([
+    [rotulo, texto(linha, 'medicine')],
+    ['Dose', decimos === null ? null : doseEmPalavra(decimos, texto(linha, 'dose_unit'))],
+    ['Quando', formatarMomento(texto(linha, 'ocorrido_em') ?? '', agora)],
+  ]);
+}
+
 /** Gramas em palavra curta: abaixo de um quilo conta em grama, acima em quilo. */
 function pesoEmPalavra(gramas: number): string {
   if (gramas < 1000) return `${gramas} g`;
@@ -1435,6 +1670,40 @@ export const LEITURA: Record<TipoRegistro, LeituraDoTipo> = {
       return listar([
         ['Quantidade', ml ? `${ml} ml` : null],
         ['O que era', bruto ? (LIQUIDOS.find((o) => o.value === bruto)?.label ?? bruto) : null],
+        ['Quando', formatarMomento(texto(l, 'ocorrido_em') ?? '', agora)],
+      ]);
+    },
+  },
+
+  /**
+   * Saúde. O resumo carrega a DOSE junto do nome, e isso é o ponto do grupo.
+   *
+   * "Dipirona" sozinho não responde a pergunta que ela abre o app para fazer —
+   * "já dei, e quanto?". O número tem que estar na linha da lista, sem exigir
+   * que ela abra o registro.
+   */
+  medicacao: {
+    resumir: (l) => resumoDeDose(l),
+    detalhar: (l, agora) => detalheDeDose(l, 'Medicamento', agora),
+  },
+
+  vitamina: {
+    resumir: (l) => resumoDeDose(l),
+    detalhar: (l, agora) => detalheDeDose(l, 'Vitamina', agora),
+  },
+
+  vacina: {
+    resumir: (l) => {
+      const nome = texto(l, 'vaccine');
+      const etapa = rotularValor(ETAPAS_VACINA, texto(l, 'stage'));
+      if (nome && etapa) return `${nome} · ${etapa}`;
+      return nome ?? etapa ?? 'Vacina';
+    },
+    detalhar: (l, agora) => {
+      const bruto = texto(l, 'stage');
+      return listar([
+        ['Vacina', texto(l, 'vaccine')],
+        ['Dose', bruto ? (ETAPAS_VACINA.find((o) => o.value === bruto)?.label ?? bruto) : null],
         ['Quando', formatarMomento(texto(l, 'ocorrido_em') ?? '', agora)],
       ]);
     },

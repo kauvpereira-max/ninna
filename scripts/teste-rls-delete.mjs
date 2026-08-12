@@ -378,6 +378,98 @@ const TIPOS = [
   },
 ];
 
+/**
+ * O gatilho da `007`: medicação, vitamina e vacina não se editam.
+ *
+ * ⚠️ ISTO NÃO É RLS, e é por isso que mora aqui mesmo assim: é o único teste que
+ * fala com o banco de verdade, e a regra só existe no banco. Uma flag no schema
+ * esconde o botão de editar; o `atualizarRegistro` é genérico e um `PATCH` no
+ * PostgREST não passa por tela nenhuma.
+ *
+ * As três asserções são irmãs e nenhuma serve sozinha:
+ *
+ *   1. o update de medicação é RECUSADO — a regra existe;
+ *   2. a linha continua com o valor antigo — a recusa aconteceu antes da escrita,
+ *      e não é um erro cosmético devolvido depois de gravar;
+ *   3. o update de FRALDA passa — o gatilho é específico, e não um "recusa tudo"
+ *      que passaria na 1 e quebraria o encerrar sono.
+ *
+ * A terceira é a que o pedido nomeou: gatilho genérico por "tipo imutável"
+ * quebraria o encerrar, porque encerrar sono é um `update`.
+ */
+async function provarImutabilidadeDaSaude(cliente, babyId) {
+  const criar = async (tipo, dados) => {
+    const r = await cliente
+      .from('registros')
+      .insert({
+        baby_id: babyId,
+        tipo,
+        ocorrido_em: AGORA,
+        dados,
+        notes: `${PREFIXO} ${tipo}`,
+      })
+      .select('id')
+      .single();
+    if (r.error) throw new Error(`não consegui criar ${tipo}: ${r.error.message}`);
+    return r.data.id;
+  };
+
+  let idMedicacao = null;
+  let idFralda = null;
+
+  try {
+    idMedicacao = await criar('medicacao', { medicine: 'TESTE', dose: 25, dose_unit: 'ml' });
+    idFralda = await criar('fralda', { content: 'pee' });
+
+    const edicao = await cliente
+      .from('registros')
+      .update({ notes: `${PREFIXO} EDITADO` })
+      .eq('id', idMedicacao)
+      .select('id');
+
+    registra(
+      'imutavel',
+      'medicação recusa edição, no BANCO',
+      Boolean(edicao.error),
+      edicao.error ? '' : 'o update passou — o gatilho da 007 não está no ar'
+    );
+
+    const depois = await cliente
+      .from('registros')
+      .select('notes')
+      .eq('id', idMedicacao)
+      .maybeSingle();
+
+    registra(
+      'imutavel',
+      'e a linha continua com o valor antigo',
+      depois.data?.notes === `${PREFIXO} medicacao`,
+      `notes = ${depois.data?.notes ?? '(sumiu)'}`
+    );
+
+    // O CONTROLE. Sem ele, um gatilho que recusasse todo update passaria nas
+    // duas asserções acima — e a mãe não conseguiria encerrar um sono.
+    const fralda = await cliente
+      .from('registros')
+      .update({ notes: `${PREFIXO} EDITADO` })
+      .eq('id', idFralda)
+      .select('id');
+
+    registra(
+      'imutavel',
+      'e fralda continua editável — o gatilho é dos três, não de todos',
+      !fralda.error && (fralda.data ?? []).length === 1,
+      fralda.error ? fralda.error.message : ''
+    );
+  } finally {
+    // Por id, e não por bebê: a limpeza geral roda depois, mas se ela falhar
+    // estas duas linhas não podem sobrar.
+    for (const id of [idMedicacao, idFralda]) {
+      if (id) await cliente.from('registros').delete().eq('id', id);
+    }
+  }
+}
+
 // ------------------------------------------------------------------
 // Execução
 // ------------------------------------------------------------------
@@ -522,6 +614,8 @@ async function main() {
         linhasApagadasPorB !== 1 ? `apagou ${linhasApagadasPorB} linha(s)` : ''
       );
     }
+
+    await provarImutabilidadeDaSaude(b.cliente, bebeB);
   } finally {
     // No `finally`: falha no meio do teste não pode deixar bebê e registro de
     // teste no mesmo banco que as embaixadoras vão usar.
