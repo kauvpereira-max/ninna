@@ -35,6 +35,11 @@ import {
   type ValoresRegistro,
 } from '../src/lib/registroSchema.ts';
 import { horaNoDia, horaParaData } from '../src/lib/horario.ts';
+import {
+  ATALHOS_DA_HOME,
+  CATEGORIAS_FORA_DA_HOME,
+  TETO_DE_ATALHOS,
+} from '../src/theme/categorias.ts';
 
 let falhas = 0;
 
@@ -536,6 +541,34 @@ checar(
     new Set(comDuracao.map((c) => `${c.min}|${c.max}|${c.escala}`)).size === 1,
   `${comDuracao.length} tipos, ${new Set(comDuracao.map((c) => `${c.min}|${c.max}|${c.escala}`)).size} faixa(s) — ` +
     'uma coluna gerada tem uma faixa só'
+);
+
+console.log('\n— os atalhos da Home, e o teto que eles têm —\n');
+
+/**
+ * O teto existe porque o grid da Home vale por ser lido de relance, com uma mão,
+ * no escuro. Passando de oito ele vira lista, e lista se lê em vez de se
+ * reconhecer.
+ *
+ * Esta asserção não é sobre código: é para a decisão voltar à mesa quando
+ * alguém tentar somar o nono. Alimentação e Crescimento trazem seis tipos, e a
+ * pergunta certa naquele momento não é "cabe mais um?" — é qual sai.
+ */
+checar(
+  `a Home tem no máximo ${TETO_DE_ATALHOS} atalhos`,
+  ATALHOS_DA_HOME.length <= TETO_DE_ATALHOS,
+  `${ATALHOS_DA_HOME.length} hoje — passar disso é decisão de produto, não de código`
+);
+checar(
+  'todo atalho é um tipo que existe',
+  ATALHOS_DA_HOME.every((t) => TIPOS_REGISTRO.includes(t))
+);
+checar(
+  'e todo tipo tem caminho: ou atalho, ou a tela de Mais tipos',
+  TIPOS_REGISTRO.every(
+    (t) => ATALHOS_DA_HOME.includes(t) || CATEGORIAS_FORA_DA_HOME.some((c) => c.key === t)
+  ),
+  'tipo sem caminho é tipo que a mãe não alcança — e nada mais no app reclamaria'
 );
 
 console.log('\n— o detalhe: rótulos, ordem, e nada em branco —\n');

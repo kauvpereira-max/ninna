@@ -99,7 +99,24 @@ export const ATALHOS_DA_HOME: TipoRegistro[] = [
   'mamadeira',
   'humor',
   'sintoma',
+  // Banho sobe, e Passeio, Leitura e Atividade não. O critério não é
+  // frequência de uso — é QUANDO ela registra: banho é rotina diária e se anota
+  // na hora, como fralda. Os outros três são esporádicos e quase sempre
+  // lembrados depois, e para "depois" a tela de Mais tipos serve igual.
+  'banho',
 ];
+
+/**
+ * ⚠️ OITO É O TETO, e ele é decisão de produto tomada em 12/08/2026.
+ *
+ * O grid da Home vale por ser lido de relance, com uma mão, no escuro. Passando
+ * de oito ele deixa de ser um conjunto que se reconhece pela forma e vira uma
+ * lista que se lê — e aí o atalho custa mais atenção do que economiza.
+ *
+ * Alimentação e Crescimento trazem seis tipos. Se algum deles for candidato a
+ * subir, a pergunta não é "cabe mais um?" — é qual sai.
+ */
+export const TETO_DE_ATALHOS = 8;
 
 /** Todas as categorias, na ordem canônica. É o que a Rotina usa nos filtros. */
 export const CATEGORIAS: Categoria[] = TODOS_OS_TIPOS.map((t) => CATEGORIA_POR_TIPO[t]);

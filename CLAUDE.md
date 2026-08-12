@@ -129,6 +129,23 @@ não enxergam:
 
 "Os testes passaram" não é fechar bloco. Os três, sempre, e depois o push.
 
+### 4. SQL de migração vence, e o vencimento nasce com o arquivo
+
+Ele é escrito para um **estado do banco**. Quando o estado muda, o arquivo não
+quebra — ele passa a fazer a coisa errada **com sucesso**, e some sem erro.
+
+> Todo SQL escrito para um estado nasce com prazo, no mesmo commit — com **data**
+> (o gatilho pode não ser notado) e **gatilho** (a data é sempre generosa demais).
+> No dia, **apagar, não renomear**: `reversao-vencida-em-…` continua sendo
+> `reversao` para quem está com pressa. O histórico do git basta.
+
+Custou dois arquivos em três dias, falhando em direções opostas — um perdia
+registro novo, o outro desfazia edição existente com dado velho. Os dois casos e
+o corolário do "nome de par" estão no `PRODUTO.md` §8-bis.
+
+**O que não vence:** SQL que descreve um ESTADO e é idempotente (o
+`supabase/restricoes/registros.sql`). Só vence o que descreve uma transição.
+
 ## Onde está a fonte da verdade
 
 - **Design system:** `src/theme/tokens.ts`
@@ -234,8 +251,8 @@ Cinco migrations, todas aplicadas e conferidas no projeto de São Paulo:
 
 **As 5 tabelas antigas ainda existem, e o app não as toca desde 11/08/2026.** As
 97 linhas foram copiadas para `registros` (passo 3), e o `drop` é uma migration
-própria, `006`, dias depois — nunca no mesmo dia. Plano, reversão e o backfill
-que dá para rodar de novo: `docs/plano-migracao-registros.md`.
+própria, `006`, dias depois — nunca no mesmo dia. O plano inteiro, incluindo o
+que foi apagado e por quê: `docs/plano-migracao-registros.md`.
 
 ## Os testes, e o que cada um defende
 
@@ -340,10 +357,9 @@ previsões → canal nativo.
 - `tokens.ts` cita `src/theme/fonts.ts`, que não existe (fontes carregam no
   `app/_layout.tsx`)
 - As 5 tabelas antigas seguem no banco, vazias de uso mas cheias de dado, até a
-  `006`. `supabase/reversao/` **venceu em 12/08/2026** (gatilho: primeiro tipo
-  novo em produção) e foi apagado — está no histórico do git. O
-  `supabase/backfill/` está na mesma situação e é pior: o `passo-3` usa
-  `do update` e, rodado hoje, desfaria edições com dado velho e sem erro
+  `006`. `supabase/reversao/` e `supabase/backfill/` **venceram em 12/08/2026**
+  pelo gatilho do primeiro tipo novo em produção, e foram apagados — estão no
+  histórico do git. Ver a regra 4 acima
 - **O contador do sono pode não avançar sozinho na PWA instalada.** O limiar de
   2 min já foi corrigido (conta desde o primeiro minuto), o que encurta a janela
   de "parece travado". Sobra a hipótese do `setInterval` estrangulado pelo

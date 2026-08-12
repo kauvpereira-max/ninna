@@ -839,6 +839,53 @@ Se ela continuar, três coisas mudam já:
 
 ---
 
+## 8-bis. SQL de migração vence — e o vencimento nasce com o arquivo
+
+**Registrado em 12/08/2026, depois de dois arquivos vencerem em três dias.**
+
+SQL de migração é escrito para um **estado do banco**, não para o banco. Quando o
+estado muda, o arquivo não deixa de funcionar — ele passa a fazer a coisa errada
+com sucesso. E é isso que o torna perigoso: um script que quebra manda um erro,
+um script vencido devolve `INSERT 0 5` e vai embora.
+
+Os dois casos, e eles falham em direções opostas:
+
+| Arquivo | O que fazia | O que passou a fazer |
+|---|---|---|
+| `reversao/passo-4-…` | Devolvia registros de `registros` para as cinco tabelas antigas | Deixava para trás, **em silêncio**, todo Banho, Passeio, Leitura e Atividade — tipos sem tabela antiga para onde voltar |
+| `backfill/passo-3-…` | Copiava das antigas para `registros`, com `do update` para recolher edições | **Desfazia** toda edição feita em `registros` desde a virada, reescrevendo com dado velho |
+
+O primeiro perdia registro novo; o segundo destrói registro existente. Nenhum dos
+dois emite erro.
+
+### A regra
+
+> **Todo SQL escrito para um estado do banco nasce com prazo de validade, no
+> mesmo commit em que é escrito — com DATA e com GATILHO, os dois.**
+
+**Data** porque o gatilho pode não ser notado. **Gatilho** porque a data quase
+sempre é generosa demais: a reversão tinha prazo até 25/08 e venceu em 12/08, no
+dia em que o primeiro tipo novo subiu — treze dias antes, e foi o gatilho que
+disparou.
+
+**No dia, apagar. Não renomear.** Uma pasta chamada `reversao-vencida-em-…`
+continua sendo uma pasta chamada `reversao` para quem está com pressa às 3h da
+manhã, que é exatamente a pessoa que a abriria. O histórico do git é onde
+arquivo de emergência vencido deve morar: perto de quem procura, longe de quem
+tem pressa.
+
+**E cuidado com o par.** O `backfill/passo-4` era inócuo — rodá-lo hoje não faria
+nada. Isso quase o salvou da lista, e é justamente o argumento contra: os dois
+tinham nome de par, e quem roda um tende a rodar o outro. Arquivo inofensivo ao
+lado de arquivo perigoso é um convite, não uma exceção.
+
+**O que NÃO vence:** a `005_registros.sql`, porque ela descreve um evento que
+aconteceu uma vez, e o arquivo gerado de restrições, porque ele descreve o
+**estado desejado** e é idempotente. A diferença é essa: SQL que descreve uma
+transição vence; SQL que descreve um estado, não.
+
+---
+
 ## 9. Riscos
 
 | # | Risco | Estado | Mitigação |
