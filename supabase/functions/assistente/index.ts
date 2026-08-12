@@ -128,6 +128,14 @@ const TIPOS_CONHECIDOS = new Set<string>([
   'sono',
   'humor',
   'sintoma',
+  // Bloco 3, primeira leva. Entraram aqui NA MESMA edição em que entraram no
+  // `TIPOS_DO_ALVO` do `consultas.ts` — é isso que esta lista cobra: tipo que
+  // o app grava mas a superfície não sabe responder fica de fora até alguém
+  // decidir que ele entra.
+  'banho',
+  'passeio',
+  'leitura',
+  'atividade',
 ]);
 
 /**

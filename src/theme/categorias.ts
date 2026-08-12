@@ -48,6 +48,12 @@ export const CATEGORIA_POR_TIPO: Record<TipoRegistro, Categoria> = {
   // Trocar quando o documento de design definir as oficiais.
   humor: { key: 'humor', label: 'Humor', icon: 'happy', bg: colors.rosa500 },
   sintoma: { key: 'sintoma', label: 'Sintoma', icon: 'thermometer', bg: colors.warning },
+  // Os quatro do bloco 3. Mesma nota de cor dos dois acima: sem token próprio no
+  // design system, reaproveitam os que existem em vez de inventar hex novo.
+  banho: { key: 'banho', label: 'Banho', icon: 'sparkles', bg: colors.categoriaMenta },
+  passeio: { key: 'passeio', label: 'Passeio', icon: 'walk', bg: colors.categoriaLavanda },
+  leitura: { key: 'leitura', label: 'Leitura', icon: 'book', bg: colors.categoriaAmarelo },
+  atividade: { key: 'atividade', label: 'Atividade', icon: 'color-palette', bg: colors.rosa500 },
 };
 
 /**
@@ -64,6 +70,10 @@ export const TODOS_OS_TIPOS: TipoRegistro[] = [
   'mamadeira',
   'humor',
   'sintoma',
+  'banho',
+  'passeio',
+  'leitura',
+  'atividade',
 ];
 
 /**
@@ -96,3 +106,15 @@ export const CATEGORIAS: Categoria[] = TODOS_OS_TIPOS.map((t) => CATEGORIA_POR_T
 
 /** As da Home, na ordem do grid. `key` é o parâmetro da rota /registro/[tipo]. */
 export const CATEGORIAS_DA_HOME: Categoria[] = ATALHOS_DA_HOME.map((t) => CATEGORIA_POR_TIPO[t]);
+
+/**
+ * O que sobra — a tela "Mais tipos", e o botão que leva até ela.
+ *
+ * Derivada, e não escrita: um tipo que entre nos atalhos sai daqui sozinho, e o
+ * dia em que todos estiverem lá esta lista fica vazia. A Home lê o `length` para
+ * decidir se mostra o botão, então a tela e o caminho até ela se apagam juntos,
+ * sem ninguém precisar lembrar de nenhum dos dois.
+ */
+export const CATEGORIAS_FORA_DA_HOME: Categoria[] = TODOS_OS_TIPOS.filter(
+  (t) => !ATALHOS_DA_HOME.includes(t)
+).map((t) => CATEGORIA_POR_TIPO[t]);

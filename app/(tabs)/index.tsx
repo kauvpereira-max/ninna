@@ -14,7 +14,7 @@ import { encerrarSono, resumirSonoEmAndamento } from '../../src/lib/registros';
 import { formatarIdade, formatarIdadeCorrigida } from '../../src/lib/idade';
 import { formatarMomento } from '../../src/lib/horario';
 import { ItemRegistro } from '../../src/components/ItemRegistro';
-import { CATEGORIAS_DA_HOME } from '../../src/theme/categorias';
+import { CATEGORIAS_DA_HOME, CATEGORIAS_FORA_DA_HOME } from '../../src/theme/categorias';
 import { colors, spacing, radius, typography, elevation } from '../../src/theme/tokens';
 
 export default function HojeScreen() {
@@ -122,6 +122,23 @@ export default function HojeScreen() {
               <Text style={styles.categoriaLabel}>{c.label}</Text>
             </Pressable>
           ))}
+
+          {/* O botão só existe enquanto houver tipo fora dos atalhos. A lista é
+              derivada, então ele aparece com o primeiro e some com o último —
+              sem ninguém lembrar de nenhum dos dois. */}
+          {CATEGORIAS_FORA_DA_HOME.length > 0 ? (
+            <Pressable
+              onPress={() => router.push('/tipos')}
+              accessibilityRole="button"
+              accessibilityLabel="Ver mais tipos de registro"
+              style={styles.categoriaItem}
+            >
+              <View style={[styles.categoriaBadge, styles.categoriaMais]}>
+                <Ionicons name="ellipsis-horizontal" size={22} color={colors.neutro500} />
+              </View>
+              <Text style={styles.categoriaLabel}>Mais</Text>
+            </Pressable>
+          ) : null}
         </View>
 
         <Text style={styles.sectionLabel}>ÚLTIMOS REGISTROS</Text>
@@ -217,6 +234,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...elevation.level1,
+  },
+  // O "Mais" não é categoria e não finge ser: sem cor de tipo, sem elevação.
+  categoriaMais: {
+    backgroundColor: colors.neutro100,
+    borderWidth: 1,
+    borderColor: colors.neutro200,
   },
   categoriaLabel: { ...typography.caption, color: colors.headline },
   vazioTexto: { ...typography.body, color: colors.neutro500 },

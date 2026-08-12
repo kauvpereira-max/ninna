@@ -341,6 +341,36 @@ const ROTULO_ALVO: Record<Alvo, RotuloAlvo> = {
     plural: 'registros de sintoma',
     registrada: 'registrado',
   },
+  // Os quatro do bloco 3. A concordância aqui é com a PALAVRA — "o banho", "a
+  // leitura" —, nunca com o bebê, cujo gênero o app não sabe e não escolhe.
+  banho: {
+    ultimo: 'O último banho',
+    ultimaEAnterior: 'o último banho e o anterior',
+    singular: 'banho',
+    plural: 'banhos',
+    registrada: 'registrado',
+  },
+  passeio: {
+    ultimo: 'O último passeio',
+    ultimaEAnterior: 'o último passeio e o anterior',
+    singular: 'passeio',
+    plural: 'passeios',
+    registrada: 'registrado',
+  },
+  leitura: {
+    ultimo: 'A última leitura',
+    ultimaEAnterior: 'a última leitura e a anterior',
+    singular: 'leitura',
+    plural: 'leituras',
+    registrada: 'registrada',
+  },
+  atividade: {
+    ultimo: 'A última atividade',
+    ultimaEAnterior: 'a última atividade e a anterior',
+    singular: 'atividade',
+    plural: 'atividades',
+    registrada: 'registrada',
+  },
 };
 
 /** Horário de relógio, exato — recall não arredonda (ver a emenda acima). */

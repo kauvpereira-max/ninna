@@ -273,6 +273,10 @@ const VALORES_CHEIOS: Record<TipoRegistro, ValoresRegistro> = {
   sono: { hora: HORA_OK },
   humor: { hora: HORA_OK, humor: 'calm', motivo: 'sleep', observacao: 'depois do banho' },
   sintoma: { hora: HORA_OK, sintoma: 'fever', intensidade: 'mild', observacao: 'à tarde' },
+  banho: { hora: HORA_OK, observacao: 'antes de dormir' },
+  passeio: { hora: HORA_OK, duracao: '40', observacao: 'na praça' },
+  leitura: { hora: HORA_OK, duracao: '15', observacao: 'O Grúfalo' },
+  atividade: { hora: HORA_OK, atividade: 'tummy_time', duracao: '10', observacao: 'aguentou bem' },
 };
 
 checar(
@@ -482,6 +486,56 @@ checar(
 checar(
   'sintoma aposentado continua legível',
   resumir('sintoma', linhaDoBanco({ symptom: 'irritability' })) === 'Irritação'
+);
+
+console.log('\n— os quatro do bloco 3 —\n');
+
+checar('banho é só o banho', resumir('banho', linhaDoBanco({})) === 'Banho');
+checar(
+  'passeio com duração se conta pela duração',
+  resumir('passeio', linhaDoBanco({ duration_seconds: 2400 })) === '40 min de passeio',
+  'a forma é a do sono: o badge da lista já diz o tipo'
+);
+checar(
+  'passeio sem duração não vira frase quebrada',
+  resumir('passeio', linhaDoBanco({})) === 'Passeio'
+);
+checar(
+  'leitura com duração',
+  resumir('leitura', linhaDoBanco({ duration_seconds: 900 })) === '15 min de leitura'
+);
+checar(
+  'atividade mostra o que foi, e depois quanto durou',
+  resumir('atividade', linhaDoBanco({ activity: 'tummy_time', duration_seconds: 600 })) ===
+    'Tempo de bruços · 10 min'
+);
+checar(
+  'atividade sem duração é só o que foi',
+  resumir('atividade', linhaDoBanco({ activity: 'sunbath' })) === 'Banho de sol'
+);
+checar(
+  'atividade com slug desconhecido cai no próprio slug',
+  resumir('atividade', linhaDoBanco({ activity: 'capoeira' })) === 'capoeira',
+  'registro antigo segue legível quando o vocabulário mudar'
+);
+
+/**
+ * A faixa de duração é COMPARTILHADA, e isto é o que segura a promessa.
+ *
+ * `duration_seconds` é uma coluna gerada só: amamentação, passeio, leitura e
+ * atividade escrevem na mesma. O gerador de SQL para com colisão se as faixas
+ * discordarem — mas ele roda em outro processo, e quem some um tipo aqui pode
+ * não rodá-lo. Esta asserção falha no mesmo lugar em que o campo foi escrito.
+ */
+const comDuracao = TIPOS_REGISTRO.map((t) => SCHEMAS[t].campos.find((c) => c.chave === 'duracao'))
+  .filter((c): c is Extract<CampoSchema, { entrada: 'numero' }> => c?.entrada === 'numero');
+
+checar(
+  'todos os tipos com duração declaram a MESMA faixa',
+  comDuracao.length >= 4 &&
+    new Set(comDuracao.map((c) => `${c.min}|${c.max}|${c.escala}`)).size === 1,
+  `${comDuracao.length} tipos, ${new Set(comDuracao.map((c) => `${c.min}|${c.max}|${c.escala}`)).size} faixa(s) — ` +
+    'uma coluna gerada tem uma faixa só'
 );
 
 console.log('\n— o detalhe: rótulos, ordem, e nada em branco —\n');

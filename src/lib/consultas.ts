@@ -71,7 +71,11 @@ export type TipoEvento =
   | 'fralda'
   | 'sono'
   | 'humor'
-  | 'sintoma';
+  | 'sintoma'
+  | 'banho'
+  | 'passeio'
+  | 'leitura'
+  | 'atividade';
 
 // ------------------------------------------------------------------
 // Entrada
@@ -98,16 +102,51 @@ export type EventoBruto = {
  * qual dos dois ela quer, que é exatamente o tipo de atrito que o assistente
  * existe para remover.
  */
-export type Alvo = 'mamada' | 'sono' | 'fralda' | 'humor' | 'sintoma';
+export type Alvo =
+  | 'mamada'
+  | 'sono'
+  | 'fralda'
+  | 'humor'
+  | 'sintoma'
+  | 'banho'
+  | 'passeio'
+  | 'leitura'
+  | 'atividade';
 
-export const ALVOS: Alvo[] = ['mamada', 'sono', 'fralda', 'humor', 'sintoma'];
+export const ALVOS: Alvo[] = [
+  'mamada',
+  'sono',
+  'fralda',
+  'humor',
+  'sintoma',
+  'banho',
+  'passeio',
+  'leitura',
+  'atividade',
+];
 
+/**
+ * ⚠️ `mamada` É EXATAMENTE `amamentar` E `mamadeira`. Nada mais entra aqui.
+ *
+ * O bloco 3 traz Extração, e ela é a armadilha: leite que saiu da mãe, que pode
+ * nunca ter sido oferecido — ou ter sido oferecido horas depois, e aí quem conta
+ * é a mamadeira. Somá-la a esta linha custa uma palavra e faz o assistente
+ * descrever uma rotina que não existe, com a cara de certeza de sempre.
+ *
+ * O motor já está protegido por fora: `listarParaPadroes` filtra por tipo e um
+ * tipo novo fica de fora por padrão. Este mapa é o lugar onde o erro entraria, e
+ * por isso o `teste-consultas.ts` fixa esta lista literalmente.
+ */
 const TIPOS_DO_ALVO: Record<Alvo, TipoEvento[]> = {
   mamada: ['amamentar', 'mamadeira'],
   sono: ['sono'],
   fralda: ['fralda'],
   humor: ['humor'],
   sintoma: ['sintoma'],
+  banho: ['banho'],
+  passeio: ['passeio'],
+  leitura: ['leitura'],
+  atividade: ['atividade'],
 };
 
 export type Contexto = {

@@ -217,6 +217,60 @@ const AGORA = local(SP, '2026-08-06', 17, 0);
 }
 
 {
+  /**
+   * ⚠️ O ALVO `mamada` É EXATAMENTE `amamentar` E `mamadeira`.
+   *
+   * Esta asserção existe por causa de um tipo que ainda não existe. O grupo de
+   * alimentação do bloco 3 traz **Extração**, e ela é leite que saiu da mãe —
+   * pode nunca ter sido oferecido ao bebê, ou ter sido horas depois, e aí quem
+   * conta é a mamadeira.
+   *
+   * Somar `extracao` ao alvo `mamada` custa uma palavra numa linha do
+   * `TIPOS_DO_ALVO`, e o assistente passaria a descrever uma rotina que não
+   * existe — com a cara de certeza de sempre. É o risco R3 por uma porta nova, e
+   * nada mais no caminho o pegaria: o motor está protegido por fora
+   * (`listarParaPadroes` filtra por tipo), mas o assistente não.
+   *
+   * O teste é escrito com TODOS os tipos presentes de propósito. Uma asserção
+   * que só contasse mamadas passaria num mapa que engoliu o mundo inteiro.
+   */
+  const umDeCada = [
+    mamada('2026-08-06', 6),
+    mamadeira('2026-08-06', 7, 30),
+    fralda('2026-08-06', 8),
+    { tipo: 'sono' as const, ocorridoEm: local(SP, '2026-08-06', 9), fimEm: local(SP, '2026-08-06', 10) },
+    { tipo: 'humor' as const, ocorridoEm: local(SP, '2026-08-06', 11) },
+    { tipo: 'sintoma' as const, ocorridoEm: local(SP, '2026-08-06', 12) },
+    { tipo: 'banho' as const, ocorridoEm: local(SP, '2026-08-06', 13) },
+    { tipo: 'passeio' as const, ocorridoEm: local(SP, '2026-08-06', 14) },
+    { tipo: 'leitura' as const, ocorridoEm: local(SP, '2026-08-06', 15) },
+    { tipo: 'atividade' as const, ocorridoEm: local(SP, '2026-08-06', 16) },
+  ];
+
+  const m = responder(
+    { nome: 'contagem_do_dia', alvo: 'mamada', dia: 'hoje' },
+    umDeCada,
+    ctx(AGORA)
+  );
+  conferir(
+    'com um registro de CADA tipo, o alvo mamada conta dois',
+    m.estado === 'ok' && m.numeros.quantos.valor === 2,
+    'amamentar e mamadeira, e nada mais — nem quando Extração chegar'
+  );
+
+  // E o controle: cada alvo novo do bloco 3 enxerga exatamente o seu, senão a
+  // asserção acima passaria também num mapa em que os tipos novos não chegaram
+  // a lugar nenhum.
+  for (const alvo of ['banho', 'passeio', 'leitura', 'atividade'] as const) {
+    const r = responder({ nome: 'contagem_do_dia', alvo, dia: 'hoje' }, umDeCada, ctx(AGORA));
+    conferir(
+      `o alvo ${alvo} conta o seu, e um só`,
+      r.estado === 'ok' && r.numeros.quantos.valor === 1
+    );
+  }
+}
+
+{
   // App instalado hoje: "quantas fraldas ontem" não é zero, é desconhecido.
   const eventos = [fralda('2026-08-06', 9)];
   const r = responder({ nome: 'contagem_do_dia', alvo: 'fralda', dia: 'ontem' }, eventos, ctx(AGORA));

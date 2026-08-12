@@ -41,8 +41,18 @@
 import type { Humor, Intensidade, LadoSeio, TipoLeite } from '../types/database';
 import { formatarDuracaoMin, formatarMomento, minutosEntre } from './horario.ts';
 
-/** Os atalhos da Home. Vale também como parâmetro da rota /registro/[tipo]. */
-export type TipoRegistro = 'amamentar' | 'mamadeira' | 'fralda' | 'sono' | 'humor' | 'sintoma';
+/** Os tipos de registro. `TipoRegistro` é também o parâmetro da rota /registro/[tipo]. */
+export type TipoRegistro =
+  | 'amamentar'
+  | 'mamadeira'
+  | 'fralda'
+  | 'sono'
+  | 'humor'
+  | 'sintoma'
+  | 'banho'
+  | 'passeio'
+  | 'leitura'
+  | 'atividade';
 
 export const TIPOS_REGISTRO: TipoRegistro[] = [
   'amamentar',
@@ -51,6 +61,10 @@ export const TIPOS_REGISTRO: TipoRegistro[] = [
   'sono',
   'humor',
   'sintoma',
+  'banho',
+  'passeio',
+  'leitura',
+  'atividade',
 ];
 
 export function ehTipoRegistro(valor: string | undefined): valor is TipoRegistro {
@@ -142,6 +156,28 @@ export const INTENSIDADES: OpcaoCampo[] = [
   { value: 'mild', label: 'Leve' },
   { value: 'moderate', label: 'Moderada' },
   { value: 'high', label: 'Forte' },
+];
+
+/**
+ * O que a Atividade foi. Vocabulário fechado, e não texto livre, pela mesma
+ * razão de sempre: dado agregável é requisito do motor. "Atividade" sozinha, sem
+ * dizer qual, é uma linha que não responde nada depois.
+ *
+ * A lista é curta de propósito — são as que uma mãe de bebê pequeno reconhece
+ * sem pensar. `other` existe porque a alternativa é ela escolher a opção errada
+ * para conseguir salvar, e aí o dado agregável vira dado agregado errado.
+ *
+ * Diferente do sintoma "Outro", aqui a descrição NÃO é obrigatória: no sintoma
+ * ela é o registro inteiro; aqui o registro já diz que houve atividade e quanto
+ * durou.
+ */
+export const ATIVIDADES: OpcaoCampo[] = [
+  { value: 'tummy_time', label: 'Tempo de bruços' },
+  { value: 'sunbath', label: 'Banho de sol' },
+  { value: 'play', label: 'Brincadeira' },
+  { value: 'music', label: 'Música' },
+  { value: 'massage', label: 'Massagem' },
+  { value: 'other', label: 'Outra' },
 ];
 
 /** Único valor de `symptom` que aceita descrição da mãe — e ela vai em `notes`. */
@@ -259,6 +295,32 @@ const OBSERVACAO: CampoSchema = {
 
 export const MAX_DURACAO_MIN = 180;
 
+/**
+ * O campo de duração, compartilhado entre os tipos que têm começo e fim.
+ *
+ * ⚠️ A FAIXA É A MESMA PARA TODOS, E ISSO NÃO É PREGUIÇA. `duration_seconds` é
+ * uma coluna GERADA e compartilhada: dois tipos que declararem esta chave usam a
+ * mesma coluna, e uma coluna tem uma faixa só. Declarar `max: 60` para leitura e
+ * `max: 180` para passeio faria o gerador parar com uma colisão — de propósito,
+ * porque a alternativa é o banco recusar um passeio de 2h em silêncio.
+ *
+ * O dia em que um tipo precisar de faixa própria, a saída é chave própria
+ * (`duracao_leitura_s`) ou faixa condicionada ao tipo. Não é reduzir esta.
+ */
+const DURACAO = (rotulo: string, placeholder: string): CampoSchema => ({
+  entrada: 'numero',
+  chave: 'duracao',
+  coluna: 'duration_seconds',
+  rotulo,
+  placeholder,
+  min: 1,
+  max: MAX_DURACAO_MIN,
+  escala: 60,
+  digitos: 3,
+  obrigatorio: false,
+  erroFaixa: `Duração em minutos, de 1 a ${MAX_DURACAO_MIN}.`,
+});
+
 export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
   amamentar: {
     tipo: 'amamentar',
@@ -276,19 +338,7 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
         obrigatorio: true,
         erroFalta: 'De qual lado foi?',
       },
-      {
-        entrada: 'numero',
-        chave: 'duracao',
-        coluna: 'duration_seconds',
-        rotulo: 'Duração em minutos (opcional)',
-        placeholder: 'ex.: 12',
-        min: 1,
-        max: MAX_DURACAO_MIN,
-        escala: 60,
-        digitos: 3,
-        obrigatorio: false,
-        erroFaixa: `Duração em minutos, de 1 a ${MAX_DURACAO_MIN}.`,
-      },
+      DURACAO('Duração em minutos (opcional)', 'ex.: 12'),
       OBSERVACAO,
     ],
   },
@@ -425,6 +475,81 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
           },
         },
       },
+    ],
+  },
+
+  // ============================================================
+  // OS EVENTOS SIMPLES — bloco 3, primeira leva
+  //
+  // Os quatro cabem inteiros nos campos que já existiam: hora, escolha, número e
+  // texto. Nenhum deles pediu tela nova, motor novo, nem campo de tipo novo — é
+  // por isso que vieram primeiro, e é a primeira vez que "somar um tipo é somar
+  // uma entrada aqui" é dito e cobrado ao mesmo tempo.
+  //
+  // DURAÇÃO INFORMADA, NÃO REGISTRO EM ANDAMENTO. Passeio e Atividade poderiam
+  // nascer abertos, como o sono, e a mãe encerrar depois. Decidido que não:
+  // registro aberto e esquecido é o pior modo de falha que este app tem — ela
+  // não sabe que deixou algo correndo, e o número fica errado sem ninguém notar.
+  // O caminho contrário, promover depois, é reversível; o de nascer aberto e
+  // simplificar deixa linha órfã no banco.
+  // ============================================================
+
+  banho: {
+    tipo: 'banho',
+    titulo: 'Banho',
+    subtitulo: 'Um toque e já volto pra Home.',
+    acao: 'Salvar banho',
+    // Sem duração: ninguém abre cronômetro para dar banho. É um momento, e o que
+    // se quer dele é a hora.
+    campos: [HORA('Horário do banho'), OBSERVACAO],
+  },
+
+  passeio: {
+    tipo: 'passeio',
+    titulo: 'Passeio',
+    subtitulo: 'Anota rapidinho — dá pra ajustar depois.',
+    acao: 'Salvar passeio',
+    campos: [
+      HORA('Começou às'),
+      DURACAO('Duração em minutos (opcional)', 'ex.: 40'),
+      OBSERVACAO,
+    ],
+  },
+
+  leitura: {
+    tipo: 'leitura',
+    titulo: 'Leitura',
+    subtitulo: 'O que vocês leram juntas hoje.',
+    acao: 'Salvar leitura',
+    campos: [
+      HORA('Começou às'),
+      DURACAO('Duração em minutos (opcional)', 'ex.: 15'),
+      {
+        ...OBSERVACAO,
+        rotulo: 'O livro (opcional)',
+        placeholder: 'O nome do livro, ou o que chamou atenção',
+      },
+    ],
+  },
+
+  atividade: {
+    tipo: 'atividade',
+    titulo: 'Atividade',
+    subtitulo: 'O que vocês fizeram, e por quanto tempo.',
+    acao: 'Salvar atividade',
+    campos: [
+      HORA('Começou às'),
+      {
+        entrada: 'escolha',
+        chave: 'atividade',
+        coluna: 'activity',
+        rotulo: 'O que foi',
+        opcoes: ATIVIDADES,
+        obrigatorio: true,
+        erroFalta: 'O que vocês fizeram?',
+      },
+      DURACAO('Duração em minutos (opcional)', 'ex.: 15'),
+      OBSERVACAO,
     ],
   },
 };
@@ -881,6 +1006,56 @@ export const LEITURA: Record<TipoRegistro, LeituraDoTipo> = {
         ['Sintoma', rotularValor([...SINTOMAS, ...SINTOMAS_APOSENTADOS], bruto) ?? bruto],
         ['Intensidade', rotularValor(INTENSIDADES, texto(l, 'intensity'))],
         ['Quando', formatarMomento(texto(l, 'ocorrido_em') ?? '', agora)],
+      ]);
+    },
+  },
+
+  // Os quatro do bloco 3. O resumo do sono virou a forma dos que têm duração —
+  // "40 min de passeio" —, e não "Passeio · 40 min": o badge da lista já diz o
+  // tipo, e repetir a palavra gasta a linha inteira dizendo o que já está visto.
+  banho: {
+    resumir: () => 'Banho',
+    detalhar: (l, agora) =>
+      listar([['Quando', formatarMomento(texto(l, 'ocorrido_em') ?? '', agora)]]),
+  },
+
+  passeio: {
+    resumir: (l) => {
+      const duracao = minutosDe(numero(l, 'duration_seconds'));
+      return duracao ? `${duracao} de passeio` : 'Passeio';
+    },
+    detalhar: (l, agora) =>
+      listar([
+        ['Duração', minutosDe(numero(l, 'duration_seconds'))],
+        ['Começou', formatarMomento(texto(l, 'ocorrido_em') ?? '', agora)],
+      ]),
+  },
+
+  leitura: {
+    resumir: (l) => {
+      const duracao = minutosDe(numero(l, 'duration_seconds'));
+      return duracao ? `${duracao} de leitura` : 'Leitura';
+    },
+    detalhar: (l, agora) =>
+      listar([
+        ['Duração', minutosDe(numero(l, 'duration_seconds'))],
+        ['Começou', formatarMomento(texto(l, 'ocorrido_em') ?? '', agora)],
+      ]),
+  },
+
+  atividade: {
+    resumir: (l) => {
+      const bruto = texto(l, 'activity');
+      const nome = rotularValor(ATIVIDADES, bruto) ?? bruto ?? 'Atividade';
+      const duracao = minutosDe(numero(l, 'duration_seconds'));
+      return duracao ? `${nome} · ${duracao}` : nome;
+    },
+    detalhar: (l, agora) => {
+      const bruto = texto(l, 'activity');
+      return listar([
+        ['Atividade', rotularValor(ATIVIDADES, bruto) ?? bruto],
+        ['Duração', minutosDe(numero(l, 'duration_seconds'))],
+        ['Começou', formatarMomento(texto(l, 'ocorrido_em') ?? '', agora)],
       ]);
     },
   },
