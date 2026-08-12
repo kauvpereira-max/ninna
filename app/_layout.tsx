@@ -88,6 +88,9 @@ function RootNavigator() {
         <Stack.Screen name="bebes/novo" options={{ presentation: 'modal' }} />
         {/* Sobre também entra por cima: é consulta, e a mãe volta pra onde estava. */}
         <Stack.Screen name="tipos" options={{ presentation: 'modal' }} />
+        {/* Painel de parceira. Rota comum e digitavel: quem nao tem cadastro de
+            afiliada ve um aviso neutro — a checagem e do banco, nao da rota. */}
+        <Stack.Screen name="afiliada" options={{ presentation: 'modal' }} />
         <Stack.Screen name="sobre" options={{ presentation: 'modal' }} />
         {/* Assinatura NÃO é modal: é o destino de volta do Checkout, e quem chega
             da Stripe chega numa carga fria, sem pilha por baixo pra modal usar. */}
