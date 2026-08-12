@@ -825,7 +825,9 @@ O relógio agora é deles. **O que falta, para quando aprovar:**
    separados na Stripe — nada do que existe hoje atravessa. Os `price_id` novos
    entram por secret, não por commit: eles saíram do código de propósito, e é isso
    que faz a virada não ser um deploy;
-2. **Criar o endpoint de webhook live**, com os mesmos 5 eventos. O `whsec_` é
+2. **Criar o endpoint de webhook live**, com os mesmos **6 eventos** — os 5 de
+   assinatura mais `invoice.paid`, que entrou em 12/08/2026 com a comissão de
+   afiliadas. O `whsec_` é
    outro: o de teste não atende o live;
 3. **Trocar os quatro secrets no Supabase** — e conferir com
    `npx supabase secrets list`, não pela tela;
@@ -863,7 +865,9 @@ O que não é secret, e por isso não vira sozinho:
 - **Conferir a primeira fatura em BRL** — moeda, imposto e o descritivo que
   aparece na fatura do cartão dela. Descritivo errado vira contestação, e
   contestação de R$24,90 custa mais que R$24,90;
-- **Endpoint de webhook live**, com os mesmos 5 eventos e um `whsec_` novo. O de
+- **Endpoint de webhook live**, com os mesmos **6 eventos** e um `whsec_` novo.
+  ⚠️ Eram 5 até 12/08/2026: `invoice.paid` entrou com o bloco 1b, e endpoint que
+  nascer sem ele credita zero comissão sem dar erro nenhum. O de
   teste não atende o live.
 
 **Fazer isto no dia do lançamento é o erro.** Se a ativação da conta travar em
