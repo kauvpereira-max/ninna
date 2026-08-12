@@ -347,27 +347,45 @@ repositório — ele contém dado de mãe.
 
 ---
 
-## ⏳ A reversão do passo 4 vence em **25/08/2026**
+## ⌛ A reversão do passo 4 VENCEU em 12/08/2026 — e foi apagada
 
-Ou no dia em que **o primeiro tipo novo entrar em produção** — o que vier
-primeiro. Depois disso, `supabase/reversao/passo-4-voltar-para-as-tabelas-antigas.sql`
-deixa de ser um caminho válido, e tentar usá-lo é pior que não ter caminho: as
-cinco consultas rodariam com sucesso e deixariam para trás, em silêncio, todo
-registro de tipo que não tem tabela antiga.
+O prazo era 25/08/2026 **ou o primeiro tipo novo em produção, o que viesse
+primeiro**. Venceu pelo segundo gatilho, treze dias antes da data: Banho,
+Passeio, Leitura e Atividade subiram em 12/08/2026.
 
-**Por que essas duas datas.** Duas semanas cobrem o passo 5 inteiro com folga —
-uso real, uma madrugada, um fim de semana. E o gatilho do primeiro tipo novo é
-o que realmente importa: no instante em que existir um registro de Peso ou
-Vacina, a estrutura antiga deixa de conseguir representar o presente.
+`supabase/reversao/` **não existe mais**. Está no histórico do git, que é onde
+arquivo de emergência vencido deve estar — perto de quem procura, longe de quem
+tem pressa.
+
+**Por que apagar, e não guardar "por via das dúvidas".** As cinco consultas dele
+rodariam com sucesso hoje, e deixariam para trás, em silêncio, todo registro de
+Banho, Passeio, Leitura e Atividade — tipos que não têm tabela antiga para onde
+voltar. Ele não falharia; ele mentiria. E o momento em que alguém abre um arquivo
+chamado "reversão" é exatamente o momento em que ninguém tem calma para ler o
+cabeçalho e descobrir que ele venceu.
+
+Foi por isso que o prazo nasceu junto com o arquivo, no mesmo commit em que ele
+foi escrito. A alternativa é a que todo projeto conhece: o arquivo fica, o
+cabeçalho envelhece, e um dia ele é usado.
 
 **Depois do vencimento o caminho é outro, e é só um:** corrigir para frente.
 Restaurar o dump do passo 6 (se já tiver acontecido) ou consertar o código sobre
-`registros`. Voltar às cinco tabelas deixa de estar na mesa.
+`registros`. Voltar às cinco tabelas deixou de estar na mesa.
 
-**O que fazer no dia 25/08/2026**, e é trabalho de cinco minutos: apagar
-`supabase/reversao/`, ou renomeá-lo para `reversao-vencida-em-25-08-2026/`.
-Arquivo de emergência que não serve mais é pior que arquivo nenhum — ele parece
-uma saída no momento em que ninguém tem calma para ler o cabeçalho.
+### ⚠️ E o `supabase/backfill/` está na mesma situação, por outra razão
+
+O `passo-3-copiar-para-registros.sql` resolve conflito de `id` com **`do
+update`** — ele reescreve a linha de `registros` a partir da tabela antiga. Isso
+estava certo enquanto as antigas eram a fonte da verdade, e ele diz isso no
+cabeçalho.
+
+Hoje ele é pior que a reversão: rodá-lo desfaria toda edição feita em `registros`
+desde a virada, com dado velho, sem erro nenhum. E o `passo-4` ao lado é inócuo,
+o que é quase pior — os dois têm nome de par, e quem rodar um tende a rodar o
+outro.
+
+Os dois já cumpriram o que tinham a cumprir. Não há mais nada para copiar: o app
+não escreve nas tabelas antigas desde 11/08/2026.
 
 ---
 

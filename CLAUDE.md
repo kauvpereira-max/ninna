@@ -340,7 +340,10 @@ previsões → canal nativo.
 - `tokens.ts` cita `src/theme/fonts.ts`, que não existe (fontes carregam no
   `app/_layout.tsx`)
 - As 5 tabelas antigas seguem no banco, vazias de uso mas cheias de dado, até a
-  `006`. E `supabase/reversao/` **vence em 25/08/2026** — no dia, apagar
+  `006`. `supabase/reversao/` **venceu em 12/08/2026** (gatilho: primeiro tipo
+  novo em produção) e foi apagado — está no histórico do git. O
+  `supabase/backfill/` está na mesma situação e é pior: o `passo-3` usa
+  `do update` e, rodado hoje, desfaria edições com dado velho e sem erro
 - **O contador do sono pode não avançar sozinho na PWA instalada.** O limiar de
   2 min já foi corrigido (conta desde o primeiro minuto), o que encurta a janela
   de "parece travado". Sobra a hipótese do `setInterval` estrangulado pelo
