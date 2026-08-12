@@ -32,7 +32,33 @@
 -- precisa conseguir entender POR QUE o número mudou. "Sumiu" é o que gera
 -- desconfiança — e mensagem no WhatsApp às 23h.
 
-create or replace function painel_da_afiliada()
+-- ------------------------------------------------------------------
+-- ⚠️ `DROP` ANTES, E DENTRO DE UMA TRANSAÇÃO
+--
+-- A primeira versão deste arquivo usava `create or replace` e foi recusada:
+--
+--     42P13: cannot change return type of existing function
+--
+-- `create or replace function` substitui o CORPO, não a assinatura. As colunas
+-- de saída fazem parte do tipo de retorno, e a 008 devolvia outras cinco
+-- (`creditado_centavos`, `estornado_centavos`, `saldo_centavos`). Trocar isso
+-- exige derrubar e recriar.
+--
+-- **E derrubar e recriar tem uma janela.** Entre o `drop` e o `create` a função
+-- não existe, e um painel aberto nesse instante receberia erro. São
+-- milissegundos e uma afiliada — mas DDL no Postgres é transacional, então a
+-- janela custa `begin`/`commit` para deixar de existir. Custo zero, e a
+-- alternativa é confiar que ninguém abriu a tela naquele milissegundo.
+--
+-- O `drop` também apaga os GRANTs. Por isso o `revoke`/`grant` do fim precisa
+-- rodar junto, dentro da mesma transação — sem eles a função volta sem permissão
+-- e o painel quebra de um jeito diferente.
+
+begin;
+
+drop function if exists painel_da_afiliada();
+
+create function painel_da_afiliada()
 returns table (
   indicacoes_total bigint,
   indicacoes_pagas bigint,
@@ -96,8 +122,12 @@ comment on function painel_da_afiliada is
   'Números do painel: total, disponível após 30 dias de carência, e o que ainda '
   'espera. Nunca devolve identidade de mãe — ver 008 e 010.';
 
+-- Dentro da transação de propósito: o `drop` acima levou os GRANTs junto, e uma
+-- função sem permissão quebra o painel do mesmo jeito que uma função ausente.
 revoke all on function painel_da_afiliada() from public, anon;
 grant execute on function painel_da_afiliada() to authenticated;
+
+commit;
 
 -- ============================================================
 -- CONFERÊNCIA — rodar depois
