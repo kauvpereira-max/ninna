@@ -227,16 +227,35 @@ qualquer lista.
 Isto não é vício do sandbox. **É o que acontece em qualquer ambiente montado à
 mão**, inclusive no live do passo 4 — onde o entulho cobra dinheiro de verdade.
 
-Arquivar os órfãos, **preços antes dos produtos** (a Stripe recusa arquivar
-produto com preço ativo):
+#### A ordem tem três passos, e o do meio é o que ninguém adivinha
 
 ```
-curl.exe -s https://api.stripe.com/v1/prices/<price_orfao>   -u "<chave>:" -d active=false
-curl.exe -s https://api.stripe.com/v1/products/<prod_orfao>  -u "<chave>:" -d active=false
+1. curl.exe -s https://api.stripe.com/v1/products/<prod_orfao> -u "<chave>:" -d "default_price="
+2. curl.exe -s https://api.stripe.com/v1/prices/<price_orfao>  -u "<chave>:" -d active=false
+3. curl.exe -s https://api.stripe.com/v1/products/<prod_orfao> -u "<chave>:" -d active=false
 ```
 
-Depois repita a ferramenta **B**: têm que sobrar **exatamente dois** preços
-ativos, e a ferramenta de produtos tem que mostrar **um** produto ativo.
+Sem o passo 1, o passo 2 é recusado:
+
+```
+This price cannot be archived because it is the default price of its product.
+```
+
+E isso **não é caso de exceção**: um produto com um preço só tem, sempre, esse
+preço como `default_price`. Todo órfão criado "um produto por plano" cai aqui.
+
+> ⚠️ A primeira versão deste arquivo mandava o contrário — *"preços antes dos
+> produtos, porque a Stripe recusa arquivar produto com preço ativo"*. As duas
+> metades estavam erradas: a recusa é na direção oposta, e arquivar o produto
+> com preço ativo funciona sem reclamar. Eu tinha escrito um mecanismo plausível
+> sem tê-lo executado. Ficou registrado porque o erro é instrutivo: **arquivar o
+> produto "dá certo" e deixa o preço ativo para trás** — some da lista de
+> produtos, continua na de preços, e a contagem do B é o que pega.
+
+Depois repita a ferramenta **B** com `&active=true`: têm que sobrar
+**exatamente dois** preços ativos, os dois do mesmo produto, e **um** produto
+ativo. Confira também que o produto certo manteve seu `default_price` — o passo
+1 só pode ter tocado nos órfãos.
 
 ---
 
