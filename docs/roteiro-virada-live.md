@@ -351,7 +351,34 @@ verdade.
 
 ⚠️ A partir daqui as chaves são de verdade. **Não cole `sk_live_` neste chat**,
 nem para eu conferir — as ferramentas B e C rodam no seu terminal e o JSON que
-elas devolvem não tem segredo dentro.
+elas devolvem não tem segredo dentro, e o `conferir-secret.sh` fecha o resto.
+
+### 4.1 · ⚠️ Os meios de pagamento em live, que ninguém configurou ainda
+
+`payment_method_types` ficou **de fora** do checkout de propósito — a Stripe
+decide a partir do painel. Isso foi desenhado para Pix entrar sem tocar em
+código, mas tem o outro lado: **o painel live decide sozinho, e ele não é o
+painel de teste.**
+
+A conta tem `boleto_payments: active`. Se o boleto estiver ligado no checkout
+live, a mãe pode escolher boleto **para uma assinatura** — e aí:
+
+- a assinatura nasce `incomplete` e só vira `active` quando o boleto for pago,
+  dias depois;
+- o acesso dela fica esperando um pagamento que pode nunca acontecer;
+- e a comissão da afiliada só nasce no `invoice.paid`, ou seja, também dias
+  depois — ou nunca.
+
+Nada disso é defeito: é o boleto funcionando como boleto. Mas é uma decisão de
+produto que **não pode ser tomada por omissão**.
+
+Antes do passo 5, abra em **live**: Configurações → Pagamentos → Métodos de
+pagamento, e decida explicitamente o que fica ligado. O desenho atual do app —
+teste grátis de 7 dias, acesso imediato, comissão na primeira fatura — pressupõe
+pagamento instantâneo. **Cartão só** é a escolha coerente com ele.
+
+Pix tem a mesma pergunta e a mesma resposta por enquanto: entra quando for
+decidido, não quando aparecer sozinho no painel.
 
 ---
 
