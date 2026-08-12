@@ -37,6 +37,9 @@
 
 alter table registros add column if not exists duration_seconds int generated always as ((dados->>'duration_seconds')::int) stored;
 alter table registros add column if not exists amount_ml int generated always as ((dados->>'amount_ml')::int) stored;
+alter table registros add column if not exists peso_g int generated always as ((dados->>'peso_g')::int) stored;
+alter table registros add column if not exists altura_mm int generated always as ((dados->>'altura_mm')::int) stored;
+alter table registros add column if not exists circunferencia_mm int generated always as ((dados->>'circunferencia_mm')::int) stored;
 
 -- ============================================================
 -- O TIPO
@@ -48,7 +51,7 @@ alter table registros add column if not exists amount_ml int generated always as
 alter table registros drop constraint if exists registros_tipo_check;
 alter table registros drop constraint if exists tipo_conhecido;
 alter table registros add  constraint tipo_conhecido check (
-  tipo in ('amamentar', 'mamadeira', 'fralda', 'sono', 'humor', 'sintoma', 'banho', 'passeio', 'leitura', 'atividade', 'comida', 'hidratacao', 'extracao')
+  tipo in ('amamentar', 'mamadeira', 'fralda', 'sono', 'humor', 'sintoma', 'banho', 'passeio', 'leitura', 'atividade', 'comida', 'hidratacao', 'extracao', 'peso', 'altura', 'circunferencia')
 );
 
 -- ============================================================
@@ -63,6 +66,21 @@ alter table registros add  constraint faixa_duration_seconds check (
 alter table registros drop constraint if exists faixa_amount_ml;
 alter table registros add  constraint faixa_amount_ml check (
   amount_ml is null or amount_ml between 5 and 500
+);
+
+alter table registros drop constraint if exists faixa_peso_g;
+alter table registros add  constraint faixa_peso_g check (
+  peso_g is null or peso_g between 500 and 30000
+);
+
+alter table registros drop constraint if exists faixa_altura_mm;
+alter table registros add  constraint faixa_altura_mm check (
+  altura_mm is null or altura_mm between 200 and 1200
+);
+
+alter table registros drop constraint if exists faixa_circunferencia_mm;
+alter table registros add  constraint faixa_circunferencia_mm check (
+  circunferencia_mm is null or circunferencia_mm between 250 and 600
 );
 
 -- ============================================================
@@ -182,18 +200,33 @@ alter table registros add  constraint vocab_extracao_side check (
   tipo <> 'extracao' or dados->>'side' is null or dados->>'side' in ('left', 'right', 'both')
 );
 
+alter table registros drop constraint if exists exige_peso_peso_g;
+alter table registros add  constraint exige_peso_peso_g check (
+  tipo <> 'peso' or dados ? 'peso_g'
+);
+
+alter table registros drop constraint if exists exige_altura_altura_mm;
+alter table registros add  constraint exige_altura_altura_mm check (
+  tipo <> 'altura' or dados ? 'altura_mm'
+);
+
+alter table registros drop constraint if exists exige_circunferencia_circunferencia_mm;
+alter table registros add  constraint exige_circunferencia_circunferencia_mm check (
+  tipo <> 'circunferencia' or dados ? 'circunferencia_mm'
+);
+
 -- ============================================================
 -- CONFERÊNCIA — rodar depois
 -- ============================================================
 --
 -- 1 · As restrições esperadas estão todas lá?
---     Esperado: 25 linhas, nenhuma com faltando = true.
+--     Esperado: 31 linhas, nenhuma com faltando = true.
 --
 -- select nome, not exists (
 --          select 1 from pg_constraint
 --          where conrelid = 'registros'::regclass and conname = nome
 --        ) as faltando
--- from unnest(array['tipo_conhecido', 'faixa_duration_seconds', 'faixa_amount_ml', 'vocab_amamentar_side', 'exige_amamentar_side', 'exige_mamadeira_amount_ml', 'vocab_mamadeira_bottle_type', 'exige_mamadeira_bottle_type', 'vocab_fralda_content', 'exige_fralda_content', 'vocab_humor_mood', 'exige_humor_mood', 'vocab_humor_probable_reason', 'vocab_sintoma_symptom', 'exige_sintoma_symptom', 'vocab_sintoma_intensity', 'vocab_atividade_activity', 'exige_atividade_activity', 'vocab_comida_acceptance', 'exige_comida_acceptance', 'vocab_hidratacao_liquid', 'exige_hidratacao_liquid', 'exige_hidratacao_amount_ml', 'exige_extracao_amount_ml', 'vocab_extracao_side']) as nome
+-- from unnest(array['tipo_conhecido', 'faixa_duration_seconds', 'faixa_amount_ml', 'faixa_peso_g', 'faixa_altura_mm', 'faixa_circunferencia_mm', 'vocab_amamentar_side', 'exige_amamentar_side', 'exige_mamadeira_amount_ml', 'vocab_mamadeira_bottle_type', 'exige_mamadeira_bottle_type', 'vocab_fralda_content', 'exige_fralda_content', 'vocab_humor_mood', 'exige_humor_mood', 'vocab_humor_probable_reason', 'vocab_sintoma_symptom', 'exige_sintoma_symptom', 'vocab_sintoma_intensity', 'vocab_atividade_activity', 'exige_atividade_activity', 'vocab_comida_acceptance', 'exige_comida_acceptance', 'vocab_hidratacao_liquid', 'exige_hidratacao_liquid', 'exige_hidratacao_amount_ml', 'exige_extracao_amount_ml', 'vocab_extracao_side', 'exige_peso_peso_g', 'exige_altura_altura_mm', 'exige_circunferencia_circunferencia_mm']) as nome
 -- order by faltando desc, nome;
 --
 -- 2 · Sobrou alguma que o schema não declara mais?
@@ -204,4 +237,4 @@ alter table registros add  constraint vocab_extracao_side check (
 -- from pg_constraint
 -- where conrelid = 'registros'::regclass
 --   and contype = 'c'
---   and conname <> all (array['tipo_conhecido', 'faixa_duration_seconds', 'faixa_amount_ml', 'vocab_amamentar_side', 'exige_amamentar_side', 'exige_mamadeira_amount_ml', 'vocab_mamadeira_bottle_type', 'exige_mamadeira_bottle_type', 'vocab_fralda_content', 'exige_fralda_content', 'vocab_humor_mood', 'exige_humor_mood', 'vocab_humor_probable_reason', 'vocab_sintoma_symptom', 'exige_sintoma_symptom', 'vocab_sintoma_intensity', 'vocab_atividade_activity', 'exige_atividade_activity', 'vocab_comida_acceptance', 'exige_comida_acceptance', 'vocab_hidratacao_liquid', 'exige_hidratacao_liquid', 'exige_hidratacao_amount_ml', 'exige_extracao_amount_ml', 'vocab_extracao_side']);
+--   and conname <> all (array['tipo_conhecido', 'faixa_duration_seconds', 'faixa_amount_ml', 'faixa_peso_g', 'faixa_altura_mm', 'faixa_circunferencia_mm', 'vocab_amamentar_side', 'exige_amamentar_side', 'exige_mamadeira_amount_ml', 'vocab_mamadeira_bottle_type', 'exige_mamadeira_bottle_type', 'vocab_fralda_content', 'exige_fralda_content', 'vocab_humor_mood', 'exige_humor_mood', 'vocab_humor_probable_reason', 'vocab_sintoma_symptom', 'exige_sintoma_symptom', 'vocab_sintoma_intensity', 'vocab_atividade_activity', 'exige_atividade_activity', 'vocab_comida_acceptance', 'exige_comida_acceptance', 'vocab_hidratacao_liquid', 'exige_hidratacao_liquid', 'exige_hidratacao_amount_ml', 'exige_extracao_amount_ml', 'vocab_extracao_side', 'exige_peso_peso_g', 'exige_altura_altura_mm', 'exige_circunferencia_circunferencia_mm']);

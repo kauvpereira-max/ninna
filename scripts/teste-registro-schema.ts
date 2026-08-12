@@ -285,6 +285,9 @@ const VALORES_CHEIOS: Record<TipoRegistro, ValoresRegistro> = {
   comida: { hora: HORA_OK, aceitacao: 'half', observacao: 'papinha de legumes' },
   hidratacao: { hora: HORA_OK, liquido: 'water', quantidade: '50', observacao: 'no copo' },
   extracao: { hora: HORA_OK, quantidade: '120', lado: 'left', duracao: '20', observacao: 'de manhã' },
+  peso: { hora: HORA_OK, peso: '4,350', observacao: 'na consulta' },
+  altura: { hora: HORA_OK, altura: '52,5', observacao: 'na consulta' },
+  circunferencia: { hora: HORA_OK, circunferencia: '38,2', observacao: 'na consulta' },
 };
 
 checar(
@@ -595,6 +598,96 @@ checar(
   'os três tipos que escrevem em amount_ml declaram a MESMA faixa',
   comMl.length === 3 && new Set(comMl.map((c) => `${c.min}|${c.max}`)).size === 1,
   `${comMl.length} tipos, faixa ${comMl[0]?.min}–${comMl[0]?.max} ml — uma coluna gerada tem uma faixa só`
+);
+
+console.log('\n— crescimento: as três medidas, e a frase que é a tese —\n');
+
+checar('peso abaixo de um quilo conta em grama', resumir('peso', linhaDoBanco({ peso_g: 850 })) === '850 g');
+checar('e acima conta em quilo', resumir('peso', linhaDoBanco({ peso_g: 4350 })) === '4,35 kg');
+checar('quilo redondo não ganha casa à toa', resumir('peso', linhaDoBanco({ peso_g: 5000 })) === '5 kg');
+checar('altura volta em cm', resumir('altura', linhaDoBanco({ altura_mm: 525 })) === '52,5 cm');
+checar(
+  'perímetro cefálico também',
+  resumir('circunferencia', linhaDoBanco({ circunferencia_mm: 382 })) === '38,2 cm'
+);
+
+const comparar = (tipo: TipoRegistro, agora: Record<string, unknown>, antes: Record<string, unknown>) =>
+  LEITURA[tipo].compararComAnterior?.(linhaDoBanco(agora), linhaDoBanco(antes)) ?? null;
+
+checar(
+  'ganho de peso: a frase que dá razão para anotar',
+  comparar('peso', { peso_g: 4350 }, { peso_g: 4010 }) === 'Ganhou 340 g desde a pesagem anterior.',
+  comparar('peso', { peso_g: 4350 }, { peso_g: 4010 }) ?? 'null'
+);
+checar(
+  'perda de peso: MESMA construção, mesmo tom',
+  comparar('peso', { peso_g: 4010 }, { peso_g: 4350 }) === '340 g a menos que na pesagem anterior.',
+  'perda de peso em bebê é assunto de pediatra — a Ninna informa e para'
+);
+checar(
+  'sem mudança não vira silêncio nem elogio',
+  comparar('peso', { peso_g: 4350 }, { peso_g: 4350 }) === 'Mesmo peso da pesagem anterior.'
+);
+checar(
+  'ganho grande vira quilo',
+  comparar('peso', { peso_g: 6350 }, { peso_g: 4350 }) === 'Ganhou 2 kg desde a pesagem anterior.'
+);
+checar('crescimento em altura', comparar('altura', { altura_mm: 550 }, { altura_mm: 525 }) === 'Cresceu 2,5 cm desde a última medida.');
+checar(
+  'perímetro cefálico compara sem palavra de crescimento',
+  comparar('circunferencia', { circunferencia_mm: 387 }, { circunferencia_mm: 382 }) ===
+    '0,5 cm a mais que na última medida.'
+);
+
+/**
+ * ⚠️ SEM ANTERIOR, SEM FRASE. A primeira medida não tem o que comparar, e
+ * inventar uma frase para ela seria começar mentindo — que é exatamente o que a
+ * tese existe para não fazer.
+ */
+checar(
+  'sem medida anterior, a comparação é null',
+  comparar('peso', { peso_g: 4350 }, {}) === null
+);
+
+/**
+ * A FRONTEIRA DO §0, verificada aqui além da varredura.
+ *
+ * O `teste-linguagem-media.ts` varre o arquivo inteiro e pegaria estas palavras
+ * na origem. Esta asserção existe porque as frases são MONTADAS — o número entra
+ * em tempo de execução, e a varredura lê o código, não a saída. Uma frase que
+ * concatenasse julgamento a partir de um valor passaria pela varredura e chegaria
+ * na mãe.
+ */
+const PROIBIDO = /\b(abaixo|acima|esperad[oa]|adequad[oa]|normal|percentil|ideal|deveria)\b/i;
+const todasAsComparacoes = [
+  comparar('peso', { peso_g: 4350 }, { peso_g: 4010 }),
+  comparar('peso', { peso_g: 4010 }, { peso_g: 4350 }),
+  comparar('peso', { peso_g: 4350 }, { peso_g: 4350 }),
+  comparar('altura', { altura_mm: 550 }, { altura_mm: 525 }),
+  comparar('altura', { altura_mm: 520 }, { altura_mm: 525 }),
+  comparar('circunferencia', { circunferencia_mm: 387 }, { circunferencia_mm: 382 }),
+  comparar('circunferencia', { circunferencia_mm: 382 }, { circunferencia_mm: 382 }),
+].filter((f): f is string => f !== null);
+
+checar(
+  'nenhuma frase de crescimento julga a medida',
+  todasAsComparacoes.length === 7 && todasAsComparacoes.every((f) => !PROIBIDO.test(f)),
+  `${todasAsComparacoes.length} frases, nenhuma com abaixo/acima/esperado/adequado/percentil`
+);
+checar(
+  'e nenhuma delas fala de outro bebê',
+  todasAsComparacoes.every((f) => !/\b(beb[êe]s|crian[çc]as|m[ée]dia|maioria)\b/i.test(f)),
+  'é a Liz com a Liz — não existe terceiro na frase'
+);
+
+/**
+ * Só o crescimento compara com o anterior. Se um dia sono ou mamada ganharem
+ * comparação, é para ser decisão — e esta asserção obriga a tomá-la.
+ */
+checar(
+  'só os três tipos de crescimento declaram comparação',
+  TIPOS_REGISTRO.filter((t) => LEITURA[t].compararComAnterior).join(',') ===
+    'peso,altura,circunferencia'
 );
 
 console.log('\n— os atalhos da Home, e o teto que eles têm —\n');

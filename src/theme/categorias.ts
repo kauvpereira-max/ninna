@@ -59,6 +59,11 @@ export const CATEGORIA_POR_TIPO: Record<TipoRegistro, Categoria> = {
   comida: { key: 'comida', label: 'Comida', icon: 'restaurant', bg: colors.categoriaMenta },
   hidratacao: { key: 'hidratacao', label: 'Hidratação', icon: 'water-outline', bg: colors.categoriaLavanda },
   extracao: { key: 'extracao', label: 'Extração', icon: 'medical', bg: colors.neutro500 },
+  // Crescimento. Os três dividem a cor: são a mesma série, medida de três
+  // jeitos, e é a curva que vai juntá-los num bloco próprio.
+  peso: { key: 'peso', label: 'Peso', icon: 'scale', bg: colors.categoriaCoral },
+  altura: { key: 'altura', label: 'Altura', icon: 'resize', bg: colors.categoriaCoral },
+  circunferencia: { key: 'circunferencia', label: 'Perímetro cefálico', icon: 'ellipse-outline', bg: colors.categoriaCoral },
 };
 
 /**
@@ -82,6 +87,9 @@ export const TODOS_OS_TIPOS: TipoRegistro[] = [
   'comida',
   'hidratacao',
   'extracao',
+  'peso',
+  'altura',
+  'circunferencia',
 ];
 
 /**

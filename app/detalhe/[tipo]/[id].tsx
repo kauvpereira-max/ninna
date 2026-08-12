@@ -144,6 +144,13 @@ export default function DetalheRegistroScreen() {
           <Text style={styles.resumo}>{registro.resumo}</Text>
         </View>
 
+        {/* A comparação com a medida anterior — a tese em uma linha, e só o
+            crescimento tem. Fica logo abaixo do número porque é a leitura dele:
+            "4,35 kg" não diz nada sozinho, "ganhou 340 g" diz. */}
+        {registro.comparacao ? (
+          <Text style={styles.comparacao}>{registro.comparacao}</Text>
+        ) : null}
+
         <View style={styles.campos}>
           {registro.campos.map((campo) => (
             <View key={campo.rotulo} style={styles.campo}>
@@ -261,6 +268,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   resumo: { ...typography.h2, color: colors.headline, flex: 1 },
+  comparacao: {
+    ...typography.body,
+    color: colors.neutro700,
+    marginTop: spacing.md,
+  },
   campos: { marginTop: spacing.xl, gap: spacing.md },
   campo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: spacing.md },
   campoRotulo: { ...typography.caption, color: colors.neutro500 },

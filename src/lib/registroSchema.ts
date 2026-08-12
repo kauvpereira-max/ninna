@@ -55,7 +55,10 @@ export type TipoRegistro =
   | 'atividade'
   | 'comida'
   | 'hidratacao'
-  | 'extracao';
+  | 'extracao'
+  | 'peso'
+  | 'altura'
+  | 'circunferencia';
 
 export const TIPOS_REGISTRO: TipoRegistro[] = [
   'amamentar',
@@ -71,6 +74,9 @@ export const TIPOS_REGISTRO: TipoRegistro[] = [
   'comida',
   'hidratacao',
   'extracao',
+  'peso',
+  'altura',
+  'circunferencia',
 ];
 
 export function ehTipoRegistro(valor: string | undefined): valor is TipoRegistro {
@@ -364,6 +370,45 @@ const MILILITROS = (rotulo: string, erroFalta: string): CampoSchema => ({
   obrigatorio: true,
   erroFalta,
   erroFaixa: erroFalta,
+});
+
+/**
+ * As medidas do crescimento. Cada uma com CHAVE PRÓPRIA, e isso é decisão.
+ *
+ * Altura e perímetro cefálico são as duas em milímetro, e seria tentador
+ * compartilhar uma coluna `medida_mm`. Não compartilham: as faixas são
+ * diferentes de verdade (20–120 cm contra 25–60 cm), e compartilhar obrigaria a
+ * alargar a faixa até caber as duas — o que faria o banco aceitar 110 cm de
+ * perímetro cefálico sem piscar.
+ *
+ * É a resposta que o guarda de colisão do gerador força a dar, e a resposta certa
+ * quase sempre é esta: chave própria, não faixa maior.
+ */
+const MEDIDA = (opcoes: {
+  chave: string;
+  coluna: string;
+  rotulo: string;
+  placeholder: string;
+  min: number;
+  max: number;
+  escala: number;
+  decimais: number;
+  digitos: number;
+  erro: string;
+}): CampoSchema => ({
+  entrada: 'numero',
+  chave: opcoes.chave,
+  coluna: opcoes.coluna,
+  rotulo: opcoes.rotulo,
+  placeholder: opcoes.placeholder,
+  min: opcoes.min,
+  max: opcoes.max,
+  escala: opcoes.escala,
+  decimais: opcoes.decimais,
+  digitos: opcoes.digitos,
+  obrigatorio: true,
+  erroFalta: opcoes.erro,
+  erroFaixa: opcoes.erro,
 });
 
 const DURACAO = (rotulo: string, placeholder: string): CampoSchema => ({
@@ -698,6 +743,95 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
         obrigatorio: false,
       },
       DURACAO('Duração em minutos (opcional)', 'ex.: 20'),
+      OBSERVACAO,
+    ],
+  },
+
+  // ============================================================
+  // CRESCIMENTO — bloco 3, terceira leva
+  //
+  // ⚠️ ESTE GRUPO É SÓ REGISTRAR. A curva com a referência da OMS é bloco
+  // próprio, e a separação é decisão de 12/08/2026: desenhar a referência é o
+  // ponto do PRODUTO.md §0 virando código, e é o item de maior risco do produto
+  // inteiro. Ele não deve competir por espaço com treze formulários.
+  //
+  // O que este grupo entrega, além do formulário, é a FRASE de comparação com a
+  // medida anterior — "ganhou 340 g desde a pesagem anterior". Sem payoff a mãe
+  // não anota, e sem anotar a série não enche para o gráfico ter o que mostrar.
+  // E a frase é a tese no formato mais limpo que existe: a Liz com a Liz.
+  //
+  // É o primeiro grupo a usar `decimais`. Peso é 4,350 kg; nenhum dos dez tipos
+  // anteriores precisou de casa decimal.
+  // ============================================================
+
+  peso: {
+    tipo: 'peso',
+    titulo: 'Peso',
+    subtitulo: 'Anota como veio da balança.',
+    acao: 'Salvar peso',
+    campos: [
+      HORA('Horário'),
+      MEDIDA({
+        chave: 'peso',
+        coluna: 'peso_g',
+        rotulo: 'Peso (kg)',
+        placeholder: 'ex.: 4,350',
+        min: 0.5,
+        max: 30,
+        // kg na tela, grama na coluna. É aqui que o arredondamento do
+        // `paraAColuna` importa: 1,005 × 1000 dá 1004.9999999999999 em ponto
+        // flutuante, e a coluna gerada recusaria isso com erro de cast.
+        escala: 1000,
+        decimais: 3,
+        digitos: 2,
+        erro: 'Peso em kg, de 0,5 a 30.',
+      }),
+      OBSERVACAO,
+    ],
+  },
+
+  altura: {
+    tipo: 'altura',
+    titulo: 'Altura',
+    subtitulo: 'Do topo da cabeça ao calcanhar.',
+    acao: 'Salvar altura',
+    campos: [
+      HORA('Horário'),
+      MEDIDA({
+        chave: 'altura',
+        coluna: 'altura_mm',
+        rotulo: 'Altura (cm)',
+        placeholder: 'ex.: 52,5',
+        min: 20,
+        max: 120,
+        escala: 10,
+        decimais: 1,
+        digitos: 3,
+        erro: 'Altura em cm, de 20 a 120.',
+      }),
+      OBSERVACAO,
+    ],
+  },
+
+  circunferencia: {
+    tipo: 'circunferencia',
+    titulo: 'Perímetro cefálico',
+    subtitulo: 'A medida da cabeça, como o pediatra faz.',
+    acao: 'Salvar medida',
+    campos: [
+      HORA('Horário'),
+      MEDIDA({
+        chave: 'circunferencia',
+        coluna: 'circunferencia_mm',
+        rotulo: 'Perímetro cefálico (cm)',
+        placeholder: 'ex.: 38,2',
+        min: 25,
+        max: 60,
+        escala: 10,
+        decimais: 1,
+        digitos: 2,
+        erro: 'Perímetro em cm, de 25 a 60.',
+      }),
       OBSERVACAO,
     ],
   },
@@ -1059,7 +1193,58 @@ type LeituraDoTipo = {
   detalhar: (linha: LinhaRegistro, agora: Date) => CampoDetalhe[];
   /** Só o sono sem `terminou_em` — a Home oferece encerrar. */
   emAndamento?: (linha: LinhaRegistro) => boolean;
+  /**
+   * A comparação com o registro ANTERIOR do mesmo tipo — a tese em uma linha.
+   *
+   * Só o crescimento declara isto, e é o que dá à mãe uma razão para anotar
+   * antes de existir gráfico: "ganhou 340 g desde a pesagem anterior" é a Liz
+   * com a Liz, sem referência, sem faixa e sem julgamento.
+   *
+   * ⚠️ O QUE ELA NUNCA DIZ, e é o §0 virando código: nada de *abaixo*, *acima*,
+   * *esperado*, *adequado*, *normal* ou percentil. A frase informa a diferença e
+   * para. Ganho e perda usam a mesma construção e o mesmo tom — perda de peso em
+   * bebê é assunto de pediatra, e a Ninna não alarma nem tranquiliza.
+   *
+   * `null` quando não há anterior: primeira medida não tem o que comparar, e
+   * inventar uma frase para ela seria começar mentindo.
+   */
+  compararComAnterior?: (linha: LinhaRegistro, anterior: LinhaRegistro) => string | null;
 };
+
+/** Gramas em palavra curta: abaixo de um quilo conta em grama, acima em quilo. */
+function pesoEmPalavra(gramas: number): string {
+  if (gramas < 1000) return `${gramas} g`;
+  const kg = gramas / 1000;
+  return `${kg.toFixed(kg % 1 === 0 ? 0 : 2).replace('.', ',')} kg`;
+}
+
+/** Milímetros em centímetro, com uma casa e sem zero à toa. */
+function cmEmPalavra(mm: number): string {
+  const cm = mm / 10;
+  return `${cm.toFixed(cm % 1 === 0 ? 0 : 1).replace('.', ',')} cm`;
+}
+
+/**
+ * A construção compartilhada das três frases de crescimento.
+ *
+ * Uma função, porque a regra de tom é a mesma nas três e escrever três vezes é
+ * como uma delas ganha um adjetivo que as outras não têm.
+ */
+function variacao(
+  linha: LinhaRegistro,
+  anterior: LinhaRegistro,
+  chave: string,
+  palavra: (v: number) => string,
+  frases: { subiu: (v: string) => string; desceu: (v: string) => string; igual: string }
+): string | null {
+  const agora = numero(linha, chave);
+  const antes = numero(anterior, chave);
+  if (agora === null || antes === null) return null;
+
+  const delta = agora - antes;
+  if (delta === 0) return frases.igual;
+  return delta > 0 ? frases.subiu(palavra(delta)) : frases.desceu(palavra(-delta));
+}
 
 export const LEITURA: Record<TipoRegistro, LeituraDoTipo> = {
   amamentar: {
@@ -1253,6 +1438,68 @@ export const LEITURA: Record<TipoRegistro, LeituraDoTipo> = {
         ['Quando', formatarMomento(texto(l, 'ocorrido_em') ?? '', agora)],
       ]);
     },
+  },
+
+  peso: {
+    resumir: (l) => {
+      const g = numero(l, 'peso_g');
+      return g ? pesoEmPalavra(g) : 'Peso';
+    },
+    detalhar: (l, agora) => {
+      const g = numero(l, 'peso_g');
+      return listar([
+        ['Peso', g ? pesoEmPalavra(g) : null],
+        ['Quando', formatarMomento(texto(l, 'ocorrido_em') ?? '', agora)],
+      ]);
+    },
+    compararComAnterior: (l, anterior) =>
+      variacao(l, anterior, 'peso_g', pesoEmPalavra, {
+        subiu: (v) => `Ganhou ${v} desde a pesagem anterior.`,
+        // Mesma construção, mesmo tom. Perda de peso em bebê é assunto de
+        // pediatra: a Ninna informa a diferença e para.
+        desceu: (v) => `${v} a menos que na pesagem anterior.`,
+        igual: 'Mesmo peso da pesagem anterior.',
+      }),
+  },
+
+  altura: {
+    resumir: (l) => {
+      const mm = numero(l, 'altura_mm');
+      return mm ? cmEmPalavra(mm) : 'Altura';
+    },
+    detalhar: (l, agora) => {
+      const mm = numero(l, 'altura_mm');
+      return listar([
+        ['Altura', mm ? cmEmPalavra(mm) : null],
+        ['Quando', formatarMomento(texto(l, 'ocorrido_em') ?? '', agora)],
+      ]);
+    },
+    compararComAnterior: (l, anterior) =>
+      variacao(l, anterior, 'altura_mm', cmEmPalavra, {
+        subiu: (v) => `Cresceu ${v} desde a última medida.`,
+        desceu: (v) => `${v} a menos que na última medida.`,
+        igual: 'Mesma altura da última medida.',
+      }),
+  },
+
+  circunferencia: {
+    resumir: (l) => {
+      const mm = numero(l, 'circunferencia_mm');
+      return mm ? cmEmPalavra(mm) : 'Perímetro cefálico';
+    },
+    detalhar: (l, agora) => {
+      const mm = numero(l, 'circunferencia_mm');
+      return listar([
+        ['Perímetro cefálico', mm ? cmEmPalavra(mm) : null],
+        ['Quando', formatarMomento(texto(l, 'ocorrido_em') ?? '', agora)],
+      ]);
+    },
+    compararComAnterior: (l, anterior) =>
+      variacao(l, anterior, 'circunferencia_mm', cmEmPalavra, {
+        subiu: (v) => `${v} a mais que na última medida.`,
+        desceu: (v) => `${v} a menos que na última medida.`,
+        igual: 'Mesma medida da anterior.',
+      }),
   },
 
   extracao: {

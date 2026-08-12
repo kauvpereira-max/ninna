@@ -284,6 +284,14 @@ export type DetalheRegistro = {
   emAndamento: boolean;
   campos: CampoDetalhe[];
   notas: string | null;
+  /**
+   * "Ganhou 340 g desde a pesagem anterior." — só o crescimento tem.
+   *
+   * `null` na primeira medida, e isso é o desenho: não há o que comparar, e
+   * inventar uma frase seria começar mentindo. Também `null` para os dez tipos
+   * que não declaram comparação.
+   */
+  comparacao: string | null;
 };
 
 /** O que a lista e o detalhe têm em comum: uma linha crua vira registro do app. */
@@ -337,9 +345,51 @@ export async function buscarRegistro(
       campos: LEITURA[tipo].detalhar(linha, agora),
       // Sono é o único tipo que nunca preenche `notes`: ele não tem o campo.
       notas: typeof notas === 'string' && notas.trim() ? notas.trim() : null,
+      comparacao: await compararComAnterior(tipo, linha),
     },
     error: null,
   };
+}
+
+/**
+ * A frase de comparação — uma consulta a mais, e só para quem declara precisar.
+ *
+ * O tipo diz se compara (`LEITURA[tipo].compararComAnterior`), e só nesse caso
+ * este módulo vai ao banco buscar o registro anterior. Os dez tipos que não
+ * comparam não pagam consulta nenhuma: o `if` de saída é a primeira linha.
+ *
+ * "Anterior" é por `ocorrido_em`, não por `created_at`: a mãe pode anotar hoje a
+ * pesagem da consulta de semana passada, e a comparação certa é com a medida que
+ * veio antes NO TEMPO — não com a que foi digitada antes.
+ *
+ * Falha de rede aqui devolve `null`, e a tela simplesmente não mostra a frase. É
+ * um enfeite verdadeiro: sem ele o registro continua completo, e com uma frase
+ * errada ele deixaria de estar.
+ */
+async function compararComAnterior(
+  tipo: TipoRegistro,
+  linha: LinhaRegistro
+): Promise<string | null> {
+  const comparar = LEITURA[tipo].compararComAnterior;
+  if (!comparar) return null;
+
+  const { data, error } = await supabase
+    .from(TABELA)
+    .select('*')
+    .eq('baby_id', String(linha.baby_id))
+    .eq('tipo', tipo)
+    .lt('ocorrido_em', String(linha.ocorrido_em))
+    .order('ocorrido_em', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.warn('[registros] falha ao buscar medida anterior:', error.message);
+    return null;
+  }
+  if (!data) return null;
+
+  return comparar(linha, data as LinhaRegistro);
 }
 
 /**

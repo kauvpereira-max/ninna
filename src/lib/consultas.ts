@@ -78,7 +78,10 @@ export type TipoEvento =
   | 'atividade'
   | 'comida'
   | 'hidratacao'
-  | 'extracao';
+  | 'extracao'
+  | 'peso'
+  | 'altura'
+  | 'circunferencia';
 
 // ------------------------------------------------------------------
 // Entrada
