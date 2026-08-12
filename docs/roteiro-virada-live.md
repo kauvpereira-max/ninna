@@ -207,7 +207,36 @@ Moeda **BRL** nos dois.
   mesmo nome em ambientes diferentes é a próxima hora perdida.
 - **Eventos:** os **seis** da lista da ferramenta C.
 
-**Conferir:** ferramenta **C**. Cole o JSON aqui.
+**Conferir:** ferramentas **B** e **C**. Cole o JSON aqui.
+
+### 1.3 · Auditar o que sobrou — o entulho nasce no mesmo dia
+
+Não confira só que os dois preços certos existem. Confira que **não existe mais
+nada**.
+
+Em 12/08/2026, montar este passo deixou para trás **três produtos e quatro
+preços ativos**, todos chamados "Ninna": os dois primeiros produtos foram
+criados um por plano, e vinte minutos depois refeitos como um produto com dois
+preços. Os primeiros ficaram, `active: true`, indistinguíveis do certo em
+qualquer lista.
+
+> O nome do produto é o que aparece **na fatura da mãe**. Três produtos com o
+> mesmo nome não se distinguem nem no seletor de preço do painel, nem no recibo.
+> E preço na Stripe é imutável: o conserto é arquivar e recriar, nunca editar.
+
+Isto não é vício do sandbox. **É o que acontece em qualquer ambiente montado à
+mão**, inclusive no live do passo 4 — onde o entulho cobra dinheiro de verdade.
+
+Arquivar os órfãos, **preços antes dos produtos** (a Stripe recusa arquivar
+produto com preço ativo):
+
+```
+curl.exe -s https://api.stripe.com/v1/prices/<price_orfao>   -u "<chave>:" -d active=false
+curl.exe -s https://api.stripe.com/v1/products/<prod_orfao>  -u "<chave>:" -d active=false
+```
+
+Depois repita a ferramenta **B**: têm que sobrar **exatamente dois** preços
+ativos, e a ferramenta de produtos tem que mostrar **um** produto ativo.
 
 ---
 
@@ -276,7 +305,10 @@ ramo rodou — não só que voltou 200.
 Igual ao passo 1, **sem `/test/` na URL**. Mesmo produto, mesmos dois preços,
 mesmos valores, mesmos seis eventos. Nome do endpoint: `ninna-live`.
 
-**Conferir:** ferramentas **B** e **C**, agora com a chave `sk_live_…`.
+**Conferir:** ferramentas **B** e **C**, agora com a chave `sk_live_…` — **e a
+auditoria do 1.3**, que aqui é a que mais importa: produto órfão em live é nome
+errado na fatura de uma mãe pagante, e preço órfão é valor errado cobrado de
+verdade.
 
 ⚠️ A partir daqui as chaves são de verdade. **Não cole `sk_live_` neste chat**,
 nem para eu conferir — as ferramentas B e C rodam no seu terminal e o JSON que
