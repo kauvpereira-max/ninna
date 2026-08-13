@@ -1204,8 +1204,28 @@ export function validarRegistro(
  * ("não escolhi nada"), e é exatamente o que o protótipo desenha no CTA da
  * fralda.
  *
- * A hora fica de fora de propósito: ela nasce preenchida com o horário atual, e
- * hora *malformada* é caso de explicar, não de bloquear.
+ * ------------------------------------------------------------------
+ * A ÚNICA EXCEÇÃO É CAMPO DE HORA — E ELA TEM NOME E CASO
+ *
+ * Não basta dizer "hora fica de fora". Sem o caso concreto, daqui a seis meses
+ * alguém lê a exceção como descuido e a "conserta".
+ *
+ * **O caso é o SONO**, e ele é extremo: o formulário de criar sono tem **um
+ * campo só**, `hora` ("Começou às"), e ele é `obrigatorio: true`. O fim do sono
+ * não mora aqui — é preenchido depois, pelo botão de encerrar na Home.
+ *
+ * Se hora entrasse na conta e a mãe apagasse o campo, o botão de começar o sono
+ * morreria **com a tela vazia atrás dele**: nada mais para preencher, nenhuma
+ * frase dizendo o que falta, e a frase só viria pelo toque que o botão morto
+ * impede. Ela ficaria olhando para um botão apagado sem nada a fazer.
+ *
+ * Banho, Passeio e Leitura estão no mesmo desenho — hora obrigatória, todo o
+ * resto opcional —, e por isso também nascem com o botão aceso.
+ *
+ * A hora, além disso, nasce preenchida com o horário atual: no caminho normal a
+ * exceção nem é exercitada. Ela existe para o caminho em que a mãe limpa o
+ * campo, que é justamente onde bloquear seria pior.
+ * ------------------------------------------------------------------
  */
 export function faltaObrigatorio(tipo: TipoRegistro, valores: ValoresRegistro): boolean {
   return SCHEMAS[tipo].campos.some((bruto) => {

@@ -1142,6 +1142,20 @@ checar(
 // O CONTROLE, e é ele que separa "estreito" de "quebrado": número fora de faixa
 // NÃO desabilita. Se este caso passar a desabilitar, a mãe fica com um botão
 // morto e nenhuma frase dizendo qual é o problema.
+// A EXCEÇÃO DA HORA, presa pelo caso que ela protege. Sono tem UM campo só, e
+// ele é hora obrigatória: incluir hora na conta mataria o botão de começar o
+// sono com a tela vazia atrás dele.
+checar(
+  'sono com a hora APAGADA continua liberado — é a exceção da hora',
+  !faltaObrigatorio('sono', { hora: '' }),
+  'o formulário de sono tem um campo só; bloquear aqui deixaria a mãe sem nada a fazer'
+);
+checar(
+  '…e sono não tem outro campo obrigatório escondido',
+  !faltaObrigatorio('sono', {}),
+  'se um campo obrigatório entrar no sono um dia, este caso vira vermelho e a decisão volta à mesa'
+);
+
 checar(
   'número fora de faixa NÃO desabilita — quem reprova é o toque',
   !faltaObrigatorio('peso', { hora: HORA_OK, peso: '999' }),
