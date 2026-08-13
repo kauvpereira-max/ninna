@@ -20,6 +20,7 @@ import {
   SINTOMA_OUTRO,
   LADOS,
   MOTIVOS_HUMOR,
+  faltaObrigatorio,
   linhaParaBanco,
   mascaraNumero,
   numeroDoCampo,
@@ -1122,7 +1123,46 @@ checar(
   comoSeFosseCriar ? `criando daria dia ${comoSeFosseCriar.getDate()}, editando dá 9` : 'null'
 );
 
+console.log('\n— o botão nasce desabilitado quando falta campo obrigatório —\n');
+
+// O que o CTA pergunta ao schema. É mais estreito que `validarRegistro` de
+// propósito: a frase de erro só aparece DEPOIS do toque, então bloquear por erro
+// que precisa de explicação deixaria a mãe sem o caminho que explica.
+checar(
+  'fralda sem escolha desabilita',
+  faltaObrigatorio('fralda', { hora: HORA_OK }),
+  'é o caso que o protótipo desenha'
+);
+checar(
+  'fralda com escolha libera',
+  !faltaObrigatorio('fralda', { hora: HORA_OK, conteudo: 'pee' }),
+  'escolhido o conteúdo, o botão acende'
+);
+
+// O CONTROLE, e é ele que separa "estreito" de "quebrado": número fora de faixa
+// NÃO desabilita. Se este caso passar a desabilitar, a mãe fica com um botão
+// morto e nenhuma frase dizendo qual é o problema.
+checar(
+  'número fora de faixa NÃO desabilita — quem reprova é o toque',
+  !faltaObrigatorio('peso', { hora: HORA_OK, peso: '999' }),
+  'fora de faixa precisa da frase de erro, e a frase só vem pelo toque'
+);
+checar(
+  '…e `validarRegistro` continua reprovando esse mesmo valor',
+  Object.keys(validar('peso', { hora: HORA_OK, peso: '999' })).length > 0,
+  'sem isto, o caso acima passaria por estar tudo certo'
+);
+
 console.log('\n— a prova de que este teste sabe reprovar —\n');
+
+// Um `faltaObrigatorio` que responde sempre `false` — o jeito mais fácil de
+// "consertar" um botão que não acende — passaria em dois dos quatro casos acima.
+// Este é o que pega.
+checar(
+  'um faltaObrigatorio que nunca bloqueia seria pego',
+  faltaObrigatorio('fralda', { hora: HORA_OK }) !== false,
+  'é a fralda em branco quem sustenta os outros três'
+);
 
 // Sem isto, tudo acima passaria com uma validação que nunca reprova e uma
 // montagem que devolve o objeto vazio.

@@ -1189,6 +1189,32 @@ export function validarRegistro(
   return erros;
 }
 
+/**
+ * Falta algum campo obrigatório? — a pergunta do BOTÃO, não a da validação.
+ *
+ * Ela é deliberadamente mais estreita que `validarRegistro`, e a diferença não é
+ * economia: é mecânica da tela.
+ *
+ * As frases de erro só aparecem DEPOIS do toque, porque é o toque que chama
+ * `validarRegistro` e preenche os erros. Então desabilitar por um erro que
+ * precisa ser explicado — número fora de faixa, hora malformada — tira o único
+ * caminho que explica: o botão fica morto e a mãe não descobre por quê.
+ *
+ * Aqui entra só campo obrigatório VAZIO, que é o estado que ela enxerga sozinha
+ * ("não escolhi nada"), e é exatamente o que o protótipo desenha no CTA da
+ * fralda.
+ *
+ * A hora fica de fora de propósito: ela nasce preenchida com o horário atual, e
+ * hora *malformada* é caso de explicar, não de bloquear.
+ */
+export function faltaObrigatorio(tipo: TipoRegistro, valores: ValoresRegistro): boolean {
+  return SCHEMAS[tipo].campos.some((bruto) => {
+    const campo = resolverCampo(bruto, valores);
+    if (!campo.obrigatorio || campo.entrada === 'hora') return false;
+    return (valores[campo.chave] ?? '').trim() === '';
+  });
+}
+
 // ============================================================
 // O QUE VAI PARA O BANCO
 // ============================================================

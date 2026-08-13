@@ -27,6 +27,7 @@ import {
 import {
   SCHEMAS,
   ehTipoRegistro,
+  faltaObrigatorio,
   mascaraNumero,
   resolverCampo,
   validarRegistro,
@@ -367,6 +368,10 @@ export default function RegistroScreen() {
                   label={editando ? 'Salvar alterações' : schema.acao}
                   onPress={handleSalvar}
                   loading={salvando}
+                  // Nasce desabilitado enquanto faltar campo obrigatório, como
+                  // no protótipo. Botão que parece ativo e recusa depois é pior
+                  // que botão que diz "falta algo" antes de ser tocado.
+                  disabled={faltaObrigatorio(tipo, valores)}
                   style={{ marginTop: spacing.sm }}
                 />
                 <Button
@@ -387,7 +392,23 @@ export default function RegistroScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.superficie },
-  scroll: { padding: spacing.lg, paddingBottom: spacing.xxl },
+  /**
+   * O `maxWidth` faltava AQUI, e só aqui — as outras dez telas do app já o
+   * tinham. Sem ele o modal esticava de ponta a ponta: num monitor de 1536px o
+   * CTA media 1488px.
+   *
+   * Era bug anterior aos blocos de fidelidade, mas o bloco 3 piorou o sintoma —
+   * a sombra colorida de 20px de raio passou a acompanhar o botão por toda essa
+   * largura, o que chama muito mais atenção que o rosa chapado de antes.
+   */
+  scroll: {
+    paddingHorizontal: spacing.respiro,
+    paddingVertical: spacing.lg,
+    paddingBottom: spacing.xxl,
+    width: '100%',
+    maxWidth: 480,
+    alignSelf: 'center',
+  },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   titulo: { ...typography.h1, color: colors.headline, marginBottom: spacing.xs },
   subtitulo: { ...typography.body, color: colors.neutro500 },
