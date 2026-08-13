@@ -88,6 +88,16 @@ export const colors = {
   linhaPill: '#F1EBE4',
   linhaTabBar: '#F2E3DA',
 
+  /**
+   * Botão desabilitado — rosa dessaturado, não cinza.
+   *
+   * O tokens não tinha estado desabilitado: o `Button` resolvia com
+   * `opacity: 0.5`, que apaga o botão inteiro, sombra junto. O protótipo pinta
+   * o estado em vez de esmaecê-lo, e o resultado continua sendo da marca.
+   */
+  desabilitadoFundo: '#F3D9D3',
+  desabilitadoTexto: '#C6A79F',
+
   // Semânticas
   success: '#C9E4D5',
   successText: '#4F8863',
@@ -167,6 +177,9 @@ export const typography = {
 
   /** O rótulo abaixo dele. O 12,5 é literal do protótipo, não arredondamento. */
   itemRotulo: { fontSize: 12.5, lineHeight: 18, fontFamily: 'NunitoSans_600SemiBold' },
+
+  /** O texto do CTA: 16,5 em Bold. O `label` com `fontSize` sobrescrito dava 15/600. */
+  cta: { fontSize: 16.5, lineHeight: 22, fontFamily: 'NunitoSans_700Bold' },
 } as const;
 
 // Elevação — sombra sempre suave, nunca pesada/3D (princípio do design system)
@@ -191,5 +204,39 @@ export const elevation = {
     shadowOpacity: 0.14,
     shadowRadius: 16,
     elevation: 6,
+  },
+
+  // ------------------------------------------------------------------
+  // A SOMBRA DO CTA TEM A COR DO BOTÃO, NÃO CINZA
+  //
+  // É o que o protótipo chama de brilho, e é a única sombra colorida do
+  // sistema. Os três níveis acima usam `neutro600` fixo, e nenhum deles
+  // consegue expressar isto.
+  //
+  // Os números são os do protótipo direto, sem conversão: `0 8px 20px` vira
+  // offset 8 e radius 20. É a convenção que já estava aqui — o `level1` é
+  // `0 1px 3px` e tem `shadowRadius: 3`, batendo com o protótipo dígito a
+  // dígito. Converter só um quebraria a régua dos outros.
+  //
+  // ⚠️ No Android, `elevation` não carrega cor: a sombra sai cinza de qualquer
+  // jeito. O brilho é da web e do iOS — e a web é onde a Ninna mora hoje.
+  // ------------------------------------------------------------------
+
+  /** CTA em repouso — `rgb(224,138,128)` é o `rosa500`. */
+  ctaRosa: {
+    shadowColor: colors.rosa500,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+
+  /** CTA com o cronômetro correndo — `rgb(225,92,66)` é o `coral500`, e aqui ele é vigilância. */
+  ctaCoral: {
+    shadowColor: colors.coral500,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.45,
+    shadowRadius: 22,
+    elevation: 8,
   },
 } as const;
