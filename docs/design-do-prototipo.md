@@ -344,7 +344,44 @@ para confirmar um banho esvaziaria isso — e o `teste-copy-saude.ts` defende qu
 as duas aberturas sejam diferentes. "Pronto" é o que se diz quando algo simples
 deu certo, e não compete.
 
-**5. O `object-position` do avatar não se aplica.** É enquadramento de foto, e o
+**5. Os modais são TELA CHEIA, não folha a 74–88% sobre a Home.**
+
+O protótipo desenha um overlay `position:absolute` com altura de 74% a 88%,
+deixando a Home aparecer em cima. No app eles continuam sendo **rota** com
+`presentation: 'modal'`, ocupando a tela inteira.
+
+Dois motivos, e o primeiro é sobre o aparelho:
+
+**A proporção não se traduz do desktop para o telefone.** 78% de uma maquete
+larga deixa uma faixa generosa de Home; 78% de um celular deixa ~150px — na
+prática, uns 50px úteis depois da barra de status. O que parecia camada vira
+sobra.
+
+**E o protótipo faz isso porque a Home dele é bonita, não porque a mãe precise
+vê-la enquanto registra.** É hierarquia visual de apresentação. No momento do
+registro — 3h da manhã, bebê no colo — o pedaço de Home atrás não dá contexto:
+dá distração, exatamente quando ela mais precisa de foco.
+
+E o custo era concreto, não estético. Como overlay, o modal deixaria de ser rota,
+e com isso:
+
+| | Rota (hoje) | Overlay |
+|---|---|---|
+| URL | `/registro/fralda`, real e recarregável | some — vira estado da Home |
+| Voltar do navegador | fecha o modal | **sai do app**, com o formulário preenchido |
+| Recarregar | reabre o modal | cai na Home e perde o preenchido |
+
+Mais três caminhos que já funcionam e ficariam frágeis: a **edição**
+(`/registro/[tipo]?id=`, que a tela de detalhe abre por rota), o fallback do
+`fechar()` — que existe justamente porque alguém já abriu o modal direto pela
+URL — e a tela **"Mais tipos"**, que navega para o modal e passaria a voltar e
+reabrir com um frame de Home no meio.
+
+> Se um dia se quiser o efeito sem o custo: manter a rota e **imitar** a folha —
+> `marginTop` proporcional, cantos arredondados no topo, fundo escurecido. Fica
+> quase todo o visual sem tocar em navegação.
+
+**6. O `object-position` do avatar não se aplica.** É enquadramento de foto, e o
 avatar do app é a **inicial do nome num círculo**. Não há o que enquadrar.
 Quando houver foto de bebê, a propriedade volta a fazer sentido e este registro
 deixa de valer.
