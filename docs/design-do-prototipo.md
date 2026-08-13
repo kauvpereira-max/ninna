@@ -36,6 +36,28 @@ uma volta inteira.
 
 ---
 
+## ✅ Conferido no navegador em 13/08/2026 — o recorte "quase idêntico" fechou
+
+Não é "passou nos testes": os três do fechamento (`tsc`, testes puros,
+`expo export`) **não enxergam cor, gradiente nem uma tela que dura 1,2s**. Isto
+aqui é o que foi visto e medido no DOM da PWA em produção.
+
+| # | O quê | Medido |
+|---|---|---|
+| 1 | Card de monitoramento CLARO | `rgb(253,244,241)` = `#FDF4F1`, borda `rgb(239,213,205)` = `#EFD5CD`, raio 24, chip com ponto coral |
+| 2 | Card "Converse com a Ninna" | `linear-gradient(rgb(255,255,255), rgb(253,244,241))` |
+| 3 | Rótulo de seção e badge "+" | `Fredoka_500Medium` 18px; o "+" no canto superior esquerdo de **todos** os atalhos, na cor do próprio ícone |
+| 4 | Tela "Pronto" | blob, selo de check, e **sumiu sozinha em ~1s** |
+| 5 | Tela do sintoma | **esperou 6+ segundos sem sumir**, com botão "Fechar" |
+
+**A linha 5 é a que vale mais**, e não é redundante com a 4: ela prova o
+comportamento OPOSTO no mesmo aplicativo. Uma tela que se dispensa e outra que
+espera, lado a lado, é a diferença entre confirmar um banho e confirmar algo que
+a mãe anotou preocupada. Se as duas se comportassem igual, o teste da 4 sozinho
+teria passado do mesmo jeito.
+
+---
+
 ## ✅ As cinco decisões de 13/08/2026
 
 Tomadas ao comparar a tela real com este documento. Ficam aqui porque são o
