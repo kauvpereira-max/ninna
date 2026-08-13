@@ -244,6 +244,29 @@ número Fredoka 21px + rótulo 12px
 
 ---
 
+## ✅ Divergências deliberadas — o protótipo NÃO é copiado nestes três
+
+Decididas em 13/08/2026. **Não são pendências**, e não devem voltar como "falta
+implementar". Vieram por conversa, como as seções abaixo.
+
+**1. Tocar no card de monitoramento não faz nada.** No protótipo o toque alterna
+estados — é recurso de **demonstração**, para mostrar as variações numa
+apresentação. No app, um card de insight que muda de estado ao ser tocado é
+comportamento sem sentido: a mãe não escolhe o que a Ninna observou.
+
+**2. O último item do grid chama "Mais", não "Registros".** É o único lugar onde
+o protótipo perde, e o motivo é de escopo, não de gosto: ele foi desenhado com
+**6 tipos** e um botão que abria a grade completa. O app tem **19 tipos e 7
+atalhos**, e "Registros" sugere *ver o que já foi registrado* — que é a aba
+Rotina. "Mais" descreve a ação; "Registros" descreveria outra tela.
+
+**3. O `object-position` do avatar não se aplica.** É enquadramento de foto, e o
+avatar do app é a **inicial do nome num círculo**. Não há o que enquadrar.
+Quando houver foto de bebê, a propriedade volta a fazer sentido e este registro
+deixa de valer.
+
+---
+
 ## ⚠️ Seções que o protótipo tem e este arquivo não descreve
 
 **Não extraídas — vieram por conversa em 13/08/2026.** Ficam registradas para

@@ -232,6 +232,17 @@ export const typography = {
   numeroStat: { fontSize: 21, lineHeight: 26, fontFamily: 'Fredoka_600SemiBold' },
 
   /**
+   * TÍTULO de seção ("Últimos registros"): Fredoka 19 em SemiBold, cor de
+   * headline.
+   *
+   * Não confundir com o RÓTULO de seção ("Registre a rotina"), que é o `h3` —
+   * Fredoka 18 em Medium, cor `neutro400`. O protótipo usa os dois, e a
+   * diferença é de hierarquia: o rótulo apresenta uma ação, o título abre um
+   * conteúdo. O app usava o mesmo `label` maiúsculo para os dois.
+   */
+  tituloSecao: { fontSize: 19, lineHeight: 24, fontFamily: 'Fredoka_600SemiBold', letterSpacing: -0.2 },
+
+  /**
    * A saudação da Home: Fredoka 25 em SemiBold.
    *
    * 25 e não o `h1` (26): o protótipo é literal, e o `letterSpacing` negativo faz

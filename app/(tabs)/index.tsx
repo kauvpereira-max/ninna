@@ -125,7 +125,11 @@ export default function HojeScreen() {
           aprendendo={insight.aprendendo}
         />
 
-        <Text style={styles.sectionLabel}>REGISTRAR</Text>
+        {/* A divisória do protótipo: 1px, `linha`, entre o bloco de cima e os
+            atalhos. O documento especifica UMA — esta. */}
+        <View style={styles.divisoria} />
+
+        <Text style={styles.rotuloSecao}>Registre a rotina</Text>
         <View style={styles.grid}>
           {CATEGORIAS_DA_HOME.map((c) => (
             <Pressable
@@ -137,6 +141,12 @@ export default function HojeScreen() {
             >
               <View style={[styles.categoriaBadge, { backgroundColor: c.bg }]}>
                 <Ionicons name={c.icon} size={26} color={c.tinta} />
+                {/* O "+" do canto: 20px, branco translúcido. Diz que o círculo
+                    ADICIONA, e não que ele filtra ou abre — a mesma dúvida que
+                    fez o último item do grid se chamar "Mais" e não "Registros". */}
+                <View style={styles.badgeMais}>
+                  <Ionicons name="add" size={13} color={c.tinta} />
+                </View>
               </View>
               <Text style={styles.categoriaLabel}>{c.label}</Text>
             </Pressable>
@@ -165,7 +175,15 @@ export default function HojeScreen() {
             "ainda não perguntei". */}
         {contagensProntas ? <MiniStats contagens={contagens} /> : null}
 
-        <Text style={styles.sectionLabel}>ÚLTIMOS REGISTROS</Text>
+        {/* "Últimos registros", e NÃO "Hoje".
+
+            O protótipo põe um cabeçalho "Hoje" aqui. Esta lista não é de hoje:
+            são os 8 registros mais recentes, venham do dia que vierem — a Home
+            mostra "ontem 11:05" o tempo todo. O cabeçalho seria falso na tela.
+
+            Para ele existir, a lista teria que passar a ser filtrada por hoje,
+            e isso é mudança de comportamento, não de rótulo. */}
+        <Text style={styles.tituloSecao}>Últimos registros</Text>
 
         {erro ? <Text style={styles.avisoTexto}>{erro}</Text> : null}
         {erroEncerrar ? <Text style={styles.avisoTexto}>{erroEncerrar}</Text> : null}
@@ -258,10 +276,14 @@ const styles = StyleSheet.create({
   },
   avatarLetter: { ...typography.label, color: colors.headline },
   // O visual do card de insight mudou-se pra src/components/CardInsight.tsx.
-  sectionLabel: {
-    ...typography.label,
-    color: colors.neutro500,
-    marginBottom: spacing.sm,
+  // O protótipo tem DOIS níveis aqui, e o app usava um maiúsculo para os dois.
+  // Rótulo apresenta uma ação; título abre um conteúdo.
+  rotuloSecao: { ...typography.h3, color: colors.neutro400, marginBottom: spacing.sm },
+  tituloSecao: { ...typography.tituloSecao, color: colors.headline, marginBottom: spacing.sm },
+  divisoria: {
+    height: 1,
+    backgroundColor: colors.linha,
+    marginBottom: spacing.respiro,
   },
   // 4 por linha, como o `repeat(4, 1fr)` do protótipo. Com o teto de 8 atalhos,
   // os 7 tipos mais o "+" caem em DUAS linhas cheias — antes eram 3 por linha e
@@ -279,6 +301,20 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Canto superior ESQUERDO, como no protótipo. Translúcido de propósito: ele
+  // deixa a cor pastel atravessar, então a mesma peça funciona sobre as dez
+  // famílias sem precisar de uma variante por cor.
+  badgeMais: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 20,
+    height: 20,
+    borderRadius: radius.full,
+    backgroundColor: 'rgba(255,255,255,0.8)',
     alignItems: 'center',
     justifyContent: 'center',
   },
