@@ -413,6 +413,10 @@ Todos puros, rodando no Node sem banco — exceto os quatro últimos:
 - `teste-registro-schema.ts` — o que cada tipo pergunta, grava e mostra; e onde
   cada campo vai parar (coluna de verdade ou chave do `dados`)
 - `teste-registros-sql.ts` — reprova se a `005` divergir do gerador
+- `teste-acessibilidade.ts` — todo tocavel declara `accessibilityRole`. Varre o
+  repositorio, e se prova antes de varrer: a primeira versao dela acusou 25
+  faltas onde havia 2, porque o `>` de `onPress={() => x}` fechava a captura
+  antes dos atributos seguintes
 - `teste-horario.ts`, `teste-paginacao.ts`
 - `teste-rls-delete.mjs` — contra o banco real. Prova que A não apaga registro de
   B, e que medicação recusa edição no banco (gatilho da `007`) enquanto fralda

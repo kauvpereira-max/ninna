@@ -37,6 +37,16 @@ export function Button({ label, variant = 'primary', loading, style, disabled, .
         desabilitado && (isPrimary ? styles.primarioDesabilitado : styles.secundarioDesabilitado),
         style as any,
       ]}
+      // ⚠️ ANTES de `{...rest}`, e isso não é estilo: quem usa este componente
+      // pode precisar de outro papel (um "link", por exemplo), e o espalhamento
+      // depois deixa a chamada vencer. Depois do `rest`, ela não venceria.
+      //
+      // Faltava desde sempre — o CTA de todo formulário do app era, para um
+      // leitor de tela, texto dentro de uma caixa. Achado em 13/08/2026 ao
+      // varrer o DOM por `[role="button"]` e o botão de salvar não aparecer.
+      accessibilityRole="button"
+      // O estado desabilitado também precisa ser anunciado, não só pintado.
+      accessibilityState={{ disabled: bloqueado }}
       disabled={bloqueado}
       {...rest}
     >

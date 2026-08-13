@@ -260,7 +260,7 @@ export default function CadastroBebeScreen({
 
           {/* Trocar de conta só faz sentido pra quem ainda não entrou no app. */}
           {adicional ? null : (
-            <Pressable onPress={signOut} style={styles.sair}>
+            <Pressable onPress={signOut} accessibilityRole="button" style={styles.sair}>
               <Text style={styles.sairTexto}>Entrar com outra conta</Text>
             </Pressable>
           )}
