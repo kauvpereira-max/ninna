@@ -52,14 +52,32 @@ ANTES de apagar a conta, pela mesma razão do procedimento de exclusão
 (`004_assinaturas.sql`): apagada a usuária, some o `stripe_customer_id` e fica
 mais difícil achar o que cancelar.
 
-## Campos a preencher
+## Campos a preencher — ✅ preenchidos em 13/08/2026
 
-Estão marcados em `[MAIÚSCULAS ENTRE COLCHETES]` dentro dos arquivos:
+Não sobrou nenhum `[MAIÚSCULAS ENTRE COLCHETES]` na pasta. O que foi para onde:
 
-- `[REGIÃO DO PROJETO]` — Supabase > Project Settings > General > Region
-- `[SEU NOME]`, `[E-MAIL]`, `[WHATSAPP]`, `[SEU NÚMERO]`
-- o link do app, no roteiro de instalação
-- o número em `src/lib/contato.ts`, que é o destino do botão "Relatar problema"
+| Campo | Valor |
+|---|---|
+| Nome | Kauane Pereira |
+| Empresa | Interdemo ME, CNPJ 64.006.872/0001-40 (dígitos conferidos) |
+| WhatsApp | 11 91330-9213 · `wa.me/5511913309213` |
+| E-mail | `kauu2804@gmail.com` — **provisório**, ver abaixo |
+| Região do banco | Brasil (São Paulo) — já estava escrito no termo |
+
+E o número foi para `src/lib/contato.ts`, que é o destino do botão "Relatar
+problema". Com ele preenchido, o item **passa a aparecer** na aba Mais.
+
+### Duas coisas que continuam abertas
+
+**O e-mail é provisório.** É o gmail enquanto o `contato@ninnaappbr.com.br` não
+recebe. E isso não é detalhe de forma: o termo diz que trocar qualquer palavra
+depois de enviado obriga a subir para a versão 2 e recolher o aceite de novo.
+Então ou o `contato@` funciona **antes** do envio, ou o termo vai com o gmail e
+fica com ele para estas mães.
+
+**O link do app não é campo.** O `roteiro-instalacao.md` fala em "o link que eu
+te mandei", e ele viaja na mensagem do WhatsApp de propósito — PDF enviado não
+se edita, e o endereço ainda pode mudar para o domínio próprio.
 
 Os blocos marcados como "apagar antes de gerar o PDF" são instruções para você, e
 não podem chegar até ela.

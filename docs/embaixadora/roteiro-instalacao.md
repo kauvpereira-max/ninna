@@ -1,6 +1,12 @@
 # Deixando a Ninna na tela do seu celular — leva 2 minutos
 
-> **Campo a preencher antes de enviar:** o link do app, onde estiver marcado.
+> **Não há campo a preencher aqui** — conferido em 13/08/2026. O texto diz "o
+> link que eu te mandei", e o link viaja na mensagem do WhatsApp, não no PDF.
+>
+> Isso é de propósito: PDF enviado não se edita, e o endereço do app ainda pode
+> mudar (o domínio `ninnaappbr.com.br` está sendo montado). Link colado aqui
+> vira link errado no dia da troca, na mão de quem não tem como saber disso.
+>
 > **Apagar este bloco antes de gerar o PDF.**
 
 Vale a pena fazer isso *antes* de criar sua conta. Aberta só pelo navegador,

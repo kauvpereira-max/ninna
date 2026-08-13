@@ -9,7 +9,7 @@ vez de 1 dia. É a mitigação do R6 — "bug de mãe real nunca chega até mim"
 Rótulo: **Relatar problema**. Destino:
 
 ```
-https://wa.me/55[SEUNUMERO]?text=Oi!%20Encontrei%20um%20problema%20na%20Ninna%3A%20
+https://wa.me/5511913309213?text=Oi!%20Encontrei%20um%20problema%20na%20Ninna%3A%20
 ```
 
 O número mora em `src/lib/contato.ts`, num lugar só. Enquanto ele estiver vazio o

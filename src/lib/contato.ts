@@ -2,15 +2,18 @@
  * O canal humano do §3.7 — um lugar só, porque o número aparece no app, no termo
  * e no roteiro de instalação, e três cópias divergem no dia em que ele mudar.
  *
- * PREENCHER ANTES DA E1: só dígitos, com DDI e DDD, sem +, espaço ou traço.
- * Exemplo do formato: '5511987654321'.
+ * Só dígitos, com DDI e DDD, sem +, espaço ou traço.
  *
  * Enquanto estiver vazio, o item "Relatar problema" NÃO aparece na aba Mais.
  * Link de WhatsApp quebrado na mão de uma mãe é pior que item ausente: ela toca,
  * cai numa tela de erro do navegador e conclui que não existe canal — que é
  * exatamente o R6 (bug de mãe real nunca chega até você) acontecendo em silêncio.
+ *
+ * Preenchido em 13/08/2026. O mesmo número aparece no termo de participação e no
+ * `docs/embaixadora/canal-feedback.md` — trocar aqui obriga a trocar lá, e o
+ * termo já enviado só muda subindo de versão e recolhendo o aceite de novo.
  */
-export const WHATSAPP_SUPORTE: string = '';
+export const WHATSAPP_SUPORTE: string = '5511913309213';
 
 /**
  * O texto já vem pronto na conversa. Não é enfeite: a mãe que toca em "relatar
