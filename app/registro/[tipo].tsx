@@ -16,7 +16,13 @@ import { useBaby } from '../../src/contexts/BabyContext';
 import { Button } from '../../src/components/Button';
 import { ConfirmacaoPronto } from '../../src/components/ConfirmacaoPronto';
 import { TextField } from '../../src/components/TextField';
-import { ChipGroup } from '../../src/components/ChipGroup';
+import {
+  RotuloCampo,
+  CampoHora,
+  EscolhaEmGrade,
+  StepperNumero,
+  CampoTextoLivre,
+} from '../../src/components/CamposDoRegistro';
 import { aplicarMascaraHora, horaAtual, horaNoDia, horaParaData } from '../../src/lib/horario';
 import { AVISO_AO_SALVAR_SINTOMA } from '../../src/lib/copySaude';
 import {
@@ -255,35 +261,59 @@ export default function RegistroScreen() {
     const valor = valores[campo.chave] ?? '';
     const erro = erros[campo.chave];
 
+    // O rótulo saiu de dentro de cada controle e virou peça própria: o
+    // protótipo usa o MESMO rótulo (13/700) acima de todos, e tê-lo dentro de
+    // cada um obrigaria os cinco a concordarem sobre ele para sempre.
+    const rotulo = (
+      <RotuloCampo texto={campo.rotulo} opcional={!campo.obrigatorio && campo.entrada !== 'hora'} />
+    );
+
     if (campo.entrada === 'hora') {
       return (
-        <TextField
-          key={campo.chave}
-          label={campo.rotulo}
-          value={valor}
-          onChangeText={(texto) => definir(campo.chave, aplicarMascaraHora(texto))}
-          placeholder="HH:MM"
-          keyboardType="number-pad"
-          maxLength={5}
-          error={erro}
-        />
+        <View key={campo.chave}>
+          {rotulo}
+          <CampoHora
+            valor={valor}
+            onChange={(texto) => definir(campo.chave, aplicarMascaraHora(texto))}
+            erro={erro}
+          />
+        </View>
       );
     }
 
     if (campo.entrada === 'escolha') {
       return (
-        <ChipGroup<string>
-          key={campo.chave}
-          label={campo.rotulo}
-          value={valores[campo.chave] ?? null}
-          onChange={(escolhido) => definir(campo.chave, escolhido)}
-          options={campo.opcoes}
-          error={erro}
-        />
+        <View key={campo.chave}>
+          {rotulo}
+          <EscolhaEmGrade
+            opcoes={campo.opcoes}
+            valor={valores[campo.chave] ?? null}
+            onChange={(escolhido) => definir(campo.chave, escolhido)}
+            erro={erro}
+          />
+        </View>
       );
     }
 
     if (campo.entrada === 'numero') {
+      // `passo` no schema é o que decide stepper ou campo — ver o comentário
+      // dele. A tela não escolhe; ela obedece.
+      if (campo.passo !== undefined) {
+        return (
+          <View key={campo.chave}>
+            {rotulo}
+            <StepperNumero
+              valor={valor}
+              onChange={(v) => definir(campo.chave, v)}
+              passo={campo.passo}
+              min={campo.min}
+              max={campo.max}
+              unidade={campo.unidade}
+              erro={erro}
+            />
+          </View>
+        );
+      }
       return (
         <TextField
           key={campo.chave}
@@ -303,16 +333,15 @@ export default function RegistroScreen() {
     }
 
     return (
-      <TextField
-        key={campo.chave}
-        label={campo.rotulo}
-        value={valor}
-        onChangeText={(texto) => definir(campo.chave, texto)}
-        placeholder={campo.placeholder}
-        maxLength={campo.max}
-        multiline={campo.linhas}
-        error={erro}
-      />
+      <View key={campo.chave}>
+        {rotulo}
+        <CampoTextoLivre
+          valor={valor}
+          onChange={(texto) => definir(campo.chave, texto)}
+          placeholder={campo.placeholder ?? ''}
+          erro={erro}
+        />
+      </View>
     );
   }
 
