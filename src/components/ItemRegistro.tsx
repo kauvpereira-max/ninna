@@ -108,6 +108,23 @@ const styles = StyleSheet.create({
     color: colors.neutro500,
     width: HORA,
     textAlign: 'right',
+    /**
+     * `flexShrink: 0` NÃO É DETALHE — é o que sustenta o alinhamento da linha.
+     *
+     * O `ListaDeRegistros` posiciona o fio vertical num `left` CONSTANTE,
+     * calculado a partir deste `HORA`. Se a coluna de hora encolher, o círculo
+     * anda para a esquerda e o fio fica onde estava: a linha passa a cortar os
+     * ícones fora do centro.
+     *
+     * E ela encolhe: no react-native-web o `Text` sai com `flex-shrink: 1`, e
+     * `width` sozinho não segura nada dentro de uma linha apertada — tela
+     * estreita com resumo longo bastaria.
+     *
+     * Medido em 13/08/2026 numa janela sem área de renderização: a hora colapsou
+     * para 0 e o desalinhamento saiu exatamente 46px, a largura desta coluna.
+     * O ambiente era degenerado, o mecanismo não.
+     */
+    flexShrink: 0,
   },
   // O anel é da COR DO FUNDO, e é ele que "corta" a linha vertical: sem isso o
   // fio atravessaria o círculo por trás e apareceria dos dois lados dele.
