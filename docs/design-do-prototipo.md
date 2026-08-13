@@ -10,6 +10,33 @@ arquivo.
 
 ---
 
+## ✅ O markup do protótipo ESTÁ no repositório desde 13/08/2026
+
+`docs/prototipo/markup-extraido.html` — 113 KB, o markup desescapado.
+
+O original (`Ninna - Protótipo offline.html`, 7,4 MB) é uma página empacotada
+com o template embutido como string JS escapada (`/` no lugar de `/`).
+Deles, ~7,4 MB são o runtime; o que descreve as telas são os 113 KB extraídos.
+
+**Só o extrato entrou no git**, e a escolha é deliberada: 7,4 MB de bundle
+entrariam de novo a cada re-exportação do protótipo, e nenhuma linha deles é
+legível num diff. Para refazer a extração:
+
+```bash
+node -e "
+const s=require('fs').readFileSync('Ninna - Protótipo offline.html','utf8');
+require('fs').writeFileSync('markup-extraido.html',
+  s.slice(7600000).replace(/\\\\u002F/g,'/').replace(/\\\\\"/g,'\"').replace(/\\\\n/g,'\n'));
+"
+```
+
+> ⚠️ **Eu disse antes que este arquivo não existia, e estava errado.** Listei
+> `ls ~/Downloads/*.html | head -3`, vi três páginas InterDemo e concluí
+> ausência — de uma lista truncada. É a regra 2 fora de um teste: filtro que não
+> acha não prova que não existe.
+
+---
+
 ## ⚠️ ESTE DOCUMENTO ESTÁ INCOMPLETO, E ISSO TEM CUSTO
 
 A extração de 13/08/2026 cobriu o markup, e os blocos 1–7 converteram **token e
@@ -346,7 +373,95 @@ trivial; o "Relatórios" fica de fora pela decisão nº 3.
 
 ---
 
-## Modal de registro
+## ✅ Os modais, extraídos do markup em 13/08/2026
+
+**São SEIS, e um deles é genérico.** O protótipo já resolveu a questão de
+arquitetura que estava em aberto: ele tem `<!-- MODAL: GENÉRICO -->` ao lado dos
+cinco por tipo.
+
+### A casca, que é idêntica em todos
+
+```
+overlay   position:absolute; inset:0; z-index:60; background:#FFFDFA;
+          display:flex; align-items:flex-end
+sheet     width:100%; background:#FFFDFA; animation:nnUp .26s cubic-bezier(.2,.8,.3,1)
+cabeçalho padding:18px 20px 8px  ·  fechar 40px redondo #F4EBE3, X stroke #5C4A42 2.6
+          título Fredoka 18/600 #2B211D  ·  espaçador de 40px
+corpo     flex:1; overflow-y:auto; padding:8px 20px 20px
+rodapé    padding:12px 20px 28px; border-top:1px solid #F3E2D8
+CTA       largura total; height:54px; radius:999px; #E08A80; branco 16,5/700
+          box-shadow:0 8px 20px rgba(224,138,128,.35)   ·   rótulo "Concluir"
+```
+
+⚠️ **A altura do sheet é DIFERENTE em cada um** — o documento dizia "84%",
+generalizando de um só:
+
+| Genérico | Mamadeira | Sono | Amamentar | Fralda | Humor | Grade |
+|---|---|---|---|---|---|---|
+| 74% | 78% | 82% | 84% | 86% | 88% | 92% |
+
+### Os cinco controles, e é aqui que mora a resposta
+
+**1. Hora — em todos os seis.** Card branco, `radius:16`, `padding:14px 16px`,
+ícone 18px stroke `#A85A4E`, texto **15,5/700** `#2B211D` ("Hoje, 11:05").
+
+> A sombra dele diverge entre modais: `0 1px 3px rgba(92,74,66,.08)` na Fralda e
+> na Mamadeira, `0 2px 10px rgba(92,74,66,.06)` no Humor e no genérico. É
+> inconsistência do protótipo, não decisão — **use a de 2px/10px**, que é a do
+> genérico.
+
+**2. Escolha COM ícone** (Fralda). `grid-template-columns:1fr 1fr 1fr; gap:10px`.
+Cada opção é um botão-card: `padding:14px 8px`, `radius:16`, `border:1.5px`,
+coluna com `gap:9`, contendo um **círculo de 48px** na cor pastel + rótulo
+**13,5/700** `#5C4A42`.
+
+**3. Escolha SÓ TEXTO** (Humor). `grid-template-columns:1fr 1fr; gap:10px`.
+Pílulas de **`height:48px`, `radius:999px`**, texto **14,5/700**, `border:1.5px`.
+
+**4. Número** (Mamadeira). **Não é campo de texto — é stepper.** Card branco
+`radius:20`, `padding:18`, `space-between`:
+- menos: 44px redondo, `border:1.5px solid #F8D5D1`, fundo transparente;
+- valor: **Fredoka 40/600**, `letter-spacing:-1px`, + unidade 15/700 `#8A6A60`;
+- mais: 44px redondo, `#E08A80` sólido, `box-shadow:0 6px 14px rgba(224,138,128,.35)`.
+
+**5. Texto livre** (genérico). `textarea rows=3`, `radius:16`,
+`border:1.5px solid #F3C9C5`, `padding:14px 16px`, **15/600**.
+
+**E o rótulo de campo, em todos:** **13/700** `#5C4A42`, `margin-bottom:8~10px`.
+O sufixo opcional vem no mesmo elemento, em 600 `#B8A69C` — *"Motivo provável ·
+opcional"*.
+
+### O genérico, inteiro
+
+Sheet 74%. No corpo, antes da Hora, um **card de dica**: `radius:20`,
+`padding:16`, sombra `0 2px 10px`, com círculo pastel de **56px** (ícone 30px na
+tinta do tipo) + texto **14/1.45/600** `#5C4A42`. Depois: Hora e "Observações".
+
+### As duas exceções, e elas são exceções de verdade
+
+**SONO — não é formulário, é cronômetro.** Sheet 82%, corpo centralizado sem
+scroll:
+- anel de **216×216**, dois círculos `r=98` `stroke-width:12` — trilho `#EFE4F4`,
+  progresso `#9B8AC4` com `stroke-dasharray` e `rotate(-90)`;
+- tempo em **Fredoka 46/600**, `letter-spacing:-1px`, `line-height:1`;
+- status 13/700 `#8A6A60` embaixo;
+- botão play/pause de **84px** `#9B8AC4`, sombra `0 12px 28px rgba(155,138,196,.45)`;
+- link **"Adicionar manualmente"** 14,5/700 `#A85A4E`, sublinhado.
+
+**AMAMENTAR — dois cronômetros.** Sheet 84%. Texto de abertura 14,5/1.5
+`#8A6A60`, depois `grid 1fr 1fr; gap:14` com dois cards brancos `radius:20`,
+`padding:18px 12px`:
+- rótulo **"ESQUERDO"/"DIREITO"** 12/**800**, `letter-spacing:1px`, `#A85A4E`;
+- botão de **88px** redondo, play/pause branco 28px, fundo e brilho dinâmicos;
+- tempo em **Fredoka 24/600**.
+
+> A frase de abertura é *"Dá pra alternar quantas vezes precisar"* — ou seja, não
+> são duas durações, são **dois cronômetros acumulando** ao longo da mamada.
+> Confirma que isto é modelo de dado, não layout: ver `PRODUTO.md` §3.4-bis.
+
+---
+
+## Modal de registro (a leitura anterior, generalizada — ver a extração acima)
 
 Padrão idêntico nos seis:
 
