@@ -79,7 +79,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   resumo: { ...typography.itemDetalhe, color: colors.headline },
-  // Sono em andamento é timer ativo — vigilância, que é o uso do coral #E15C42.
+  /**
+   * Sono em andamento. Hoje é só a COR DO TEXTO do resumo — `coral600`
+   * (`#C94A32`) —, não fundo sólido nem ícone branco.
+   *
+   * ⚠️ NÃO LEIA ISTO COMO DECISÃO DE VIGILÂNCIA. É coral porque, quando foi
+   * escrito, coral era o único recurso disponível para dizer "está correndo": os
+   * pares pastéis não existiam ainda, e a paleta de categoria era sólida e
+   * vívida. Não é a superfície escura do card de monitoramento, e não herda a
+   * regra dele.
+   *
+   * A ALTERNATIVA, para quem for mexer nisto:
+   *
+   * O par `pastel.roxo` é exatamente o material para este caso — o sono já veste
+   * essa família no badge. Em andamento poderia ser o item inteiro com fundo
+   * `#ECE7F8` e texto na tinta `#7A67A8`, em vez de trocar a cor do texto por
+   * coral. Fica dentro do sistema, usa a cor do próprio tipo, e não pede que o
+   * coral signifique duas coisas.
+   *
+   * Não foi feito porque não é o bloco disto, e trocar o realce do sono no meio
+   * dos blocos de fidelidade misturaria fidelidade com desenho novo — o
+   * protótipo não desenha o sono em andamento na lista.
+   */
   ativo: { color: colors.coral600 },
   categoria: { ...typography.itemRotulo, color: colors.textoTerciario },
   hora: { ...typography.caption, color: colors.neutro500 },

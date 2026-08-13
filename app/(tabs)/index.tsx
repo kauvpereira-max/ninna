@@ -61,44 +61,59 @@ export default function HojeScreen() {
     await recarregar();
   }
 
-  // O conteúdo é o mesmo nos dois casos; o que muda é ser tocável ou não.
-  const conteudoHeader = (
-    <>
-      <View style={styles.avatarRow}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarLetter}>{bebeAtivo.name.charAt(0).toUpperCase()}</Text>
-        </View>
-        <View>
-          <Text style={styles.nome}>{bebeAtivo.name}</Text>
-          <Text style={styles.idade}>
-            {idadeCorrigida ? `${idade} · ${idadeCorrigida} corrigida` : idade}
-          </Text>
-        </View>
+  /**
+   * O pill do bebê — canto direito do cabeçalho, como no protótipo.
+   *
+   * Só o avatar e a seta. O NOME saiu daqui e desceu para o subtítulo da
+   * saudação: no protótipo o pill não carrega texto, e o nome do bebê continua
+   * visível logo abaixo, além do card de monitoramento que o repete.
+   */
+  const pillDoBebe = (
+    <View style={styles.pill}>
+      <View style={styles.avatar}>
+        <Text style={styles.avatarLetter}>{bebeAtivo.name.charAt(0).toUpperCase()}</Text>
       </View>
-      {podeTrocar ? <Ionicons name="chevron-down" size={18} color={colors.neutro400} /> : null}
-    </>
+      {podeTrocar ? <Ionicons name="chevron-down" size={10} color={colors.neutro400} /> : null}
+    </View>
   );
+
+  const legendaDoBebe = idadeCorrigida
+    ? `${bebeAtivo.name} · ${idade} · ${idadeCorrigida} corrigida`
+    : `${bebeAtivo.name} · ${idade}`;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        {/* A saudação some quando não há nome, em vez de virar "Oi," pendurado: conta
-            criada antes do D2 não tem a chave em user_metadata. O nome é da mãe; o
-            resto da Home é do bebê, e é por isso que a saudação é discreta e ele não. */}
-        {nomeMae ? <Text style={styles.saudacao}>Oi, {nomeMae}</Text> : null}
+        {/* O cabeçalho do protótipo: saudação grande à esquerda, pill do bebê à
+            direita.
 
-        {podeTrocar ? (
-          <Pressable
-            onPress={() => router.push('/bebes')}
-            accessibilityRole="button"
-            accessibilityLabel={`Trocar de bebê. Acompanhando ${bebeAtivo.name} agora.`}
-            style={styles.header}
-          >
-            {conteudoHeader}
-          </Pressable>
-        ) : (
-          <View style={styles.header}>{conteudoHeader}</View>
-        )}
+            A saudação vira o nome do BEBÊ quando não há nome da mãe — conta
+            criada antes do D2 não tem a chave em user_metadata. Antes ela
+            simplesmente sumia, o que agora deixaria o cabeçalho começando por um
+            subtítulo solto. O título grande existe nos dois casos; o que muda é
+            de quem é o nome nele. */}
+        <View style={styles.header}>
+          <View style={styles.headerTexto}>
+            <Text style={styles.saudacao} numberOfLines={1}>
+              {nomeMae ? `Oi, ${nomeMae}` : bebeAtivo.name}
+            </Text>
+            <Text style={styles.subtitulo} numberOfLines={1}>
+              {legendaDoBebe}
+            </Text>
+          </View>
+
+          {podeTrocar ? (
+            <Pressable
+              onPress={() => router.push('/bebes')}
+              accessibilityRole="button"
+              accessibilityLabel={`Trocar de bebê. Acompanhando ${bebeAtivo.name} agora.`}
+            >
+              {pillDoBebe}
+            </Pressable>
+          ) : (
+            pillDoBebe
+          )}
+        </View>
 
         <CardInsight
           nomeBebe={bebeAtivo.name}
@@ -193,25 +208,46 @@ const styles = StyleSheet.create({
   // janela toda e esticava header, card e lista de ponta a ponta. 480 é largura de
   // celular grande — a Home continua sendo uma coluna, mesmo num monitor.
   scroll: { paddingHorizontal: spacing.respiro, paddingVertical: spacing.lg, width: '100%', maxWidth: 480, alignSelf: 'center' },
-  saudacao: { ...typography.body, color: colors.neutro500, marginBottom: spacing.xs },
+  // `alignItems: 'flex-start'` e não `center`: o pill acompanha o TOPO do bloco
+  // de texto. Centralizado, ele desce junto com o subtítulo e desalinha da
+  // saudação, que é a linha que o olho usa como régua.
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: spacing.md,
+    gap: 12,
+    marginBottom: spacing.respiro,
   },
-  avatarRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  // `flex: 1` para o `numberOfLines` ter contra o que truncar — sem isso o nome
+  // longo empurraria o pill para fora da tela em vez de cortar.
+  headerTexto: { flex: 1 },
+  saudacao: { ...typography.saudacao, color: colors.headline },
+  subtitulo: { ...typography.saudacaoSub, color: colors.neutro500 },
+  // O pill: branco com borda própria, medidas literais do protótipo. O padding
+  // assimétrico (5 à esquerda, 10 à direita) é o que centra opticamente o
+  // conjunto avatar-seta dentro do redondo.
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingTop: 5,
+    paddingBottom: 5,
+    paddingLeft: 5,
+    paddingRight: 10,
+    borderRadius: radius.full,
+    backgroundColor: colors.neutro0,
+    borderWidth: 1,
+    borderColor: colors.linhaPill,
+  },
   avatar: {
-    width: 32,
-    height: 32,
+    width: 34,
+    height: 34,
     borderRadius: radius.full,
     backgroundColor: colors.amarelo200,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarLetter: { ...typography.label, color: colors.headline },
-  nome: { ...typography.h3, color: colors.headline },
-  idade: { ...typography.caption, color: colors.neutro500 },
   // O visual do card de insight mudou-se pra src/components/CardInsight.tsx.
   sectionLabel: {
     ...typography.label,

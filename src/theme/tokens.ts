@@ -215,6 +215,31 @@ export const typography = {
 
   /** O texto do CTA: 16,5 em Bold. O `label` com `fontSize` sobrescrito dava 15/600. */
   cta: { fontSize: 16.5, lineHeight: 22, fontFamily: 'NunitoSans_700Bold' },
+
+  /**
+   * A saudação da Home: Fredoka 25 em SemiBold.
+   *
+   * 25 e não o `h1` (26): o protótipo é literal, e o `letterSpacing` negativo faz
+   * parte — títulos grandes dele fecham em `-.2px`, e sem isso o texto fica com
+   * ar de largo no mesmo corpo.
+   */
+  saudacao: { fontSize: 25, lineHeight: 32, fontFamily: 'Fredoka_600SemiBold', letterSpacing: -0.2 },
+
+  /**
+   * O subtítulo dela — e AQUI MORA A DÍVIDA DA FONTE.
+   *
+   * O protótipo pede **14,5 em Medium (500)**, e `NunitoSans-Medium.ttf` não
+   * está em `assets/fonts/`: só Regular, SemiBold e Bold. Família que não existe
+   * cai no fallback do sistema **sem erro nenhum**, que é como o
+   * `typography.caption` passou meses errado.
+   *
+   * Fica em **Regular (400)** — o mesmo desvio que o `caption` já tomou, para
+   * não haver dois paliativos diferentes para a mesma falta. O 600 seria pesado
+   * demais para texto de apoio.
+   *
+   * Quando o `.ttf` entrar, os DOIS voltam juntos.
+   */
+  saudacaoSub: { fontSize: 14.5, lineHeight: 21, fontFamily: 'NunitoSans_400Regular' },
 } as const;
 
 // Elevação — sombra sempre suave, nunca pesada/3D (princípio do design system)
