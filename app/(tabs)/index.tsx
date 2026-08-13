@@ -14,6 +14,7 @@ import { encerrarSono, resumirSonoEmAndamento } from '../../src/lib/registros';
 import { formatarIdade, formatarIdadeCorrigida } from '../../src/lib/idade';
 import { formatarMomento } from '../../src/lib/horario';
 import { ItemRegistro } from '../../src/components/ItemRegistro';
+import { ListaDeRegistros } from '../../src/components/ListaDeRegistros';
 import { CATEGORIAS_DA_HOME, CATEGORIAS_FORA_DA_HOME } from '../../src/theme/categorias';
 import { colors, spacing, radius, typography, elevation } from '../../src/theme/tokens';
 
@@ -168,7 +169,7 @@ export default function HojeScreen() {
             </Text>
           )
         ) : (
-          <View style={styles.lista}>
+          <ListaDeRegistros>
             {registros.map((r) => (
               <ItemRegistro
                 key={`${r.tipo}-${r.id}`}
@@ -195,7 +196,7 @@ export default function HojeScreen() {
                 }
               />
             ))}
-          </View>
+          </ListaDeRegistros>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -285,7 +286,6 @@ const styles = StyleSheet.create({
   categoriaLabel: { ...typography.label, color: colors.neutro600, letterSpacing: 0 },
   vazioTexto: { ...typography.body, color: colors.neutro500 },
   avisoTexto: { ...typography.caption, color: colors.coral600, marginBottom: spacing.sm },
-  lista: { gap: spacing.sm },
   // O visual do item da lista mudou-se pra src/components/ItemRegistro.tsx, que a
   // Home e a Rotina compartilham.
   encerrar: {

@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useBaby } from '../../src/contexts/BabyContext';
 import { useHistorico } from '../../src/hooks/useHistorico';
 import { ItemRegistro } from '../../src/components/ItemRegistro';
+import { ListaDeRegistros } from '../../src/components/ListaDeRegistros';
 import { formatarHora, rotularDia } from '../../src/lib/horario';
 import type { TipoRegistro } from '../../src/lib/registros';
 import { CATEGORIAS, CATEGORIA_POR_TIPO } from '../../src/theme/categorias';
@@ -71,7 +72,10 @@ export default function RotinaScreen() {
             <Chip
               key={c.key}
               label={c.label}
-              cor={c.bg}
+              // `tinta`, e não `bg`: o ponto tem 8px, e o fundo pastel some
+              // nesse tamanho contra o chip claro. Círculo grande usa o fundo;
+              // elemento pequeno usa a tinta. É o par sendo usado como par.
+              cor={c.tinta}
               ativo={filtro === c.key}
               onPress={() => setFiltro(filtro === c.key ? null : c.key)}
             />
@@ -140,7 +144,7 @@ export default function RotinaScreen() {
                   {grupo.registros.length === 1 ? 'registro' : 'registros'}
                 </Text>
 
-                <View style={styles.lista}>
+                <ListaDeRegistros>
                   {grupo.registros.map((r) => (
                     <ItemRegistro
                       key={`${r.tipo}-${r.id}`}
@@ -149,7 +153,7 @@ export default function RotinaScreen() {
                       onPress={() => router.push(`/detalhe/${r.tipo}/${r.id}`)}
                     />
                   ))}
-                </View>
+                </ListaDeRegistros>
               </View>
             ))}
 
@@ -263,7 +267,6 @@ const styles = StyleSheet.create({
   grupo: { marginBottom: spacing.lg },
   diaLabel: { ...typography.label, color: colors.neutro600, letterSpacing: 0.6 },
   diaContagem: { ...typography.caption, color: colors.neutro400, marginBottom: spacing.sm },
-  lista: { gap: spacing.xs },
   carregarMais: {
     minHeight: 44,
     alignItems: 'center',

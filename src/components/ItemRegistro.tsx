@@ -2,7 +2,7 @@ import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { RegistroRecente } from '../lib/registros';
 import { CATEGORIA_POR_TIPO } from '../theme/categorias';
-import { colors, spacing, radius, typography, elevation } from '../theme/tokens';
+import { colors, typography } from '../theme/tokens';
 
 /**
  * No Safari do iPhone, segurar o dedo sobre um elemento dispara o callout do
@@ -14,9 +14,31 @@ import { colors, spacing, radius, typography, elevation } from '../theme/tokens'
 export const semCalloutNaWeb =
   Platform.OS === 'web' ? ({ userSelect: 'none', WebkitTouchCallout: 'none' } as any) : null;
 
+/**
+ * A GEOMETRIA DA TIMELINE, num lugar só.
+ *
+ * O `ListaDeRegistros` desenha a linha vertical e precisa acertar o eixo dos
+ * círculos daqui. Os números moram neste arquivo — que é quem os usa para
+ * montar a linha — e são IMPORTADOS lá, nunca repetidos: dois `80` escritos em
+ * arquivos diferentes é a linha saindo do eixo na primeira vez que alguém
+ * ajustar a largura da hora.
+ */
+const HORA = 46;
+const GAP_HORA = 8;
+/** O anel: círculo de 44 mais 4px de borda da cor do fundo, que "corta" a linha. */
+const ANEL = 52;
+const CIRCULO = 44;
+const GAP_TEXTO = 12;
+const PAD_VERTICAL = 6;
+
+/** Onde o eixo dos círculos cai, contado da borda esquerda da lista. */
+export const TIMELINE_X = HORA + GAP_HORA + ANEL / 2;
+/** E a que altura o centro do primeiro (e do último) círculo fica. */
+export const TIMELINE_Y = PAD_VERTICAL + ANEL / 2;
+
 type Props = {
   registro: RegistroRecente;
-  /** Texto da direita: hora na Rotina, momento relativo na Home. */
+  /** Texto da esquerda: hora na Rotina, momento relativo na Home. */
   horaLabel: string;
   /** Sobrescreve o resumo — a Home recalcula o sono em andamento num tick local. */
   resumo?: string;
@@ -37,47 +59,76 @@ export function ItemRegistro({ registro, horaLabel, resumo, onPress, acao }: Pro
       accessibilityLabel={`Abrir registro de ${visual.label}: ${texto}, ${horaLabel}`}
       style={[styles.item, semCalloutNaWeb]}
     >
-      <View style={[styles.badge, { backgroundColor: visual.bg }]}>
-        <Ionicons name={visual.icon} size={15} color={visual.tinta} />
+      {/* Duas linhas porque a Home manda momento relativo ("ontem 11:05"), que
+          não cabe em 46px numa linha só. A Rotina manda só "11:05" e usa uma. */}
+      <Text style={styles.hora} numberOfLines={2}>
+        {horaLabel}
+      </Text>
+
+      <View style={styles.anel}>
+        <View style={[styles.circulo, { backgroundColor: visual.bg }]}>
+          <Ionicons name={visual.icon} size={20} color={visual.tinta} />
+        </View>
       </View>
 
-      <View style={{ flex: 1 }}>
+      <View style={styles.texto}>
         <Text style={[styles.resumo, registro.emAndamento && styles.ativo]}>{texto}</Text>
         <Text style={styles.categoria}>{visual.label}</Text>
       </View>
 
-      {acao ?? <Text style={styles.hora}>{horaLabel}</Text>}
+      {acao}
     </Pressable>
   );
 }
 
-// Estilo herdado da lista da Home, onde este item nasceu — inclusive a elevação.
-// A Rotina usa o mesmo: duas listas de registro com aparências diferentes seria a
-// mãe achando que são duas coisas.
-//
-// O resumo era `body` (14) em SemiBold; o protótipo pede 16 em Bold, e o rótulo
-// sai de 12/Regular para 12,5/SemiBold. É a diferença que mais muda a leitura da
-// lista, e ela é de PESO, não de layout.
+/**
+ * O item deixou de ser CARD e virou linha do tempo.
+ *
+ * Foi-se o fundo branco, o raio e a elevação: no protótipo estes itens não são
+ * cartões sobre o fundo, são linhas atravessadas por um fio vertical. O que
+ * separa um do outro passa a ser o ritmo dos círculos, não a moldura.
+ *
+ * E a hora mudou de lado — era a última coluna, agora é a primeira, alinhada à
+ * direita contra o fio. É o que dá a leitura de cronologia: o olho desce pela
+ * coluna de horas.
+ *
+ * Um efeito colateral bom: a `acao` (encerrar sono) ocupava o lugar da hora e a
+ * escondia. Agora as duas convivem — a mãe vê a hora do sono aberto E o botão.
+ */
 const styles = StyleSheet.create({
   item: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.neutro0,
-    borderRadius: radius.card,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    paddingVertical: PAD_VERTICAL,
     // Dedo de mãe com bebê no colo, no meio da madrugada.
     minHeight: 44,
-    ...elevation.level1,
   },
-  badge: {
-    width: 30,
-    height: 30,
-    borderRadius: radius.full,
+  hora: {
+    ...typography.itemRotulo,
+    color: colors.neutro500,
+    width: HORA,
+    textAlign: 'right',
+  },
+  // O anel é da COR DO FUNDO, e é ele que "corta" a linha vertical: sem isso o
+  // fio atravessaria o círculo por trás e apareceria dos dois lados dele.
+  anel: {
+    width: ANEL,
+    height: ANEL,
+    borderRadius: ANEL / 2,
+    backgroundColor: colors.superficie,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: GAP_HORA,
+    marginRight: GAP_TEXTO,
+  },
+  circulo: {
+    width: CIRCULO,
+    height: CIRCULO,
+    borderRadius: CIRCULO / 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  texto: { flex: 1 },
   resumo: { ...typography.itemDetalhe, color: colors.headline },
   /**
    * Sono em andamento. Hoje é só a COR DO TEXTO do resumo — `coral600`
@@ -92,7 +143,7 @@ const styles = StyleSheet.create({
    * A ALTERNATIVA, para quem for mexer nisto:
    *
    * O par `pastel.roxo` é exatamente o material para este caso — o sono já veste
-   * essa família no badge. Em andamento poderia ser o item inteiro com fundo
+   * essa família no círculo. Em andamento poderia ser o item inteiro com fundo
    * `#ECE7F8` e texto na tinta `#7A67A8`, em vez de trocar a cor do texto por
    * coral. Fica dentro do sistema, usa a cor do próprio tipo, e não pede que o
    * coral signifique duas coisas.
@@ -103,5 +154,4 @@ const styles = StyleSheet.create({
    */
   ativo: { color: colors.coral600 },
   categoria: { ...typography.itemRotulo, color: colors.textoTerciario },
-  hora: { ...typography.caption, color: colors.neutro500 },
 });
