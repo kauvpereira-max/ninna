@@ -273,7 +273,29 @@ manhã "hoje" tem zero registros, e a tela que deveria acolher mostraria nada.
 O histórico por dia já existe, inteiro, na aba Rotina — com cabeçalho de data de
 verdade.
 
-**4. O `object-position` do avatar não se aplica.** É enquadramento de foto, e o
+**4. A confirmação pós-registro se dispensa sozinha, sem botão "Continuar".**
+Sai em ~1,2s; um toque em qualquer lugar antecipa. O visual é o do protótipo
+inteiro — blob, badge de check, "Pronto" em Fredoka 26 — e **só a permanência
+muda.**
+
+É a única divergência por **uso**, e não por escopo. O protótipo foi desenhado
+com 6 tipos e uso ocasional; o app tem 19, e a mãe registra mamada, fralda e
+sono várias vezes por dia, às 3h, com o bebê no colo.
+
+> Um passo a mais a cada registro deixa de ser encanto e vira atrito — e o custo
+> aparece justamente em quem usa mais.
+
+Se um dia houver dado de uso mostrando que a tela é bem-vinda, voltar ao botão é
+trocar um `useEffect` por um `<Button>`.
+
+**A palavra é "Pronto", não "Anotado".** "Anotado." é a abertura da copy de
+saúde, e ela tem peso ali: confirma um registro que a mãe pode estar fazendo
+preocupada, e a frase inteira devolve a decisão a ela. Usar a mesma abertura
+para confirmar um banho esvaziaria isso — e o `teste-copy-saude.ts` defende que
+as duas aberturas sejam diferentes. "Pronto" é o que se diz quando algo simples
+deu certo, e não compete.
+
+**5. O `object-position` do avatar não se aplica.** É enquadramento de foto, e o
 avatar do app é a **inicial do nome num círculo**. Não há o que enquadrar.
 Quando houver foto de bebê, a propriedade volta a fazer sentido e este registro
 deixa de valer.

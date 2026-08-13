@@ -93,6 +93,13 @@ export const colors = {
   superficieRosada: '#FDF4F1',
   bordaRosada: '#EFD5CD',
 
+  /**
+   * O fim do gradiente da confirmação pós-registro. O começo é o `neutro50`
+   * (`#FFF9F2`), que o documento já descreve como "fundo de onboarding e
+   * confirmação" — os dois momentos em que a tela é quente e não branca.
+   */
+  confirmacaoFim: '#FDEFE6',
+
   // A família de linha que não existia. `linha` é a mais usada: divisória,
   // borda de card branco e — no bloco da timeline — a linha vertical.
   linha: '#F3EDE6',

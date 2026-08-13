@@ -14,6 +14,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useBaby } from '../../src/contexts/BabyContext';
 import { Button } from '../../src/components/Button';
+import { ConfirmacaoPronto } from '../../src/components/ConfirmacaoPronto';
 import { TextField } from '../../src/components/TextField';
 import { ChipGroup } from '../../src/components/ChipGroup';
 import { aplicarMascaraHora, horaAtual, horaNoDia, horaParaData } from '../../src/lib/horario';
@@ -82,6 +83,7 @@ export default function RegistroScreen() {
   const [erroForm, setErroForm] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [sintomaSalvo, setSintomaSalvo] = useState(false);
+  const [pronto, setPronto] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
 
   const abrir = useCallback(async () => {
@@ -144,6 +146,12 @@ export default function RegistroScreen() {
         </View>
       </SafeAreaView>
     );
+  }
+
+  // Vem ANTES do `sintomaSalvo` só por ordem de leitura; os dois nunca são
+  // verdadeiros ao mesmo tempo — o `salvar` escolhe um ou outro.
+  if (pronto) {
+    return <ConfirmacaoPronto onFim={fechar} />;
   }
 
   if (sintomaSalvo) {
@@ -227,13 +235,17 @@ export default function RegistroScreen() {
     // algo que a preocupa, e a linha do pediatra precisa de um instante de tela
     // pra ser lida. Editando não: "Anotado." confirmaria um registro que já
     // existia, e a frase certa para o momento é nenhuma.
+    //
+    // ⚠️ E ele NÃO ganha o "Pronto": aquela tela sai sozinha em 1,2s, e esta
+    // precisa ser lida. Confirmação que se dispensa sozinha por cima de copy de
+    // saúde seria a linha do pediatra passando na frente da mãe.
     if (tipo === 'sintoma' && !editando) {
       setSintomaSalvo(true);
       return;
     }
 
-    // A Home recarrega os registros ao receber o foco de volta.
-    fechar();
+    // Todo o resto ganha o "Pronto", que fecha sozinho e devolve para a Home.
+    setPronto(true);
   }
 
   function desenhar(bruto: CampoSchema) {
