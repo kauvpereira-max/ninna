@@ -104,11 +104,21 @@ export const colors = {
   warning: '#F4B183',
   warningText: '#A85A2E',
 
-  // Modo noturno
-  noiteBg: '#201915',
+  // ------------------------------------------------------------------
+  // O "modo noturno" ESTÁ SAINDO — decidido em 13/08/2026
+  //
+  // Eram quatro tokens para uma superfície escura que só o card de
+  // monitoramento usava, e ele passa a ser claro no protótipo. `noiteBg`,
+  // `noiteTexto` e `noitePrimaria` saíram agora: já não tinham consumidor
+  // nenhum, eram órfãos antes mesmo desta decisão.
+  //
+  // Vigilância agora se marca por BORDA E CHIP — ver a regra no `CLAUDE.md`.
+  //
+  // ⚠️ `noiteSurface` fica até o bloco do card claro, e sai NELE. Removê-lo aqui
+  // quebraria o `CardInsight`, que ainda o usa — e deixar o código sem compilar
+  // entre dois blocos é pior que um token vivendo mais três commits.
+  // ------------------------------------------------------------------
   noiteSurface: '#3A2E2A',
-  noiteTexto: '#F7EDE4',
-  noitePrimaria: '#D99A85',
 
   onDark: '#FFF3E9',
 } as const;

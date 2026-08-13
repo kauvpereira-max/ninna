@@ -10,6 +10,63 @@ arquivo.
 
 ---
 
+## ⚠️ ESTE DOCUMENTO ESTÁ INCOMPLETO, E ISSO TEM CUSTO
+
+A extração de 13/08/2026 cobriu o markup, e os blocos 1–7 converteram **token e
+propriedade** a partir dela: cor, fonte, raio, sombra, espaçamento. **A
+estrutura das telas não foi tocada** — e é onde a distância com o protótipo
+ainda é grande.
+
+Pior: três especificações que o protótipo tem **não estão neste arquivo** e
+chegaram por conversa, não por extração:
+
+| O que | De onde veio |
+|---|---|
+| Fundo claro do card de monitoramento e o estado de atenção | conversa, 13/08 |
+| Seção "Padrões da [bebê]" com cards de 212px | conversa, 13/08 |
+| Cabeçalho "Hoje" e link "Relatórios" nos últimos registros | conversa, 13/08 |
+
+Elas estão registradas abaixo e **marcadas como não-extraídas**, porque o resto
+do arquivo tem outra procedência: os valores literais do markup.
+
+**O conserto não é escrever mais aqui — é o HTML do protótipo entrar no
+repositório**, em `docs/prototipo/`. Enquanto ele estiver só na máquina de
+alguém, as lacunas se descobrem uma mensagem por vez, e cada descoberta custa
+uma volta inteira.
+
+---
+
+## ✅ As cinco decisões de 13/08/2026
+
+Tomadas ao comparar a tela real com este documento. Ficam aqui porque são o
+recorte do que "idêntico" quer dizer.
+
+**1. Vigilância se marca por borda e chip, não por superfície.** O card de
+monitoramento vira claro (`#FDF4F1`, borda `#EFD5CD`), e o estado de atenção é
+`#FFF6F3` com borda `#E88A7D`. A superfície escura sai do app, e os tokens de
+noite saem com ela. A regra completa está no `CLAUDE.md`.
+
+**2. A nota do dia fica FORA — e é decisão, não pendência.** Não há fonte de
+texto para ela, e as duas saídas eram piores que a ausência: a mãe escrevendo é
+funcionalidade nova, e a Ninna escrevendo é uma segunda superfície de frase
+gerada ao lado do card de monitoramento. Texto todo dia, sem ter o que dizer, é
+exatamente onde a Ninna inventaria.
+
+**3. "Ver tudo" e "Relatórios" ficam de fora enquanto Evolução não existir.**
+Link inerte é pior que link ausente: a mãe toca, nada acontece, e ela conclui
+que o app travou. Voltam junto com a tela que eles abrem.
+
+**4. Os modais ganham um desenho genérico com a cara do protótipo**, e não seis
+desenhos sob medida. O protótipo desenha 6 dos 19 tipos; sob medida, o app
+ficaria com formulário derivado do schema "exceto quando não for" — que é perder
+o que o `registroSchema.ts` comprou. Genérico cobre os 19 pelo preço de um.
+
+**5. As exceções que valem são Sono e Amamentar, porque têm cronômetro** — e
+ficam para depois. O Amamentar de dois timers não é fidelidade visual: é
+`PRODUTO.md`, migration e mudança no motor. Ver o registro lá.
+
+---
+
 ## ⚠️ O que NÃO copiar
 
 O protótipo desenha um produto maior que o app de hoje. Três coisas nele não
@@ -146,6 +203,17 @@ Ordem exata do protótipo, de cima para baixo:
   `padding: 5px 10px 5px 5px`, avatar 34px + seta de 10px
 
 **2. Card de monitoramento** — raio 24px, `padding: 22px 20px 6px`, borda 1.5px
+
+> ⚠️ **NÃO EXTRAÍDO — veio por conversa em 13/08/2026.** As cores abaixo não
+> saíram do markup como o resto deste arquivo.
+>
+> | Estado | Fundo | Borda |
+> |---|---|---|
+> | Repouso | `#FDF4F1` | `#EFD5CD` |
+> | Atenção | `#FFF6F3` | `#E88A7D` |
+>
+> É o card CLARO. A versão no app é escura, e a diferença é a decisão nº 1
+> acima — vigilância passa a ser borda e chip.
 - Chip pulsante de 26px com ponto de 9px dentro (animação `nnPulse`, 3.2s)
 - Frase de 17.5px, `line-height: 1.55`
 - Linhas separadas por `border-top: 1px`
@@ -173,6 +241,28 @@ número Fredoka 21px + rótulo 12px
 - Cada item: hora à direita (46px, alinhada à direita) + círculo de 44px com
   `box-shadow: 0 0 0 4px #FFFDFA` (o anel que "corta" a linha) + detalhe
 - Detalhe 16px peso 700, rótulo 12.5px cor `#B8A69C`
+
+---
+
+## ⚠️ Seções que o protótipo tem e este arquivo não descreve
+
+**Não extraídas — vieram por conversa em 13/08/2026.** Ficam registradas para
+não se perderem, e marcadas para não passarem por medida lida do markup.
+
+**Seção "Padrões da [bebê]"** — cards horizontais de 212px, raio 20, com scroll
+lateral e link "Ver tudo". O motor já calcula os três padrões, então é
+estrutura, não escopo — mas tem duas perguntas em aberto antes de existir:
+
+- as métricas têm **três estados de confiança**, e `insuficiente` e
+  `nao_se_aplica` tiram o card de cena. A seção pode ficar com 3, 2, 1 ou zero
+  cards, e um carrossel vazio é pior que seção ausente;
+- o card de monitoramento **já narra padrão**. Precisa ficar claro o que cada um
+  diz que o outro não diz, ou são duas superfícies repetindo.
+
+O link "Ver tudo" fica de fora pela decisão nº 3.
+
+**Cabeçalho "Hoje" e link "Relatórios"** nos últimos registros. O "Hoje" é
+trivial; o "Relatórios" fica de fora pela decisão nº 3.
 
 ---
 

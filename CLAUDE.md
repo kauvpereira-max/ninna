@@ -209,19 +209,32 @@ o corolário do "nome de par" estão no `PRODUTO.md` §8-bis.
   Fralda, Sono, Banho, Comida, Hidratação, Extração, Medicação, Vitamina,
   Sintoma, Humor, Peso, Altura, Circunferência, Atividade, Passeio, Leitura,
   Vacina, Habilidade
-- **A regra do coral é sobre `#E15C42`, não sobre a família coral.** O
-  `coral500` (`#E15C42`) e a superfície escura são de **vigilância**: card de
-  monitoramento, alerta, timer correndo. Significam "está acontecendo agora", e
-  por isso não entram em decoração nem em onboarding.
+- **Vigilância se marca por BORDA E CHIP, nunca por superfície.**
 
-  O `coralAcao` (`#F4796B`) é **outro hex e outro papel**: ação. É dele o "+" do
-  grid de atalhos e os links "Ver tudo" e "Relatórios". Vem do protótipo, é
-  escolha de design, e não é vigilância vazando para enfeite.
+  O estado de atenção é fundo claro `#FFF6F3` com borda `#E88A7D`, mais o chip
+  pulsante. O card em repouso é `#FDF4F1` com borda `#EFD5CD`. **Não existe
+  superfície escura no app.**
 
-  A redação anterior dizia "paleta de vigilância (coral)" e proibia coral em
-  botão comum. Ela era ambígua nos dois sentidos: proibia o `#F4796B`, que o
-  protótipo quer, e não cobria o timer correndo, que É vigilância num botão.
-  Corrigida em 13/08/2026.
+  Isso mudou em 13/08/2026, e a mudança é do protótipo. A redação anterior dizia
+  que "coral + superfície escura" eram exclusivos do card de monitoramento — e o
+  protótipo desenha esse mesmo card CLARO. Mantida a regra velha, ela ficaria
+  sem sujeito: o único lugar que usava fundo escuro deixou de usá-lo.
+
+  Consequência que foi executada junto, e não deixada para depois: os tokens
+  `noiteBg`, `noiteSurface`, `noiteTexto` e `noitePrimaria` saíram. Token sem
+  consumidor é convite a alguém "aproveitar que já existe".
+
+- **O coral tem dois papéis e dois hexes, e a regra é sobre o `#E15C42`.**
+
+  `coral500` (`#E15C42`) é **vigilância**: timer correndo, alerta. Significa
+  "está acontecendo agora", e por isso não entra em decoração nem em onboarding.
+
+  `coralAcao` (`#F4796B`) é **ação**: o "+" do grid de atalhos. Outro hex, outro
+  papel, escolha do designer — não é vigilância vazando para enfeite.
+
+  A redação de antes proibia "coral em botão comum" e era ambígua nos dois
+  sentidos: proibia o `#F4796B`, que o protótipo quer, e não cobria o timer
+  correndo, que É vigilância num botão.
 - A aba Ninna é item **igual aos outros** na tab bar — mesmo tamanho, mesma
   linha. Nunca botão flutuante elevado com `position: absolute` (bug já
   corrigido antes)

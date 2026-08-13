@@ -447,6 +447,46 @@ monitoramento, vai junto com a curva de crescimento, que é a outra conversa do
 
 ---
 
+### Amamentação com dois cronômetros — registrado em 13/08/2026
+
+**Trabalho: migration + schema + motor. Não é bloco de interface.**
+
+O protótipo desenha o modal de amamentação com **dois cronômetros de 88px lado a
+lado**, um por seio. Isso chegou como item de fidelidade visual e **não é**: é um
+tipo de registro diferente.
+
+**O que o app modela hoje:**
+
+```
+hora (obrigatório) · lado (escolha ÚNICA) · duracao (UM número, opcional)
+```
+
+Dois cronômetros significam **duração por lado** — e possivelmente os dois lados
+na mesma mamada, que é o caso comum. Isso muda:
+
+- o `registroSchema.ts`, e por consequência a **migration**, que é gerada dele
+  pelo `scripts/gerar-registros-sql.ts`;
+- a `LEITURA`, o resumo e o detalhe do tipo;
+- e o **motor**: `padroes.ts` lê duração de mamada para a métrica de intervalo.
+  Com duas durações, "duração da mamada" passa a precisar de definição — a soma,
+  a maior, ou as duas separadas?
+
+**Por que vale mesmo assim, e a justificativa não é estética:**
+
+> A mãe alterna os lados, e hoje ela só consegue registrar um.
+
+Quem amamenta precisa saber em qual seio começou da última vez — é a informação
+que a mãe cansada esquece às 3h e que o app existe para guardar. Registrar
+"esquerdo" quando ela deu os dois é registrar errado, e o motor calcula em cima
+disso.
+
+**Fica fora do bloco de interface de propósito.** Entrar junto faria a fidelidade
+visual carregar uma mudança de banco, e um bloco que muda schema não fecha com
+`tsc` + testes + `expo export` — pede o procedimento de migration do `BETA.md`
+§11.x, que é outro rito.
+
+---
+
 ### 3.5 Painel de afiliadas — registrado em 11/08/2026, não construído
 
 **Trabalho: 1,5–2 semanas. Relógio: —. Depende da cobrança existir.**
