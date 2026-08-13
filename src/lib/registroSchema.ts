@@ -1219,6 +1219,35 @@ export function validarRegistro(
 }
 
 /**
+ * O próximo valor do stepper — e ele ENCAIXA NA GRADE, não soma ao atual.
+ *
+ * ⚠️ Somar foi o bug de 13/08/2026, achado no navegador. Com `min: 5` e
+ * `passo: 10`, somar produzia 5, 15, 25, …, 135: **130 ml era inalcançável**, e
+ * 130 é valor comum de mamadeira. O protótipo não expõe isso porque a faixa
+ * dele começa em 0, onde somar e encaixar dão o mesmo resultado.
+ *
+ * Encaixando, "+" a partir de 5 leva a 10, e a grade passa a ser a dos múltiplos
+ * do passo — mais o próprio `min`, que o clamp preserva como piso.
+ *
+ * Vive aqui, e não na tela, por dois motivos: o `passo` é declaração do schema,
+ * e aritmética de borda só se prova em teste — que não alcança componente de
+ * React Native.
+ */
+export function proximoNoPasso(
+  atual: number,
+  passo: number,
+  min: number,
+  max: number,
+  direcao: 1 | -1
+): number {
+  const naGrade =
+    direcao > 0
+      ? Math.floor(atual / passo) * passo + passo
+      : Math.ceil(atual / passo) * passo - passo;
+  return Math.min(max, Math.max(min, naGrade));
+}
+
+/**
  * Falta algum campo obrigatório? — a pergunta do BOTÃO, não a da validação.
  *
  * Ela é deliberadamente mais estreita que `validarRegistro`, e a diferença não é

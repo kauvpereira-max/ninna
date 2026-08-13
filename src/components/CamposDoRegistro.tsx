@@ -1,6 +1,7 @@
 import { View, Text, TextInput, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, typography } from '../theme/tokens';
+import { proximoNoPasso } from '../lib/registroSchema.ts';
 
 /**
  * Os controles do modal de registro, no desenho do protótipo.
@@ -151,16 +152,17 @@ export function StepperNumero({
   const atual = valor.trim() === '' ? min : Number(valor.replace(',', '.'));
   const seguro = Number.isFinite(atual) ? atual : min;
 
-  const andar = (delta: number) => {
-    const novo = Math.min(max, Math.max(min, seguro + delta));
-    onChange(String(novo));
-  };
+  // A aritmética mora no schema (`proximoNoPasso`), não aqui: ela ENCAIXA na
+  // grade em vez de somar, e a diferença entre as duas foi o bug do 130 ml.
+  // Regra sobre número se prova em teste, e teste não alcança componente de RN.
+  const andar = (direcao: 1 | -1) =>
+    onChange(String(proximoNoPasso(seguro, passo, min, max, direcao)));
 
   return (
     <>
       <View style={estilos.stepper}>
         <Pressable
-          onPress={() => andar(-passo)}
+          onPress={() => andar(-1)}
           accessibilityRole="button"
           accessibilityLabel={`Diminuir ${passo}`}
           style={estilos.stepperMenos}
@@ -168,13 +170,26 @@ export function StepperNumero({
           <Ionicons name="remove" size={18} color={colors.rosa700} />
         </Pressable>
 
+        {/* O número É EDITÁVEL, e isso é desvio do protótipo com motivo.
+            Lá ele é texto: a maquete vai de 0 a 300 de 10 em 10, e tudo que
+            existe está na grade. Aqui não — o passo é atalho, não a única via.
+            Sem teclado, um valor fora dos múltiplos fica inalcançável, e a mãe
+            fica presa entre 125 e 135 quando a mamadeira foi de 132. */}
         <View style={estilos.stepperValor}>
-          <Text style={estilos.stepperNumero}>{valor.trim() === '' ? min : valor}</Text>
+          <TextInput
+            value={valor}
+            onChangeText={onChange}
+            placeholder={String(min)}
+            placeholderTextColor={colors.neutro300}
+            keyboardType="number-pad"
+            accessibilityLabel="Valor"
+            style={estilos.stepperNumero}
+          />
           {unidade ? <Text style={estilos.stepperUnidade}>{unidade}</Text> : null}
         </View>
 
         <Pressable
-          onPress={() => andar(passo)}
+          onPress={() => andar(1)}
           accessibilityRole="button"
           accessibilityLabel={`Aumentar ${passo}`}
           style={estilos.stepperMais}
@@ -285,8 +300,17 @@ const estilos = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepperValor: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
-  stepperNumero: { ...typography.display, fontSize: 40, letterSpacing: -1, color: colors.headline },
+  stepperValor: { flex: 1, flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', gap: 6 },
+  // `minWidth` para o campo não colapsar quando está vazio — sem ele o toque
+  // no número não teria onde cair, e o teclado nunca abriria.
+  stepperNumero: {
+    ...typography.display,
+    fontSize: 40,
+    letterSpacing: -1,
+    color: colors.headline,
+    minWidth: 64,
+    textAlign: 'center',
+  },
   stepperUnidade: { ...typography.label, fontFamily: 'NunitoSans_700Bold', fontSize: 15, color: colors.neutro500 },
 
   area: {

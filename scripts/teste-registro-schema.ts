@@ -21,6 +21,7 @@ import {
   LADOS,
   MOTIVOS_HUMOR,
   faltaObrigatorio,
+  proximoNoPasso,
   linhaParaBanco,
   mascaraNumero,
   numeroDoCampo,
@@ -1247,6 +1248,51 @@ checar(
       .dados as Record<string, unknown>
   ).duration_seconds as number) !== 12,
   '12 minutos não podem virar 12 segundos'
+);
+
+
+
+console.log('\n— o stepper encaixa na grade, e o 130 ml volta a existir —\n');
+
+// O BUG REAL, achado no navegador em 13/08/2026: mamadeira tem min 5 e passo 10.
+// Somando, a sequência era 5, 15, 25 … 135, e 130 ml — valor comum — não existia.
+checar(
+  'de 5, o "+" encaixa em 10 (e não soma para 15)',
+  proximoNoPasso(5, 10, 5, 500, 1) === 10,
+  `deu ${proximoNoPasso(5, 10, 5, 500, 1)}`
+);
+
+// A prova de que o valor perdido voltou: 130 é alcançável a partir do mínimo.
+let v = 5;
+let toques = 0;
+while (v < 130 && toques < 50) {
+  v = proximoNoPasso(v, 10, 5, 500, 1);
+  toques++;
+}
+checar('e 130 ml é alcançável', v === 130, `chegou em ${v} com ${toques} toques`);
+
+checar(
+  'o "−" também encaixa: de 25 vai para 20',
+  proximoNoPasso(25, 10, 5, 500, -1) === 20,
+  `deu ${proximoNoPasso(25, 10, 5, 500, -1)}`
+);
+checar(
+  'e o mínimo é piso, não múltiplo — de 10 o "−" para em 5',
+  proximoNoPasso(10, 10, 5, 500, -1) === 5,
+  'o clamp preserva o min mesmo fora da grade'
+);
+checar(
+  'o máximo é teto — de 495 o "+" para em 500',
+  proximoNoPasso(495, 10, 5, 500, 1) === 500,
+  `deu ${proximoNoPasso(495, 10, 5, 500, 1)}`
+);
+
+// O CONTROLE: com min 0, encaixar e somar dão o mesmo — que é exatamente por que
+// o protótipo nunca expôs o bug. Sem este caso, a correção pareceria arbitrária.
+checar(
+  'com min 0, encaixar e somar coincidem — é por isso que o protótipo não via',
+  proximoNoPasso(0, 10, 0, 300, 1) === 10 && proximoNoPasso(20, 10, 0, 300, 1) === 30,
+  'a faixa do protótipo começa em 0'
 );
 
 console.log(

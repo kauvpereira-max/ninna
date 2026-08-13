@@ -304,7 +304,10 @@ export default function RegistroScreen() {
             {rotulo}
             <StepperNumero
               valor={valor}
-              onChange={(v) => definir(campo.chave, v)}
+              // A MESMA máscara do campo digitado. O stepper agora aceita
+              // teclado, e mandar o texto cru aqui abriria a porta que o campo
+              // fechava: máscara que aceita o que a validação recusa.
+              onChange={(v) => definir(campo.chave, mascaraNumero(v, campo))}
               passo={campo.passo}
               min={campo.min}
               max={campo.max}
