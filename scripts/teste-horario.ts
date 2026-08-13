@@ -22,7 +22,7 @@
 // EXECUÇÃO que consegue distinguir uma implementação correta de uma errada. Se
 // não conseguir, falha e diz por quê — em vez de dar verde.
 
-import { chaveDoDia, rotularDia, formatarHora } from '../src/lib/horario.ts';
+import { chaveDoDia, rotularDia, formatarHora, inicioDoDiaLocal } from '../src/lib/horario.ts';
 
 let falhas = 0;
 function conferir(nome: string, condicao: boolean, detalhe = '') {
@@ -129,6 +129,40 @@ if (!discrimina) {
   conferir(
     '31/12 às 23h30 continua em 2025',
     chaveDoDia(new Date(2025, 11, 31, 23, 30, 0).toISOString()) === '2025-12-31'
+  );
+
+  // ------------------------------------------------------------------
+  // O CORTE DE "HOJE" — o que os mini-stats contam
+  // ------------------------------------------------------------------
+
+  const noiteFechada = new Date(2026, 7, 13, 23, 45, 0);
+  const corte = inicioDoDiaLocal(noiteFechada);
+
+  conferir(
+    'às 23h45, o corte de hoje é a meia-noite LOCAL do mesmo dia',
+    corte.getFullYear() === 2026 &&
+      corte.getMonth() === 7 &&
+      corte.getDate() === 13 &&
+      corte.getHours() === 0 &&
+      corte.getMinutes() === 0
+  );
+
+  // O CONTROLE, e é ele que dá sentido ao caso acima: a implementação errada
+  // óbvia é `toISOString().slice(0,10)`, que no Brasil já virou o dia 14 às
+  // 21h. Este caso reprova essa versão sem depender do fuso da máquina — ele
+  // compara o corte com a data LOCAL, que é a única que a mãe enxerga.
+  conferir(
+    'e o corte nunca cai no dia seguinte ao que a mãe está vivendo',
+    chaveDoDia(corte.toISOString()) === chaveDoDia(noiteFechada.toISOString())
+  );
+
+  conferir(
+    'um registro de 23h50 é de HOJE para a contagem',
+    new Date(2026, 7, 13, 23, 50, 0).getTime() >= corte.getTime()
+  );
+  conferir(
+    'e um de 23h50 de ontem não é',
+    new Date(2026, 7, 12, 23, 50, 0).getTime() < corte.getTime()
   );
 
   console.log(

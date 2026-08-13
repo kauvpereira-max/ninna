@@ -15,7 +15,7 @@
 // ordenação, corte e cursor voltam para o banco, que é onde índice existe.
 
 import { supabase } from './supabase';
-import { formatarHora } from './horario';
+import { formatarHora, inicioDoDiaLocal } from './horario';
 import { filtroDoCursor, paginar, type CursorRegistro, type Pagina } from './paginacao';
 import type { TipoEvento } from './consultas';
 import {
@@ -658,4 +658,73 @@ export async function atualizarRegistro(
   }
 
   return { error: null };
+}
+
+// ============================================================
+// AS CONTAGENS DE HOJE — os mini-stats da Home
+// ============================================================
+
+/**
+ * ⚠️ POR QUE UMA CONSULTA PRÓPRIA, E NÃO CONTAR O QUE A HOME JÁ TEM
+ *
+ * A Home carrega **8 registros** (`useRegistrosRecentes`). Contar "as mamadas de
+ * hoje" a partir deles daria número errado em qualquer dia normal — fralda e
+ * mamada passam de oito sozinhas antes do almoço.
+ *
+ * E número errado aqui é pior que número ausente: a mãe confere contra a própria
+ * memória, vê "4" onde ela lembra de seis, e passa a duvidar do resto do app.
+ *
+ * Traz só a coluna `tipo` das linhas do dia. É payload minúsculo e uma ida só —
+ * três `count` separados seriam três viagens para somar três números.
+ */
+export type ContagensDeHoje = {
+  mamadas: number;
+  sonecas: number;
+  fraldas: number;
+};
+
+const ERRO_CONTAR = 'Não consegui contar os registros de hoje agora.';
+
+/**
+ * `mamadas` soma amamentação E mamadeira, de propósito: para a mãe as duas são
+ * "mamou". Separá-las num contador de três colunas seria pedir que ela some de
+ * cabeça o que ela pensa junto.
+ */
+const TIPOS_CONTADOS: Record<keyof ContagensDeHoje, TipoRegistro[]> = {
+  mamadas: ['amamentar', 'mamadeira'],
+  sonecas: ['sono'],
+  fraldas: ['fralda'],
+};
+
+export async function contarHoje(
+  babyId: string,
+  agora: Date = new Date()
+): Promise<Resultado<ContagensDeHoje>> {
+  const vazio: ContagensDeHoje = { mamadas: 0, sonecas: 0, fraldas: 0 };
+  const desde = inicioDoDiaLocal(agora);
+
+  const todos = Object.values(TIPOS_CONTADOS).flat();
+
+  const { data, error } = await supabase
+    .from(TABELA)
+    .select('tipo')
+    .eq('baby_id', babyId)
+    .in('tipo', todos)
+    .gte('ocorrido_em', desde.toISOString());
+
+  if (error) {
+    console.warn('[registros] falha ao contar hoje:', error.message);
+    return { data: vazio, error: ERRO_CONTAR };
+  }
+
+  const contagens = { ...vazio };
+  for (const linha of (data ?? []) as { tipo: string }[]) {
+    for (const [chave, tipos] of Object.entries(TIPOS_CONTADOS)) {
+      if (tipos.includes(linha.tipo as TipoRegistro)) {
+        contagens[chave as keyof ContagensDeHoje] += 1;
+      }
+    }
+  }
+
+  return { data: contagens, error: null };
 }

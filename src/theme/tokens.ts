@@ -174,6 +174,8 @@ export const spacing = {
 export const radius = {
   sm: 8,
   md: 16,
+  /** Mini-cards de estatística. O menor raio de card do protótipo. */
+  mini: 12,
   /** Cards de conteúdo — o raio mais comum do protótipo. Entre `md` e `lg`. */
   card: 20,
   lg: 24,
@@ -215,6 +217,9 @@ export const typography = {
 
   /** O texto do CTA: 16,5 em Bold. O `label` com `fontSize` sobrescrito dava 15/600. */
   cta: { fontSize: 16.5, lineHeight: 22, fontFamily: 'NunitoSans_700Bold' },
+
+  /** O número dos mini-stats: Fredoka 21, a ponta de baixo da faixa 21–24 do protótipo. */
+  numeroStat: { fontSize: 21, lineHeight: 26, fontFamily: 'Fredoka_600SemiBold' },
 
   /**
    * A saudação da Home: Fredoka 25 em SemiBold.

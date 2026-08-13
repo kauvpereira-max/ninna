@@ -7,6 +7,7 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { useBaby } from '../../src/contexts/BabyContext';
 import { useRegistrosRecentes } from '../../src/hooks/useRegistrosRecentes';
 import { usePadroes } from '../../src/hooks/usePadroes';
+import { useContagensDeHoje } from '../../src/hooks/useContagensDeHoje';
 import { useAgoraTick } from '../../src/hooks/useAgoraTick';
 import { escolherInsight } from '../../src/lib/copyInsight';
 import { CardInsight } from '../../src/components/CardInsight';
@@ -15,6 +16,7 @@ import { formatarIdade, formatarIdadeCorrigida } from '../../src/lib/idade';
 import { formatarMomento } from '../../src/lib/horario';
 import { ItemRegistro } from '../../src/components/ItemRegistro';
 import { ListaDeRegistros } from '../../src/components/ListaDeRegistros';
+import { MiniStats } from '../../src/components/MiniStats';
 import { CATEGORIAS_DA_HOME, CATEGORIAS_FORA_DA_HOME } from '../../src/theme/categorias';
 import { colors, spacing, radius, typography, elevation } from '../../src/theme/tokens';
 
@@ -24,6 +26,7 @@ export default function HojeScreen() {
   const router = useRouter();
   const { registros, carregando, erro, recarregar } = useRegistrosRecentes(bebeAtivo?.id ?? null);
   const { padroes } = usePadroes(bebeAtivo?.id ?? null);
+  const { contagens, prontas: contagensProntas } = useContagensDeHoje(bebeAtivo?.id ?? null);
 
   const [encerrandoId, setEncerrandoId] = useState<string | null>(null);
   const [erroEncerrar, setErroEncerrar] = useState<string | null>(null);
@@ -156,6 +159,11 @@ export default function HojeScreen() {
             </Pressable>
           ) : null}
         </View>
+
+        {/* Os três números de hoje. Só entram DEPOIS de a resposta chegar —
+            três zeros antes disso a mãe lê como registro perdido, não como
+            "ainda não perguntei". */}
+        {contagensProntas ? <MiniStats contagens={contagens} /> : null}
 
         <Text style={styles.sectionLabel}>ÚLTIMOS REGISTROS</Text>
 

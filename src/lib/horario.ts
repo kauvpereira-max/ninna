@@ -108,6 +108,20 @@ export function formatarMomento(iso: string, agora: Date = new Date()): string {
  *
  * Não usar `toISOString().slice(0, 10)` para isso: aquilo é UTC por definição.
  */
+/**
+ * A meia-noite LOCAL de hoje — o corte que separa "hoje" de "ontem".
+ *
+ * Mesma regra do `chaveDoDia`, e pela mesma razão: `toISOString()` é UTC por
+ * definição, e no Brasil ele vira o dia seguinte a partir das 21h. Um contador
+ * de "hoje" em UTC zeraria no meio da noite — bem na hora em que a mãe mais
+ * registra, e bem quando ela menos tem paciência para desconfiar do app.
+ */
+export function inicioDoDiaLocal(agora: Date = new Date()): Date {
+  const dia = new Date(agora);
+  dia.setHours(0, 0, 0, 0);
+  return dia;
+}
+
 export function chaveDoDia(iso: string): string {
   const data = new Date(iso);
   const ano = data.getFullYear();
