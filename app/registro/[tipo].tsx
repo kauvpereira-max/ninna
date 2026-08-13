@@ -386,7 +386,7 @@ export default function RegistroScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.neutro50 },
+  container: { flex: 1, backgroundColor: colors.superficie },
   scroll: { padding: spacing.lg, paddingBottom: spacing.xxl },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   titulo: { ...typography.h1, color: colors.headline, marginBottom: spacing.xs },

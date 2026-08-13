@@ -1,5 +1,14 @@
 // Design System Ninna v1.6 — tokens
-// Fonte da verdade: ninna-design-system-v1.md
+//
+// ⚠️ FONTE DA VERDADE: `docs/design-do-prototipo.md`.
+//
+// Este cabeçalho apontava para `ninna-design-system-v1.md`, que NÃO existe no
+// repositório — apontava para lugar nenhum desde sempre. A referência real é o
+// protótipo do Claude Design, extraído em 13/08/2026.
+//
+// E a precedência é essa mesma: **onde o protótipo divergir destes tokens ou do
+// `CLAUDE.md`, o protótipo vence.** A divergência é anotada, não resolvida em
+// silêncio — e só para quem escreve o código, nunca em silêncio para quem lê.
 
 export const colors = {
   // Rosa — marca
@@ -33,9 +42,41 @@ export const colors = {
   // Texto de headline (mais contraste que neutro600)
   headline: '#2B211D',
 
-  // Coral vívido — vigilância/ação (uso restrito: timers ativos, card de monitoramento, alertas)
+  // ------------------------------------------------------------------
+  // OS DOIS CORAIS, E ELES NÃO SÃO O MESMO
+  //
+  // `coral500` é o de VIGILÂNCIA: timer correndo, card de monitoramento, alerta.
+  // Ele significa "está acontecendo agora" — e é por isso que não entra em
+  // decoração.
+  //
+  // `coralAcao` é do protótipo, e é outro hex. Ele marca AÇÃO: o "+" do grid de
+  // atalhos, os links "Ver tudo" e "Relatórios". Não é vigilância vazando para
+  // enfeite — é escolha do designer, e o protótipo é a autoridade.
+  //
+  // A regra do CLAUDE.md é sobre o `#E15C42`, não sobre a família coral.
+  // ------------------------------------------------------------------
   coral500: '#E15C42',
   coral600: '#C94A32',
+  coralAcao: '#F4796B',
+
+  // ------------------------------------------------------------------
+  // Superfícies e linhas — extraídas do protótipo
+  //
+  // O protótipo usa DOIS fundos, e a distinção é de tela, não de gosto:
+  // `superficie` nas abas e nos modais, `neutro50` (#FFF9F2) em onboarding e
+  // confirmação. Pintar tudo com um só apaga a diferença de propósito.
+  // ------------------------------------------------------------------
+  superficie: '#FFFDFA',
+  superficieNota: '#F9F4EF',   // card de nota do dia
+  superficieBotao: '#F4EBE3',  // botão de fechar do modal
+  superficieFaixa: '#FDF2EC',  // faixa de total dentro do modal
+
+  // A família de linha que não existia. `linha` é a mais usada: divisória,
+  // borda de card branco e — no bloco da timeline — a linha vertical.
+  linha: '#F3EDE6',
+  linhaModal: '#F3E2D8',
+  linhaPill: '#F1EBE4',
+  linhaTabBar: '#F2E3DA',
 
   // Semânticas
   success: '#C9E4D5',
@@ -62,6 +103,14 @@ export const spacing = {
   xs: 4,
   sm: 8,
   md: 16,
+  /**
+   * O respiro lateral de toda tela, e o valor mais usado do protótipo.
+   *
+   * Fica fora da escala de 8 de propósito: a escala saltava 16 → 24, e nenhum
+   * dos dois é o que o protótipo desenha. Nome semântico em vez de `lg2` porque
+   * ele tem UM uso, e um nome que diz qual evita que vire "o 20 genérico".
+   */
+  respiro: 20,
   lg: 24,
   xl: 32,
   xxl: 48,
@@ -70,6 +119,8 @@ export const spacing = {
 export const radius = {
   sm: 8,
   md: 16,
+  /** Cards de conteúdo — o raio mais comum do protótipo. Entre `md` e `lg`. */
+  card: 20,
   lg: 24,
   full: 999,
 } as const;

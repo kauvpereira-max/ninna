@@ -182,10 +182,11 @@ export default function NinnaScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.neutro50 },
+  container: { flex: 1, backgroundColor: colors.superficie },
   // Mesma coluna de 480 da Home: sem isso a web estica a conversa de ponta a ponta.
   scroll: {
-    padding: spacing.lg,
+    paddingHorizontal: spacing.respiro,
+    paddingVertical: spacing.lg,
     paddingBottom: spacing.xl,
     width: '100%',
     maxWidth: 480,
@@ -201,7 +202,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.neutro0,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.neutro100,
+    borderColor: colors.linha,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
   },
@@ -235,7 +236,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.neutro0,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.neutro100,
+    borderColor: colors.linha,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     maxHeight: 120,

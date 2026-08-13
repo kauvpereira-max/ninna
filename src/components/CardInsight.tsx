@@ -42,7 +42,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
     backgroundColor: colors.neutro800,
-    borderRadius: radius.md,
+    // 24 e não 20: no protótipo o card de monitoramento tem raio próprio, maior
+    // que o dos cards de conteúdo. Ele é o único elemento com essa medida.
+    borderRadius: radius.lg,
     padding: spacing.md,
     marginBottom: spacing.lg,
   },

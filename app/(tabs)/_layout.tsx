@@ -20,7 +20,7 @@ export default function TabsLayout() {
         tabBarInactiveTintColor: colors.neutro400,
         tabBarStyle: {
           backgroundColor: colors.neutro0,
-          borderTopColor: colors.neutro100,
+          borderTopColor: colors.linhaTabBar,
         },
         tabBarLabelStyle: {
           fontFamily: 'NunitoSans_600SemiBold',

@@ -77,7 +77,7 @@ export default function TiposScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.neutro50 },
+  container: { flex: 1, backgroundColor: colors.superficie },
   scroll: { padding: spacing.lg, width: '100%', maxWidth: 480, alignSelf: 'center' },
   topo: {
     flexDirection: 'row',

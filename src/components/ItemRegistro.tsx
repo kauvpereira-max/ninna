@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     backgroundColor: colors.neutro0,
-    borderRadius: radius.md,
+    borderRadius: radius.card,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     // Dedo de mãe com bebê no colo, no meio da madrugada.

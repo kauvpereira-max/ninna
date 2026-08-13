@@ -188,11 +188,11 @@ export default function HojeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.neutro50 },
+  container: { flex: 1, backgroundColor: colors.superficie },
   // maxWidth vale pra Home inteira, não só pro grid: na web o ScrollView ocupa a
   // janela toda e esticava header, card e lista de ponta a ponta. 480 é largura de
   // celular grande — a Home continua sendo uma coluna, mesmo num monitor.
-  scroll: { padding: spacing.lg, width: '100%', maxWidth: 480, alignSelf: 'center' },
+  scroll: { paddingHorizontal: spacing.respiro, paddingVertical: spacing.lg, width: '100%', maxWidth: 480, alignSelf: 'center' },
   saudacao: { ...typography.body, color: colors.neutro500, marginBottom: spacing.xs },
   header: {
     flexDirection: 'row',

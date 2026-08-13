@@ -103,10 +103,11 @@ function Item({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.neutro50 },
+  container: { flex: 1, backgroundColor: colors.superficie },
   // Mesma coluna de 480 da Home: sem isso a web estica o cartão de ponta a ponta.
   scroll: {
-    padding: spacing.lg,
+    paddingHorizontal: spacing.respiro,
+    paddingVertical: spacing.lg,
     paddingBottom: spacing.xxl,
     width: '100%',
     maxWidth: 480,
@@ -118,7 +119,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     backgroundColor: colors.neutro0,
-    borderRadius: radius.md,
+    borderRadius: radius.card,
     padding: spacing.md,
   },
   avatar: {
@@ -138,7 +139,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     backgroundColor: colors.neutro0,
-    borderRadius: radius.md,
+    borderRadius: radius.card,
     padding: spacing.md,
   },
   itemIcone: {

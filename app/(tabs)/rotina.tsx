@@ -229,9 +229,9 @@ function Aviso({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.neutro50 },
+  container: { flex: 1, backgroundColor: colors.superficie },
   // Mesma coluna de 480 da Home: sem isso a web estica a lista de ponta a ponta.
-  scroll: { padding: spacing.lg, width: '100%', maxWidth: 480, alignSelf: 'center' },
+  scroll: { paddingHorizontal: spacing.respiro, paddingVertical: spacing.lg, width: '100%', maxWidth: 480, alignSelf: 'center' },
   cabecalho: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   titulo: { ...typography.h1, color: colors.headline },
   subtitulo: { ...typography.body, color: colors.neutro500 },
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     backgroundColor: colors.neutro0,
     borderWidth: 1,
-    borderColor: colors.neutro100,
+    borderColor: colors.linha,
   },
   chipAtivo: { backgroundColor: colors.rosa100, borderColor: colors.rosa300 },
   chipPonto: { width: 8, height: 8, borderRadius: radius.full },

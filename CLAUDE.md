@@ -178,7 +178,21 @@ o corolário do "nome de par" estão no `PRODUTO.md` §8-bis.
 
 ## Onde está a fonte da verdade
 
-- **Design system:** `src/theme/tokens.ts`
+> ### ⚠️ O protótipo vence — decidido em 13/08/2026
+>
+> `docs/design-do-prototipo.md` é a **autoridade visual**. Onde ele divergir do
+> `tokens.ts` ou deste arquivo, **ele vence**.
+>
+> O procedimento não é seguir calado: **avise a divergência e siga o protótipo.**
+> Pare e pergunte só se algo nele for impossível (a fonte não existe, o PNG não
+> foi exportado) ou perigoso.
+>
+> Isso já mudou uma regra deste arquivo — a do coral, abaixo — e vai mudar
+> outras. Regra de design que sobrevive a um protótipo novo por inércia é regra
+> que ninguém reviu.
+
+- **Design system:** `src/theme/tokens.ts` — os valores; a autoridade é o
+  protótipo acima
 - **Fontes:** Fredoka (títulos) e Nunito Sans (corpo), em `assets/fonts/`
 - **Escopo e cronograma:** `PRODUTO.md`
 - **Procedimentos de banco e painel:** `BETA.md` §11.x
@@ -195,8 +209,19 @@ o corolário do "nome de par" estão no `PRODUTO.md` §8-bis.
   Fralda, Sono, Banho, Comida, Hidratação, Extração, Medicação, Vitamina,
   Sintoma, Humor, Peso, Altura, Circunferência, Atividade, Passeio, Leitura,
   Vacina, Habilidade
-- Paleta de vigilância (coral/superfície escura) é EXCLUSIVA do card de
-  monitoramento e alertas — nunca em botão comum ou onboarding
+- **A regra do coral é sobre `#E15C42`, não sobre a família coral.** O
+  `coral500` (`#E15C42`) e a superfície escura são de **vigilância**: card de
+  monitoramento, alerta, timer correndo. Significam "está acontecendo agora", e
+  por isso não entram em decoração nem em onboarding.
+
+  O `coralAcao` (`#F4796B`) é **outro hex e outro papel**: ação. É dele o "+" do
+  grid de atalhos e os links "Ver tudo" e "Relatórios". Vem do protótipo, é
+  escolha de design, e não é vigilância vazando para enfeite.
+
+  A redação anterior dizia "paleta de vigilância (coral)" e proibia coral em
+  botão comum. Ela era ambígua nos dois sentidos: proibia o `#F4796B`, que o
+  protótipo quer, e não cobria o timer correndo, que É vigilância num botão.
+  Corrigida em 13/08/2026.
 - A aba Ninna é item **igual aos outros** na tab bar — mesmo tamanho, mesma
   linha. Nunca botão flutuante elevado com `position: absolute` (bug já
   corrigido antes)

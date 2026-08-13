@@ -114,7 +114,7 @@ function Secao({ titulo, children }: { titulo: string; children: React.ReactNode
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.neutro50 },
+  container: { flex: 1, backgroundColor: colors.superficie },
   scroll: {
     padding: spacing.lg,
     paddingBottom: spacing.xxl,
