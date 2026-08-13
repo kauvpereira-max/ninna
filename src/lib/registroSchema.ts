@@ -1229,6 +1229,14 @@ export function validarRegistro(
  * Encaixando, "+" a partir de 5 leva a 10, e a grade passa a ser a dos múltiplos
  * do passo — mais o próprio `min`, que o clamp preserva como piso.
  *
+ * ⚠️ **O PRIMEIRO TOQUE É MAIS CURTO QUE OS OUTROS, E ISSO É O MECANISMO.**
+ * Saindo de 5, ele anda 5 (para 10); daí em diante anda 10. Conferido no
+ * navegador em 13/08/2026: 5 → 10 → 20 → … → 130, em 13 toques.
+ *
+ * Parece irregular e não é: o passo é sempre "o próximo múltiplo", e só o
+ * primeiro é curto porque o `min` do schema não está na grade. Uniformizá-lo —
+ * somando sempre `passo` — é exatamente o bug que isto conserta.
+ *
  * Vive aqui, e não na tela, por dois motivos: o `passo` é declaração do schema,
  * e aritmética de borda só se prova em teste — que não alcança componente de
  * React Native.

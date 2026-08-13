@@ -77,6 +77,28 @@ aqui é o que foi visto e medido no DOM da PWA em produção.
 | 4 | Tela "Pronto" | blob, selo de check, e **sumiu sozinha em ~1s** |
 | 5 | Tela do sintoma | **esperou 6+ segundos sem sumir**, com botão "Fechar" |
 
+### ✅ Os modais, conferidos em 13/08/2026 — e o stepper, duas vezes
+
+Fralda, Humor e Peso passaram de primeira. **A Mamadeira reprovou**, e os dois
+defeitos foram achados no navegador, não em teste:
+
+- o passo **somava** em vez de encaixar (5, 15, 25 … 135) e **130 ml era
+  inalcançável**;
+- e o número tinha deixado de aceitar teclado, então não havia contorno.
+
+Reconferido depois da correção: **5 → 10 → 20 → … → 130 em 13 toques**, e o
+número aceita `132` digitado, mantendo o valor ao perder o foco.
+
+> O primeiro toque anda 5 e os seguintes andam 10. **É o mecanismo, não
+> irregularidade**: o passo é sempre "o próximo múltiplo", e o primeiro é curto
+> porque o `min: 5` do schema não está na grade. Uniformizar isso reintroduz o
+> bug.
+
+E o `Peso` continua sendo campo digitado, com vírgula — que é a prova de que o
+`passo` declarado por campo funcionou: sete tipos ganharam stepper e seis não.
+
+---
+
 **A linha 5 é a que vale mais**, e não é redundante com a 4: ela prova o
 comportamento OPOSTO no mesmo aplicativo. Uma tela que se dispensa e outra que
 espera, lado a lado, é a diferença entre confirmar um banho e confirmar algo que
