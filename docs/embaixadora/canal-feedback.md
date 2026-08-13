@@ -1,8 +1,22 @@
 # Canal de feedback
 
-Observabilidade aqui é humana, não ferramenta (BETA.md §3.7): com três mães, um
-grupo de WhatsApp e um link na aba Mais acham mais bug que Sentry, e custam 1h em
-vez de 1 dia. É a mitigação do R6 — "bug de mãe real nunca chega até mim".
+Observabilidade aqui é humana, não ferramenta (BETA.md §3.7): uma conversa de
+WhatsApp e um link na aba Mais acham mais bug que Sentry, e custam 1h em vez de
+1 dia. É a mitigação do R6 — "bug de mãe real nunca chega até mim".
+
+## ✅ Decidido em 13/08/2026: começa com UMA usuária
+
+Não é a primeira de três a chegar — é uma, por escolha. O `PRODUTO.md` §8 já
+apontava para isso: a E1 deixou de validar demanda e passou a ser **a única
+fonte de histórico real**, que é o que destrava o backtesting da previsão e o que
+testa o assistente ancorado contra perguntas que ninguém inventa de cabeça. Para
+isso, uma basta — e uma que use todo dia vale mais que três que somem.
+
+**O grupo volta quando houver três.** Esse é o gatilho, e ele é de número, não de
+data: com duas ainda não há conversa, há duas conversas paralelas. O texto de
+convite do grupo existia neste arquivo e foi apagado hoje — **está no histórico
+do git**, que basta. Convite guardado "para quando der" é convite que alguém
+manda antes da hora.
 
 ## Botão na aba Mais
 
@@ -12,28 +26,31 @@ Rótulo: **Relatar problema**. Destino:
 https://wa.me/5511913309213?text=Oi!%20Encontrei%20um%20problema%20na%20Ninna%3A%20
 ```
 
-O número mora em `src/lib/contato.ts`, num lugar só. Enquanto ele estiver vazio o
-item não aparece na tela — link de WhatsApp quebrado na mão de uma mãe é pior que
-item ausente, porque ela tenta, falha e conclui que não há canal.
+O número mora em `src/lib/contato.ts`, num lugar só, e foi preenchido em
+13/08/2026 — então o item **aparece** na aba Mais. Enquanto estava vazio ele
+ficava escondido de propósito: link de WhatsApp quebrado na mão de uma mãe é pior
+que item ausente, porque ela tenta, falha e conclui que não há canal.
 
-### Por que ele aponta pro privado, e não pro grupo
+## Por que o canal é privado — e por que isso ficou mais forte, não menos
 
-Relato de bug vem grudado no contexto: "registrei o sono da Liz às 3h e sumiu".
-Mandar isso pro grupo publica a rotina do bebê dela para as outras duas mães. O
-grupo é sobre o app; o privado é sobre o bebê dela.
+O argumento original era de privacidade entre participantes: relato de bug vem
+grudado no contexto ("registrei o sono da Liz às 3h e sumiu"), e mandar isso num
+grupo publicaria a rotina do bebê dela para as outras mães.
 
-## Texto do convite para o grupo
+Com uma usuária só, **não existe grupo para onde vazar** — e o desenho continua
+valendo, por uma razão que estava embaixo da primeira o tempo todo:
 
-> **Grupo da Ninna** 💛
->
-> Aqui é onde a gente conversa sobre o app enquanto ele está sendo feito: o que
-> travou, o que ficou confuso, o que faltou, o que te irritou. Pode mandar print,
-> áudio, reclamação e ideia solta — tudo serve, inclusive "achei feio".
->
-> Duas combinações:
->
-> Se for alguma coisa sobre o seu bebê que você prefira não dividir com as outras
-> mães, me manda no privado. O grupo é sobre o app, não sobre a rotina de
-> ninguém.
->
-> E não existe hora certa. Se eu demorar pra responder, insiste sem dó.
+> O privado é sobre o bebê dela. Sempre foi.
+
+O grupo nunca foi o lugar certo para relato de bug; ele era o lugar certo para
+conversa sobre o app. Quando os três voltarem a existir, essa separação volta
+como está escrita aqui — o botão continua apontando para o privado, e o grupo
+nasce ao lado dele, não no lugar dele.
+
+## O que isso exige de você, que um grupo diluía
+
+Com uma pessoa, **você é o canal inteiro**. Não há outra mãe para responder no
+seu lugar às 23h, e não há volume que faça uma pergunta parecer menos importante.
+A contrapartida está no roteiro de instalação, e vale repetir aqui: *"não tem
+pergunta boba aqui — se ficou confuso pra você, está confuso mesmo"*. Isso só é
+verdade se a resposta vier.
