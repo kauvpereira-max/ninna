@@ -110,6 +110,7 @@ export default function RootLayout() {
           Fredoka_500Medium: require('../assets/fonts/Fredoka-Medium.ttf'),
           Fredoka_600SemiBold: require('../assets/fonts/Fredoka-SemiBold.ttf'),
           NunitoSans_400Regular: require('../assets/fonts/NunitoSans-Regular.ttf'),
+          NunitoSans_500Medium: require('../assets/fonts/NunitoSans-Medium.ttf'),
           NunitoSans_600SemiBold: require('../assets/fonts/NunitoSans-SemiBold.ttf'),
           NunitoSans_700Bold: require('../assets/fonts/NunitoSans-Bold.ttf'),
         });

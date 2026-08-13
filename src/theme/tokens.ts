@@ -222,10 +222,10 @@ export const typography = {
   bodyLarge: { fontSize: 16, lineHeight: 24, fontFamily: 'NunitoSans_400Regular' },
   body: { fontSize: 14, lineHeight: 20, fontFamily: 'NunitoSans_400Regular' },
   label: { fontSize: 13, lineHeight: 18, fontFamily: 'NunitoSans_600SemiBold', letterSpacing: 0.2 },
-  // O design pede Medium (500) aqui, mas NunitoSans-Medium.ttf não está em assets/fonts/,
-  // então a família não resolvia e caía no fallback do sistema. Regular é o mais próximo
-  // disponível — trocar de volta pra Medium quando o arquivo da fonte entrar no projeto.
-  caption: { fontSize: 12, lineHeight: 16, fontFamily: 'NunitoSans_400Regular' },
+  // ✅ Medium (500) desde 13/08/2026, quando o `NunitoSans-Medium.ttf` entrou.
+  // Era Regular como paliativo: a família não resolvia e caía no fallback do
+  // sistema, sem erro nenhum. Ver a nota da fonte variável no `CLAUDE.md`.
+  caption: { fontSize: 12, lineHeight: 16, fontFamily: 'NunitoSans_500Medium' },
 
   // ------------------------------------------------------------------
   // Entradas do protótipo — nomeadas pelo elemento, não pela escala
@@ -285,20 +285,14 @@ export const typography = {
   saudacao: { fontSize: 25, lineHeight: 32, fontFamily: 'Fredoka_600SemiBold', letterSpacing: -0.2 },
 
   /**
-   * O subtítulo dela — e AQUI MORA A DÍVIDA DA FONTE.
+   * O subtítulo da saudação: 14,5 em Medium (500), como o protótipo pede.
    *
-   * O protótipo pede **14,5 em Medium (500)**, e `NunitoSans-Medium.ttf` não
-   * está em `assets/fonts/`: só Regular, SemiBold e Bold. Família que não existe
-   * cai no fallback do sistema **sem erro nenhum**, que é como o
-   * `typography.caption` passou meses errado.
-   *
-   * Fica em **Regular (400)** — o mesmo desvio que o `caption` já tomou, para
-   * não haver dois paliativos diferentes para a mesma falta. O 600 seria pesado
-   * demais para texto de apoio.
-   *
-   * Quando o `.ttf` entrar, os DOIS voltam juntos.
+   * ✅ Esteve em Regular como paliativo até 13/08/2026, junto com o `caption` —
+   * os dois pela mesma falta, e de propósito com o mesmo desvio, para não haver
+   * dois paliativos diferentes para o mesmo buraco. Voltaram juntos, que era o
+   * combinado.
    */
-  saudacaoSub: { fontSize: 14.5, lineHeight: 21, fontFamily: 'NunitoSans_400Regular' },
+  saudacaoSub: { fontSize: 14.5, lineHeight: 21, fontFamily: 'NunitoSans_500Medium' },
 } as const;
 
 // Elevação — sombra sempre suave, nunca pesada/3D (princípio do design system)

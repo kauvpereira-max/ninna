@@ -139,6 +139,62 @@ afirmação esteve falsa por vários commits e ninguém tinha como saber.
 > Suíte que não é rodada inteira não é suíte — é uma lista de arquivos.
 > Rodar todos, e ler o resultado de cada um, faz parte de fechar bloco.
 
+### 2d. A regra 2b em forma de ASSET: a fonte variável do Nunito
+
+Não é sobre teste, é sobre arquivo — e por isso nenhum dos três do fechamento
+enxerga. Fica aqui porque o modo de falha é o mesmo: **errado em silêncio, no
+runtime que importa.**
+
+```
+NunitoSans[YTLC,opsz,wdth,wght].ttf
+  wght   min 200   PADRÃO 200   max 1000
+```
+
+> **O padrão da variável é 200 — ExtraLight.**
+
+Registrá-la no `Font.loadAsync` sob qualquer chave faz o React Native renderizar
+a **instância padrão**: o app inteiro em fonte fina. Sem erro, sem aviso, sem
+nada no console. `tsc` passa, os testes passam, o `expo export` passa.
+
+**Isto vai ser tentado**, e a tentação é legítima: desde 2023 o download do
+Google Fonts traz **só a variável** — a pasta `static/` sumiu do zip, e o
+repositório `google/fonts` **nunca teve os estáticos** desta versão (conferido na
+árvore atual e no commit `a0e524c059`, o do v3.101). Quem for atualizar a fonte
+vai achar que a variável é o caminho.
+
+Na web daria para contornar com `fontWeight`, mas isso troca a arquitetura de
+tipografia: hoje é **uma família por peso** (`NunitoSans_600SemiBold`), e
+passaria a ser família + peso, mexendo em todas as entradas do `tokens.ts`. No
+nativo continuaria ExtraLight de qualquer jeito.
+
+#### Como conseguir o estático, que é o caminho certo
+
+A API de CSS ainda serve TTF para User-Agent antigo:
+
+```bash
+curl -s -A "Mozilla/4.0" "https://fonts.googleapis.com/css?family=Nunito+Sans:500&subset=latin,latin-ext" \
+  | grep -oE "https://[^)]+\.ttf" \
+  | xargs curl -L -o assets/fonts/NunitoSans-Medium.ttf
+```
+
+⚠️ **O `&subset=latin,latin-ext` não é opcional.** Sem ele vêm **230 pontos de
+código**; com ele, **546**. O `caption` e o subtítulo da saudação pintam texto
+que carrega o **nome do bebê** — e nome com caractere fora do subconjunto cairia
+no fallback só naquele nome, o que é o tipo de defeito que nunca aparece em
+teste.
+
+#### E confira o arquivo, nunca o nome dele
+
+```
+usWeightClass  -> tem que ser 500
+fvar           -> tem que estar AUSENTE (presente = é a variável)
+name[5]        -> a versão tem que casar com os outros três
+```
+
+Os arquivos que estão lá são `Version 3.101;gftools[0.9.27]`, e todos carregam
+`postscript: NunitoSans-12ptExtraLight` — herança do nome da instância padrão da
+variável, não erro. **Peso se confere no `usWeightClass`, nunca no nome.**
+
 ### 3. Push a cada bloco fechado, não acumulado
 
 Dez commits ficaram parados localmente durante a migração. O sintoma apareceu
@@ -445,8 +501,10 @@ previsões → canal nativo.
   `/nova-senha`. **O que sobra não é configuração:** domínio novo não tem
   reputação, e os primeiros envios podem cair no spam — a E1 precisa ser avisada
   de olhar o spam e marcar "não é spam". O R2 passa de aberto a mitigado
-- `typography.caption` pede Medium (500), mas `NunitoSans-Medium.ttf` não está em
-  `assets/fonts/` — está em Regular como paliativo
+- ~~`typography.caption` em Regular por falta do Medium~~ — **paga em
+  13/08/2026.** O `NunitoSans-Medium.ttf` entrou, e `caption` e `saudacaoSub`
+  voltaram juntos para `NunitoSans_500Medium`. A armadilha que ela deixou está
+  na regra 2d acima, e essa não vence
 - `tokens.ts` cita `src/theme/fonts.ts`, que não existe (fontes carregam no
   `app/_layout.tsx`)
 - As 5 tabelas antigas seguem no banco, vazias de uso mas cheias de dado, até a
