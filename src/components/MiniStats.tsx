@@ -21,11 +21,39 @@ import type { ContagensDeHoje } from '../lib/registros';
  * quantos, de que, hoje.
  *
  * ------------------------------------------------------------------
+ * ⚠️ A LISTA É FIXA POR DECISÃO. NÃO TROQUE POR "OS MAIS USADOS".
+ *
+ * São três, sempre estes três, nesta ordem — mamadas, fraldas, sonecas. É a
+ * lista do protótipo, literal, e a razão é de produto:
+ *
+ * > Estas são as perguntas de TODO dia.
+ *
+ * "Ela mamou quantas vezes?", "quantas trocas?", "dormiu?" — uma mãe de primeira
+ * viagem faz essas três diariamente, tenha registrado muito ou pouco. Um card
+ * que responde uma pergunta que ela não fez ocupa o lugar de um que responde uma
+ * que ela fez.
+ *
+ * A "melhoria" que vai ocorrer a alguém é trocar por *os tipos mais registrados
+ * do dia*. Ela produz "0 vacinas" ao lado de "8 mamadas" no dia em que a mãe
+ * registrou uma vacina — e produz uma Home que muda de forma a cada dia.
+ *
+ * É exatamente a regra genérica que os ATALHOS já rejeitaram, pelo mesmo motivo
+ * escrito em `categorias.ts`: *mãe cansada precisa que o botão esteja onde
+ * estava ontem*. Um grid que se reordena sozinho obriga a reler a tela toda vez.
+ * Um trio de números que troca de assunto faz o mesmo, e mais barato de não
+ * fazer.
+ *
+ * Se um dia mudar, mude a LISTA — não o critério.
+ *
+ * ------------------------------------------------------------------
  * O ZERO É NÚMERO LEGÍTIMO, MAS SÓ DEPOIS DE PERGUNTAR
  *
- * "0 sonecas" às 7h da manhã está correto e deve aparecer. O que não pode é
- * aparecer antes da resposta chegar — daí o `prontas` no hook, e não um
- * `!carregando`.
+ * "0 sonecas" às 7h da manhã está correto e DEVE aparecer — é a mesma razão da
+ * lista vazia da timeline: a ausência do número seria pior que o número zero. A
+ * mãe precisa saber que hoje ainda não teve, não descobrir que o app não sabe.
+ *
+ * O que não pode é aparecer antes da resposta chegar. Daí o `prontas` no hook,
+ * e não um `!carregando`.
  */
 type Props = { contagens: ContagensDeHoje };
 
@@ -33,8 +61,8 @@ export function MiniStats({ contagens }: Props) {
   return (
     <View style={styles.grid}>
       <Stat numero={contagens.mamadas} rotulo={contagens.mamadas === 1 ? 'mamada' : 'mamadas'} />
-      <Stat numero={contagens.sonecas} rotulo={contagens.sonecas === 1 ? 'soneca' : 'sonecas'} />
       <Stat numero={contagens.fraldas} rotulo={contagens.fraldas === 1 ? 'fralda' : 'fraldas'} />
+      <Stat numero={contagens.sonecas} rotulo={contagens.sonecas === 1 ? 'soneca' : 'sonecas'} />
     </View>
   );
 }

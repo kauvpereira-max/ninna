@@ -17,7 +17,8 @@
 import { supabase } from './supabase';
 import { formatarHora, inicioDoDiaLocal } from './horario';
 import { filtroDoCursor, paginar, type CursorRegistro, type Pagina } from './paginacao';
-import type { TipoEvento } from './consultas';
+import { TIPOS_DO_ALVO, type TipoEvento } from './consultas';
+import { ehSonoNoturno } from './padroes';
 import {
   CONTEUDOS_FRALDA,
   INTENSIDADES,
@@ -677,37 +678,49 @@ export async function atualizarRegistro(
  * Traz só a coluna `tipo` das linhas do dia. É payload minúsculo e uma ida só —
  * três `count` separados seriam três viagens para somar três números.
  */
+/**
+ * A ordem das chaves é a ordem da tela: mamadas, fraldas, sonecas. É a lista do
+ * protótipo, literal.
+ */
 export type ContagensDeHoje = {
   mamadas: number;
-  sonecas: number;
   fraldas: number;
+  sonecas: number;
 };
 
 const ERRO_CONTAR = 'Não consegui contar os registros de hoje agora.';
 
 /**
- * `mamadas` soma amamentação E mamadeira, de propósito: para a mãe as duas são
- * "mamou". Separá-las num contador de três colunas seria pedir que ela some de
- * cabeça o que ela pensa junto.
+ * ⚠️ SONECA NÃO É "SONO" — e a diferença é do motor, não deste arquivo.
+ *
+ * O `padroes.ts` separa soneca de noite pelo INÍCIO: sono que começa entre 19h e
+ * 6h é noite e fica fora das métricas de soneca. Se o card contasse todo `sono`,
+ * a noite inteira entraria como mais uma soneca, e o "2 sonecas" da Home
+ * discordaria do que a Ninna diz sobre soneca duas linhas acima.
+ *
+ * Por isso `ehSonoNoturno` vem IMPORTADO do motor. A regra tem um dono, e não é
+ * este módulo — copiar o `19` para cá seria a mesma deriva, só que silenciosa.
+ *
+ * `mamadas` vem de `TIPOS_DO_ALVO.mamada`, pela mesma razão: é a definição que o
+ * assistente usa. Duas listas do que é mamada é a Home dizendo 7 e a Ninna
+ * dizendo 5 sobre o mesmo dia.
  */
-const TIPOS_CONTADOS: Record<keyof ContagensDeHoje, TipoRegistro[]> = {
-  mamadas: ['amamentar', 'mamadeira'],
-  sonecas: ['sono'],
-  fraldas: ['fralda'],
-};
-
 export async function contarHoje(
   babyId: string,
   agora: Date = new Date()
 ): Promise<Resultado<ContagensDeHoje>> {
-  const vazio: ContagensDeHoje = { mamadas: 0, sonecas: 0, fraldas: 0 };
+  const vazio: ContagensDeHoje = { mamadas: 0, fraldas: 0, sonecas: 0 };
   const desde = inicioDoDiaLocal(agora);
 
-  const todos = Object.values(TIPOS_CONTADOS).flat();
+  const deMamada = TIPOS_DO_ALVO.mamada as TipoRegistro[];
+  const todos: TipoRegistro[] = [...deMamada, 'fralda', 'sono'];
 
+  // `ocorrido_em` entra porque a soneca precisa da hora de início — sem ela não
+  // há como separar soneca de noite, e contar tudo como soneca seria mais fácil
+  // e errado.
   const { data, error } = await supabase
     .from(TABELA)
-    .select('tipo')
+    .select('tipo, ocorrido_em')
     .eq('baby_id', babyId)
     .in('tipo', todos)
     .gte('ocorrido_em', desde.toISOString());
@@ -718,11 +731,19 @@ export async function contarHoje(
   }
 
   const contagens = { ...vazio };
-  for (const linha of (data ?? []) as { tipo: string }[]) {
-    for (const [chave, tipos] of Object.entries(TIPOS_CONTADOS)) {
-      if (tipos.includes(linha.tipo as TipoRegistro)) {
-        contagens[chave as keyof ContagensDeHoje] += 1;
-      }
+  for (const linha of (data ?? []) as { tipo: string; ocorrido_em: string }[]) {
+    if (deMamada.includes(linha.tipo as TipoRegistro)) {
+      contagens.mamadas += 1;
+      continue;
+    }
+    if (linha.tipo === 'fralda') {
+      contagens.fraldas += 1;
+      continue;
+    }
+    if (linha.tipo === 'sono') {
+      const inicio = new Date(linha.ocorrido_em);
+      const minutosLocais = inicio.getHours() * 60 + inicio.getMinutes();
+      if (!ehSonoNoturno(minutosLocais)) contagens.sonecas += 1;
     }
   }
 

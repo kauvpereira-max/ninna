@@ -23,11 +23,7 @@ import { contarHoje, type ContagensDeHoje } from '../lib/registros.ts';
  * atual. Antes disso a Home não desenha os cards.
  */
 export function useContagensDeHoje(babyId: string | null) {
-  const [contagens, setContagens] = useState<ContagensDeHoje>({
-    mamadas: 0,
-    sonecas: 0,
-    fraldas: 0,
-  });
+  const [contagens, setContagens] = useState<ContagensDeHoje>({ mamadas: 0, fraldas: 0, sonecas: 0 });
   const [prontas, setProntas] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -38,7 +34,7 @@ export function useContagensDeHoje(babyId: string | null) {
     const token = ++requisicaoAtual.current;
 
     if (!babyId) {
-      setContagens({ mamadas: 0, sonecas: 0, fraldas: 0 });
+      setContagens({ mamadas: 0, fraldas: 0, sonecas: 0 });
       setProntas(false);
       setErro(null);
       return;

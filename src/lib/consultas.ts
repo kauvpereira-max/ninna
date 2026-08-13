@@ -154,8 +154,13 @@ export const ALVOS: Alvo[] = [
  * O motor já está protegido por fora: `listarParaPadroes` filtra por tipo e um
  * tipo novo fica de fora por padrão. Este mapa é o lugar onde o erro entraria, e
  * por isso o `teste-consultas.ts` fixa esta lista literalmente.
+ *
+ * EXPORTADO desde 13/08/2026 para os mini-stats da Home contarem "mamadas" com
+ * a MESMA definição que o assistente usa. Duas listas de "o que é mamada" é a
+ * Home dizendo 7 e a Ninna dizendo 5 sobre o mesmo dia — e a mãe não tem como
+ * saber qual das duas mentiu.
  */
-const TIPOS_DO_ALVO: Record<Alvo, TipoEvento[]> = {
+export const TIPOS_DO_ALVO: Record<Alvo, TipoEvento[]> = {
   mamada: ['amamentar', 'mamadeira'],
   sono: ['sono'],
   fralda: ['fralda'],
