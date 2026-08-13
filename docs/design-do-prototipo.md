@@ -260,7 +260,20 @@ o protótipo perde, e o motivo é de escopo, não de gosto: ele foi desenhado co
 atalhos**, e "Registros" sugere *ver o que já foi registrado* — que é a aba
 Rotina. "Mais" descreve a ação; "Registros" descreveria outra tela.
 
-**3. O `object-position` do avatar não se aplica.** É enquadramento de foto, e o
+**3. Não existe cabeçalho "Hoje" nos últimos registros, e a lista continua sendo
+os 8 mais recentes.** O protótipo põe "Hoje" ali. A lista da Home não é de hoje —
+ela traz os 8 últimos, venham do dia que vierem, e mostra "ontem 11:05" o tempo
+todo. O cabeçalho seria falso na tela, e falso do jeito pior: a mãe confere
+contra a memória e conclui que o app perdeu o registro de ontem.
+
+E **filtrar a lista por hoje para o cabeçalho ficar verdadeiro é pior ainda**:
+deixaria a Home vazia toda madrugada, que é justamente quando ela abre. Às 3h da
+manhã "hoje" tem zero registros, e a tela que deveria acolher mostraria nada.
+
+O histórico por dia já existe, inteiro, na aba Rotina — com cabeçalho de data de
+verdade.
+
+**4. O `object-position` do avatar não se aplica.** É enquadramento de foto, e o
 avatar do app é a **inicial do nome num círculo**. Não há o que enquadrar.
 Quando houver foto de bebê, a propriedade volta a fazer sentido e este registro
 deixa de valer.

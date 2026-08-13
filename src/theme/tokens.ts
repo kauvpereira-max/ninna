@@ -81,6 +81,18 @@ export const colors = {
   superficieBotao: '#F4EBE3',  // botão de fechar do modal
   superficieFaixa: '#FDF2EC',  // faixa de total dentro do modal
 
+  /**
+   * O par rosado — nomeado pelo PAPEL, não pelo componente, porque dois o usam:
+   * o card de monitoramento (fundo e borda) e o card "Converse com a Ninna"
+   * (borda, e o fim do gradiente dele é este mesmo `#FDF4F1`).
+   *
+   * Chamá-los de `monitoramentoFundo`/`monitoramentoBorda` faria o segundo
+   * componente importar o nome do primeiro — e o dia em que o card de
+   * monitoramento mudasse de cor levaria o outro junto, sem ninguém pedir.
+   */
+  superficieRosada: '#FDF4F1',
+  bordaRosada: '#EFD5CD',
+
   // A família de linha que não existia. `linha` é a mais usada: divisória,
   // borda de card branco e — no bloco da timeline — a linha vertical.
   linha: '#F3EDE6',
@@ -114,11 +126,11 @@ export const colors = {
   //
   // Vigilância agora se marca por BORDA E CHIP — ver a regra no `CLAUDE.md`.
   //
-  // ⚠️ `noiteSurface` fica até o bloco do card claro, e sai NELE. Removê-lo aqui
-  // quebraria o `CardInsight`, que ainda o usa — e deixar o código sem compilar
-  // entre dois blocos é pior que um token vivendo mais três commits.
+  // ✅ `noiteSurface` saiu em 13/08/2026, junto com o card claro — o único
+  // consumidor dele era o `CardInsight`, e ele deixou de ser escuro.
+  //
+  // Não existe superfície escura no app.
   // ------------------------------------------------------------------
-  noiteSurface: '#3A2E2A',
 
   onDark: '#FFF3E9',
 } as const;
@@ -241,6 +253,15 @@ export const typography = {
    * conteúdo. O app usava o mesmo `label` maiúsculo para os dois.
    */
   tituloSecao: { fontSize: 19, lineHeight: 24, fontFamily: 'Fredoka_600SemiBold', letterSpacing: -0.2 },
+
+  /**
+   * A frase do card de monitoramento: 17,5 com `line-height: 1.55` (≈27).
+   *
+   * É o maior corpo de texto do app, e de propósito — é a única frase que a
+   * Ninna escreve sobre o bebê, e ela ocupa o espaço de uma frase, não de um
+   * rótulo de painel.
+   */
+  fraseMonitoramento: { fontSize: 17.5, lineHeight: 27, fontFamily: 'NunitoSans_600SemiBold' },
 
   /**
    * A saudação da Home: Fredoka 25 em SemiBold.
