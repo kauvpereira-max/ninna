@@ -403,7 +403,35 @@ reabrir com um frame de Home no meio.
 > `marginTop` proporcional, cantos arredondados no topo, fundo escurecido. Fica
 > quase todo o visual sem tocar em navegação.
 
-**6. O `object-position` do avatar não se aplica.** É enquadramento de foto, e o
+**6. O anel do Sono é VISUAL, e o encerrar continua na Home.**
+
+O protótipo põe `toggleTimer` (play/pause) dentro do modal. Aqui o anel só conta;
+não há stop nele. Três motivos:
+
+- **O sono é o único evento que a mãe inicia e larga.** O lugar de voltar é onde
+  ela bate o olho, e é a Home — não reabrir um modal.
+- **É a mudança menor.** A lógica de encerrar que já funciona não é tocada. Mover
+  a posse do estado do timer para o modal é como se reintroduz o "começou e
+  nunca encerrou": dois donos do mesmo "correndo".
+- **E o subtítulo publicado já promete o contrário.** Ele diz, com todas as
+  letras: *"Deixo o sono correndo a partir desse horário — você encerra na Home
+  quando acabar."* Mudar exigiria reescrever texto que já está no ar.
+
+Vale notar que o protótipo **também não tem "Encerrar"** ali — ele tem
+`toggleTimer` e o "Concluir" genérico do rodapé. O modelo dele é *começa,
+assiste, conclui*, que é o de uma maquete, não o de um sono.
+
+**O anel conta desde o horário ESCOLHIDO, não do zero.** Quando o modal abre não
+há sono correndo, e um anel parado em `00:00` seria forma sem função — o mesmo
+critério que recusou o overlay. Contando desde a hora do campo, ele diz algo
+verdadeiro: *"o sono que você vai registrar já corre há 14 minutos"*.
+
+**E não há arco de progresso.** O protótipo desenha um com `stroke-dasharray`.
+Progresso rumo a quê? Sono não tem duração-alvo, e desenhar meta de sono é a
+Ninna opinando sobre quanto o bebê devia dormir. Sem o arco, o anel é um trilho
+com borda — e o `react-native-svg` deixa de ser necessário.
+
+**7. O `object-position` do avatar não se aplica.** É enquadramento de foto, e o
 avatar do app é a **inicial do nome num círculo**. Não há o que enquadrar.
 Quando houver foto de bebê, a propriedade volta a fazer sentido e este registro
 deixa de valer.

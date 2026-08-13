@@ -15,6 +15,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useBaby } from '../../src/contexts/BabyContext';
 import { Button } from '../../src/components/Button';
 import { ConfirmacaoPronto } from '../../src/components/ConfirmacaoPronto';
+import { AnelDoSono } from '../../src/components/AnelDoSono';
+import { useAgoraTick } from '../../src/hooks/useAgoraTick';
 import { TextField } from '../../src/components/TextField';
 import {
   RotuloCampo,
@@ -23,7 +25,13 @@ import {
   StepperNumero,
   CampoTextoLivre,
 } from '../../src/components/CamposDoRegistro';
-import { aplicarMascaraHora, horaAtual, horaNoDia, horaParaData } from '../../src/lib/horario';
+import {
+  aplicarMascaraHora,
+  horaAtual,
+  horaNoDia,
+  horaParaData,
+  minutosEntre,
+} from '../../src/lib/horario';
 import { AVISO_AO_SALVAR_SINTOMA } from '../../src/lib/copySaude';
 import {
   atualizarRegistro,
@@ -110,6 +118,20 @@ export default function RegistroScreen() {
   function definir(chave: string, valor: string | null) {
     setValores((atuais) => ({ ...atuais, [chave]: valor }));
   }
+
+  /**
+   * Quanto tempo já correu desde o horário digitado — o número do anel do sono.
+   *
+   * O relógio só bate no tipo de duração aberta: `useAgoraTick(false)` nem cria
+   * o intervalo, então nos outros 18 tipos isto não custa nada.
+   *
+   * `horaParaData` ancora em ontem quando o horário ainda não chegou hoje, então
+   * 23h50 lido às 00h10 dá 20 minutos, e não menos vinte e três horas.
+   */
+  const ehAberto = ehTipoRegistro(tipo) && SCHEMAS[tipo].emAberto === true && !editando;
+  const agora = useAgoraTick(ehAberto);
+  const inicio = ehAberto ? horaParaData(valores.hora ?? '') : null;
+  const minutosDesdeAHora = inicio ? Math.max(0, minutosEntre(inicio.toISOString(), agora)) : null;
 
   function fechar() {
     // Na web o modal é uma rota comum, e ela pode ser aberta direto pela URL —
@@ -373,6 +395,12 @@ export default function RegistroScreen() {
           </View>
 
           <View style={styles.form}>
+            {/* O anel só existe no tipo de duração aberta — hoje, o sono. Vem do
+                `emAberto` do schema, e não de `tipo === 'sono'`: se um dia
+                nascer outro tipo que fica correndo, ele ganha o anel sem ninguém
+                lembrar de vir aqui. */}
+            {schema.emAberto && !editando ? <AnelDoSono minutos={minutosDesdeAHora} /> : null}
+
             {schema.campos.map(desenhar)}
 
             {erroForm ? <Text style={styles.erroForm}>{erroForm}</Text> : null}
