@@ -38,7 +38,7 @@ export function ItemRegistro({ registro, horaLabel, resumo, onPress, acao }: Pro
       style={[styles.item, semCalloutNaWeb]}
     >
       <View style={[styles.badge, { backgroundColor: visual.bg }]}>
-        <Ionicons name={visual.icon} size={15} color={colors.onDark} />
+        <Ionicons name={visual.icon} size={15} color={visual.tinta} />
       </View>
 
       <View style={{ flex: 1 }}>

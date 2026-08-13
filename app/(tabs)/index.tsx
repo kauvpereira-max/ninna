@@ -117,7 +117,7 @@ export default function HojeScreen() {
               style={styles.categoriaItem}
             >
               <View style={[styles.categoriaBadge, { backgroundColor: c.bg }]}>
-                <Ionicons name={c.icon} size={22} color={colors.onDark} />
+                <Ionicons name={c.icon} size={26} color={c.tinta} />
               </View>
               <Text style={styles.categoriaLabel}>{c.label}</Text>
             </Pressable>
@@ -134,7 +134,7 @@ export default function HojeScreen() {
               style={styles.categoriaItem}
             >
               <View style={[styles.categoriaBadge, styles.categoriaMais]}>
-                <Ionicons name="ellipsis-horizontal" size={22} color={colors.neutro500} />
+                <Ionicons name="add" size={30} color={colors.neutro0} />
               </View>
               <Text style={styles.categoriaLabel}>Mais</Text>
             </Pressable>
@@ -218,30 +218,35 @@ const styles = StyleSheet.create({
     color: colors.neutro500,
     marginBottom: spacing.sm,
   },
-  // 3 por linha com wrap: 6 itens caem em 2 linhas certinhas e um 7º tipo entraria
-  // sem mexer aqui. O `space-between` anterior espalhava os itens pela largura toda.
+  // 4 por linha, como o `repeat(4, 1fr)` do protótipo. Com o teto de 8 atalhos,
+  // os 7 tipos mais o "+" caem em DUAS linhas cheias — antes eram 3 por linha e
+  // a última ficava pela metade.
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     rowGap: spacing.md,
     marginBottom: spacing.lg,
   },
-  categoriaItem: { width: '33.333%', alignItems: 'center', gap: 4 },
+  categoriaItem: { width: '25%', alignItems: 'center', gap: 9 },
+  // 70px e redondo. Era 52 com raio 16 — o círculo grande é o item nº 2 da lista
+  // de maior impacto do protótipo, e o que mais muda a silhueta da Home.
   categoriaBadge: {
-    width: 52,
-    height: 52,
-    borderRadius: radius.md,
+    width: 70,
+    height: 70,
+    borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',
-    ...elevation.level1,
   },
-  // O "Mais" não é categoria e não finge ser: sem cor de tipo, sem elevação.
+  // O "+" é o único item sólido do grid, e é onde o `coralAcao` estreia: no
+  // protótipo ele tem cor cheia, ícone branco e sombra da própria cor.
+  //
+  // Ele deixou de ser um "···" cinza discreto. A leitura muda — antes dizia "tem
+  // mais coisa aqui", agora convida. É o que o protótipo desenha.
   categoriaMais: {
-    backgroundColor: colors.neutro100,
-    borderWidth: 1,
-    borderColor: colors.neutro200,
+    backgroundColor: colors.coralAcao,
+    ...elevation.acaoCoral,
   },
-  categoriaLabel: { ...typography.caption, color: colors.headline },
+  categoriaLabel: { ...typography.label, color: colors.neutro600, letterSpacing: 0 },
   vazioTexto: { ...typography.body, color: colors.neutro500 },
   avisoTexto: { ...typography.caption, color: colors.coral600, marginBottom: spacing.sm },
   lista: { gap: spacing.sm },

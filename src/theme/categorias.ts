@@ -11,14 +11,20 @@
 // qualquer teste que importe este módulo.
 import type { Ionicons } from '@expo/vector-icons';
 import type { TipoRegistro } from '../lib/registros';
-import { colors } from './tokens.ts';
+import { pastel } from './tokens.ts';
 
 export type Categoria = {
   key: TipoRegistro;
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
+  /** O círculo. Pastel. */
   bg: string;
+  /** O ícone sobre ele. Escuro — fundo pastel com ícone branco some. */
+  tinta: string;
 };
+
+/** Açúcar para as 19 entradas abaixo não repetirem `pastel.x.fundo` duas vezes. */
+const de = (f: (typeof pastel)[keyof typeof pastel]) => ({ bg: f.fundo, tinta: f.tinta });
 
 /**
  * Tipo → identidade visual, e é aqui que a exaustividade é COBRADA.
@@ -40,39 +46,40 @@ export type Categoria = {
  *
  * A ORDEM não mora aqui. `Record` não tem ordem que se possa confiar, e as duas
  * listas abaixo dizem qual é a delas.
+ *
+ * ------------------------------------------------------------------
+ * AS FAMÍLIAS SE REPETEM, E ISSO É DESENHO — NÃO FALTA DE COR
+ *
+ * O mapeamento é o do protótipo, literal. Verde cobre Mamadeira, Extração e
+ * Passeio; azul cobre Banho, Hidratação e Vacina. Com 20 tipos, cor deixa de ser
+ * identidade única e vira **agrupamento semântico** — dez famílias para vinte
+ * tipos é a proporção que o designer escolheu.
+ *
+ * Antes daqui, dezesseis dos dezenove emprestavam `rosa500`, `warning` ou
+ * `neutro500` "até o documento de design definir as oficiais". Ele definiu.
  */
 export const CATEGORIA_POR_TIPO: Record<TipoRegistro, Categoria> = {
-  amamentar: { key: 'amamentar', label: 'Amamentar', icon: 'heart', bg: colors.categoriaCoral },
-  fralda: { key: 'fralda', label: 'Fralda', icon: 'water', bg: colors.categoriaAmarelo },
-  sono: { key: 'sono', label: 'Sono', icon: 'moon', bg: colors.categoriaLavanda },
-  mamadeira: { key: 'mamadeira', label: 'Mamadeira', icon: 'flask', bg: colors.categoriaMenta },
-  // Humor e Sintoma não têm cor de categoria própria no design system ainda. Em
-  // vez de inventar hex novo, reaproveitam tokens existentes: rosa da marca e
-  // `warning` (semântico de atenção, que é exatamente o papel do sintoma).
-  // Trocar quando o documento de design definir as oficiais.
-  humor: { key: 'humor', label: 'Humor', icon: 'happy', bg: colors.rosa500 },
-  sintoma: { key: 'sintoma', label: 'Sintoma', icon: 'thermometer', bg: colors.warning },
-  // Os quatro do bloco 3. Mesma nota de cor dos dois acima: sem token próprio no
-  // design system, reaproveitam os que existem em vez de inventar hex novo.
-  banho: { key: 'banho', label: 'Banho', icon: 'sparkles', bg: colors.categoriaMenta },
-  passeio: { key: 'passeio', label: 'Passeio', icon: 'walk', bg: colors.categoriaLavanda },
-  leitura: { key: 'leitura', label: 'Leitura', icon: 'book', bg: colors.categoriaAmarelo },
-  atividade: { key: 'atividade', label: 'Atividade', icon: 'color-palette', bg: colors.rosa500 },
-  // Alimentação. Comida e Hidratação puxam a paleta de alimentação que já existe
-  // (mamadeira); Extração é da mãe, e por isso não veste a cor do bebê.
-  comida: { key: 'comida', label: 'Comida', icon: 'restaurant', bg: colors.categoriaMenta },
-  hidratacao: { key: 'hidratacao', label: 'Hidratação', icon: 'water-outline', bg: colors.categoriaLavanda },
-  extracao: { key: 'extracao', label: 'Extração', icon: 'medical', bg: colors.neutro500 },
-  // Crescimento. Os três dividem a cor: são a mesma série, medida de três
-  // jeitos, e é a curva que vai juntá-los num bloco próprio.
-  peso: { key: 'peso', label: 'Peso', icon: 'scale', bg: colors.categoriaCoral },
-  altura: { key: 'altura', label: 'Altura', icon: 'resize', bg: colors.categoriaCoral },
-  circunferencia: { key: 'circunferencia', label: 'Perímetro cefálico', icon: 'ellipse-outline', bg: colors.categoriaCoral },
-  // Saúde. `warning` e o token semântico de atenção, o mesmo do sintoma — e é o
-  // que estes três são: registro que ela vai reler para conferir.
-  medicacao: { key: 'medicacao', label: 'Medicação', icon: 'medkit', bg: colors.warning },
-  vitamina: { key: 'vitamina', label: 'Vitamina', icon: 'nutrition', bg: colors.warning },
-  vacina: { key: 'vacina', label: 'Vacina', icon: 'shield-checkmark', bg: colors.warning },
+  amamentar: { key: 'amamentar', label: 'Amamentar', icon: 'heart', ...de(pastel.coral) },
+  fralda: { key: 'fralda', label: 'Fralda', icon: 'water', ...de(pastel.amarelo) },
+  sono: { key: 'sono', label: 'Sono', icon: 'moon', ...de(pastel.roxo) },
+  mamadeira: { key: 'mamadeira', label: 'Mamadeira', icon: 'flask', ...de(pastel.verde) },
+  humor: { key: 'humor', label: 'Humor', icon: 'happy', ...de(pastel.rosa) },
+  sintoma: { key: 'sintoma', label: 'Sintoma', icon: 'thermometer', ...de(pastel.coral) },
+  banho: { key: 'banho', label: 'Banho', icon: 'sparkles', ...de(pastel.azul) },
+  passeio: { key: 'passeio', label: 'Passeio', icon: 'walk', ...de(pastel.verde) },
+  leitura: { key: 'leitura', label: 'Leitura', icon: 'book', ...de(pastel.lavanda) },
+  atividade: { key: 'atividade', label: 'Atividade', icon: 'color-palette', ...de(pastel.terra) },
+  comida: { key: 'comida', label: 'Comida', icon: 'restaurant', ...de(pastel.terra) },
+  hidratacao: { key: 'hidratacao', label: 'Hidratação', icon: 'water-outline', ...de(pastel.azul) },
+  extracao: { key: 'extracao', label: 'Extração', icon: 'medical', ...de(pastel.verde) },
+  peso: { key: 'peso', label: 'Peso', icon: 'scale', ...de(pastel.ameixa) },
+  altura: { key: 'altura', label: 'Altura', icon: 'resize', ...de(pastel.salvia) },
+  circunferencia: { key: 'circunferencia', label: 'Perímetro cefálico', icon: 'ellipse-outline', ...de(pastel.lavanda) },
+  medicacao: { key: 'medicacao', label: 'Medicação', icon: 'medkit', ...de(pastel.rosa) },
+  vitamina: { key: 'vitamina', label: 'Vitamina', icon: 'nutrition', ...de(pastel.amarelo) },
+  vacina: { key: 'vacina', label: 'Vacina', icon: 'shield-checkmark', ...de(pastel.azul) },
+  // Habilidade tem família no protótipo (ameixa) e ainda não é tipo do app —
+  // `PRODUTO.md` §3.4. Quando entrar, a cor já está decidida.
 };
 
 /**

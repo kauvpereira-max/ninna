@@ -104,12 +104,6 @@ export const colors = {
   warning: '#F4B183',
   warningText: '#A85A2E',
 
-  // Paleta de categoria (badges de registro — fundo sólido, ícone branco)
-  categoriaCoral: '#E15C42',   // Amamentar
-  categoriaAmarelo: '#E8B03A', // Fralda
-  categoriaLavanda: '#9B8AC4', // Sono
-  categoriaMenta: '#6BAF92',   // Mamadeira
-
   // Modo noturno
   noiteBg: '#201915',
   noiteSurface: '#3A2E2A',
@@ -117,6 +111,47 @@ export const colors = {
   noitePrimaria: '#D99A85',
 
   onDark: '#FFF3E9',
+} as const;
+
+/**
+ * As dez famílias pastéis do protótipo — a identidade de cada tipo de registro.
+ *
+ * ------------------------------------------------------------------
+ * ELAS SUBSTITUÍRAM A PALETA DE CATEGORIA, E ISSO CONSERTOU UMA REGRA
+ *
+ * A antiga (`categoriaCoral`, `categoriaAmarelo`, `categoriaLavanda`,
+ * `categoriaMenta`) era sólida e vívida, para ícone branco — e cobria **4 dos
+ * 20 tipos**. Os outros dezesseis vinham emprestando `rosa500`, `warning` e
+ * `neutro500` por falta de cor própria.
+ *
+ * E o `categoriaCoral` era, literalmente, `#E15C42` — o mesmo hex do
+ * `coral500`, a cor de vigilância. Ou seja: o badge de Amamentar usava a cor
+ * que o `CLAUDE.md` reserva para o card de monitoramento, e ninguém tinha
+ * notado. Trocar pelos pastéis não abre exceção nenhuma: fecha uma que já
+ * estava aberta.
+ *
+ * ------------------------------------------------------------------
+ * SÃO PARES, E É POR ISSO QUE NÃO MORAM EM `colors`
+ *
+ * `fundo` é o círculo; `tinta` é o ícone e o texto sobre ele. Os dois só fazem
+ * sentido juntos — separados em dez chaves planas, a próxima pessoa combinaria
+ * o fundo de um com a tinta de outro sem que nada reclamasse.
+ *
+ * ⚠️ A tinta é escura de propósito: no sistema antigo o ícone era branco sobre
+ * cor forte. Fundo pastel com ícone branco é ilegível — se algum consumidor
+ * ficou com `colors.onDark`, ele some.
+ */
+export const pastel = {
+  coral: { fundo: '#FDE7E1', tinta: '#D9502F' },
+  amarelo: { fundo: '#FCF2D6', tinta: '#C08A1E' },
+  roxo: { fundo: '#ECE7F8', tinta: '#7A67A8' },
+  verde: { fundo: '#DDF0E7', tinta: '#3F8368' },
+  azul: { fundo: '#E2EEF7', tinta: '#43799A' },
+  rosa: { fundo: '#FBE7E4', tinta: '#B96C63' },
+  terra: { fundo: '#F8E7D9', tinta: '#A55E30' },
+  lavanda: { fundo: '#ECE9F9', tinta: '#7A6DB8' },
+  salvia: { fundo: '#E3F0E6', tinta: '#5A8768' },
+  ameixa: { fundo: '#F7E6EF', tinta: '#8B4E6E' },
 } as const;
 
 export const spacing = {
@@ -225,6 +260,15 @@ export const elevation = {
   /** CTA em repouso — `rgb(224,138,128)` é o `rosa500`. */
   ctaRosa: {
     shadowColor: colors.rosa500,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+
+  /** O "+" do grid de atalhos — mesma ideia, com o coral de AÇÃO. */
+  acaoCoral: {
+    shadowColor: colors.coralAcao,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
     shadowRadius: 20,

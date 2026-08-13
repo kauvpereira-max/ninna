@@ -140,7 +140,7 @@ export default function DetalheRegistroScreen() {
 
         <View style={styles.cabecalho}>
           <View style={[styles.badge, { backgroundColor: visual.bg }]}>
-            <Ionicons name={visual.icon} size={24} color={colors.onDark} />
+            <Ionicons name={visual.icon} size={24} color={visual.tinta} />
           </View>
           <Text style={styles.resumo}>{registro.resumo}</Text>
         </View>

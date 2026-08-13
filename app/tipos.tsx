@@ -64,7 +64,7 @@ export default function TiposScreen() {
               style={styles.item}
             >
               <View style={[styles.badge, { backgroundColor: c.bg }]}>
-                <Ionicons name={c.icon} size={20} color={colors.onDark} />
+                <Ionicons name={c.icon} size={20} color={c.tinta} />
               </View>
               <Text style={styles.itemLabel}>{c.label}</Text>
               <Ionicons name="chevron-forward" size={18} color={colors.neutro400} />
