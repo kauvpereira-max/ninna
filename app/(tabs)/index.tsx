@@ -11,6 +11,7 @@ import { useContagensDeHoje } from '../../src/hooks/useContagensDeHoje';
 import { useAgoraTick } from '../../src/hooks/useAgoraTick';
 import { escolherInsight } from '../../src/lib/copyInsight';
 import { CardInsight } from '../../src/components/CardInsight';
+import { CardConversa } from '../../src/components/CardConversa';
 import { encerrarSono, resumirSonoEmAndamento } from '../../src/lib/registros';
 import { formatarIdade, formatarIdadeCorrigida } from '../../src/lib/idade';
 import { formatarMomento } from '../../src/lib/horario';
@@ -124,6 +125,8 @@ export default function HojeScreen() {
           texto={insight.texto}
           aprendendo={insight.aprendendo}
         />
+
+        <CardConversa nomeBebe={bebeAtivo.name} onPress={() => router.push('/(tabs)/ninna')} />
 
         {/* A divisória do protótipo: 1px, `linha`, entre o bloco de cima e os
             atalhos. O documento especifica UMA — esta. */}

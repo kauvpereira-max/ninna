@@ -198,6 +198,8 @@ export const radius = {
   md: 16,
   /** Mini-cards de estatística. O menor raio de card do protótipo. */
   mini: 12,
+  /** O card "Converse com a Ninna" — único elemento com 22 no protótipo. */
+  conversa: 22,
   /** Cards de conteúdo — o raio mais comum do protótipo. Entre `md` e `lg`. */
   card: 20,
   lg: 24,
@@ -262,6 +264,9 @@ export const typography = {
    * rótulo de painel.
    */
   fraseMonitoramento: { fontSize: 17.5, lineHeight: 27, fontFamily: 'NunitoSans_600SemiBold' },
+
+  /** Título de card ("Converse com a Ninna"): Fredoka 16,5. */
+  tituloCard: { fontSize: 16.5, lineHeight: 22, fontFamily: 'Fredoka_600SemiBold' },
 
   /**
    * A saudação da Home: Fredoka 25 em SemiBold.
