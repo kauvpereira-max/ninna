@@ -301,6 +301,22 @@ export type CampoSchema =
       /** Multiplicador até a unidade da coluna: minutos → segundos usa 60. */
       escala: number;
       digitos: number;
+      /**
+       * De quanto em quanto o −/+ anda. **Presente = a tela desenha um STEPPER;
+       * ausente = campo com máscara.**
+       *
+       * O protótipo tem stepper de 10 em 10 para mL (`Math.min(300, ml + 10)`),
+       * e ele NÃO generaliza: dos 13 campos numéricos do app, `peso` vai de 0,5
+       * a 30 e `dose` de 0,1 a 1000. Andar de 10 em 10 ali não é impreciso — é
+       * inútil, e para a dose seria perigoso.
+       *
+       * Por isso o passo é declarado campo a campo em vez de global: quem tem
+       * unidade grossa e faixa curta ganha stepper; quem precisa do número exato
+       * continua digitando. A tela não decide isso, o schema decide.
+       */
+      passo?: number;
+      /** A unidade ao lado do numero no stepper: "ml", "min". So faz sentido com `passo`. */
+      unidade?: string;
       placeholder: string;
       erroFaixa: string;
       /**
@@ -423,6 +439,10 @@ const MILILITROS = (rotulo: string, erroFalta: string): CampoSchema => ({
   max: 500,
   escala: 1,
   digitos: 3,
+  // Do protótipo: mlPlus anda de 10 em 10. A faixa dele era 0–300; aqui a
+  // faixa do schema (5–500) manda, e o passo apenas anda dentro dela.
+  passo: 10,
+  unidade: 'ml',
   obrigatorio: true,
   erroFalta,
   erroFaixa: erroFalta,
@@ -516,6 +536,9 @@ const DURACAO = (rotulo: string, placeholder: string): CampoSchema => ({
   max: MAX_DURACAO_MIN,
   escala: 60,
   digitos: 3,
+  // Minuto e unidade grossa e a faixa e curta (1–180): stepper serve.
+  passo: 5,
+  unidade: 'min',
   obrigatorio: false,
   erroFaixa: `Duração em minutos, de 1 a ${MAX_DURACAO_MIN}.`,
 });
@@ -559,6 +582,12 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
         max: 500,
         escala: 1,
         digitos: 3,
+        // Mesmo passo do `MILILITROS`, e a duplicação é o ponto: este campo é
+        // declarado à mão em vez de usar a fábrica, então tudo que ela ganha
+        // precisa ser copiado aqui. Foi assim que ele ficou de fora do stepper
+        // na primeira tentativa — e ele é justamente o que o protótipo desenha.
+        passo: 10,
+        unidade: 'ml',
         obrigatorio: true,
         erroFalta: 'Quantidade em ml, ex.: 90.',
         erroFaixa: 'Quantidade em ml, ex.: 90.',

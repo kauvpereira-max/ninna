@@ -1123,6 +1123,55 @@ checar(
   comoSeFosseCriar ? `criando daria dia ${comoSeFosseCriar.getDate()}, editando dá 9` : 'null'
 );
 
+console.log('\n— o passo do stepper: quem tem, quem não tem, e por quê —\n');
+
+const numericos = TIPOS_REGISTRO.flatMap((t) =>
+  SCHEMAS[t].campos
+    .map((c) => resolverCampo(c, {}))
+    .filter((c): c is Extract<CampoSchema, { entrada: 'numero' }> => c.entrada === 'numero')
+    .map((c) => ({ tipo: t, campo: c }))
+);
+
+// A INVARIANTE QUE QUEBROU: `mamadeira` declara a quantidade à mão em vez de
+// usar a fábrica MILILITROS, e por isso nasceu sem `passo` — justamente o campo
+// que o protótipo desenha como stepper. Mesma coluna tem que ter mesmo passo.
+const porColuna = new Map<string, Set<number | undefined>>();
+for (const { campo } of numericos) {
+  // Campo sem coluna vive no `dados` (jsonb) e não divide gaveta com ninguém —
+  // a invariante é sobre quem COMPARTILHA coluna, que é onde a fábrica copiada
+  // à mão diverge da original.
+  if (!campo.coluna) continue;
+  if (!porColuna.has(campo.coluna)) porColuna.set(campo.coluna, new Set());
+  porColuna.get(campo.coluna)!.add(campo.passo);
+}
+const divergentes = [...porColuna.entries()].filter(([, passos]) => passos.size > 1);
+checar(
+  'campos na MESMA coluna têm o mesmo passo',
+  divergentes.length === 0,
+  divergentes.length
+    ? `divergem: ${divergentes.map(([c, p]) => `${c} → ${[...p].join('/')}`).join(', ')}`
+    : 'é o que pega a fábrica copiada à mão'
+);
+
+// O CONTROLE, e ele é o que dá sentido ao caso acima: passo NÃO é para todo
+// campo numérico. Peso vai de 0,5 a 30 e dose de 0,1 a 1000 — andar de 10 em 10
+// ali não é impreciso, é inútil, e na dose seria perigoso.
+const comPassoQueNaoDeviam = numericos.filter(
+  ({ campo }) => campo.passo !== undefined && campo.max - campo.min < 50
+);
+checar(
+  'campo de faixa curta e fina NÃO ganha stepper',
+  comPassoQueNaoDeviam.length === 0,
+  comPassoQueNaoDeviam.length
+    ? `ganharam sem dever: ${comPassoQueNaoDeviam.map((x) => x.campo.chave).join(', ')}`
+    : 'peso, altura e perímetro seguem digitados'
+);
+checar(
+  '…e o passo nunca é maior que a faixa que ele percorre',
+  numericos.every(({ campo }) => campo.passo === undefined || campo.passo <= campo.max - campo.min),
+  'passo maior que a faixa faria o botão pular de mínimo a máximo'
+);
+
 console.log('\n— o botão nasce desabilitado quando falta campo obrigatório —\n');
 
 // O que o CTA pergunta ao schema. É mais estreito que `validarRegistro` de
