@@ -1,27 +1,20 @@
-# Ninna — termo de participação no beta fechado
+# Ninna — termo das primeiras usuárias
 
-*Versão 1 — 13/08/2026*
+*Versão 2 — 13/08/2026*
 
-> **Campos preenchidos em 13/08/2026.** Não sobrou marcador neste arquivo.
+> **Versão 2, e ela substitui a 1 inteira.** A versão 1 descrevia um beta fechado
+> de 21 dias que acabava em 25/08/2026, com exclusão de tudo nessa data por
+> padrão. Esse desenho morreu (`PRODUTO.md` §8): a Ninna é um produto que cobra e
+> que continua existindo, e a embaixadora entra cedo, com cortesia, não num teste
+> com data de fim.
 >
-> ⚠️ **O e-mail abaixo é provisório.** É o `kauu2804@gmail.com` enquanto o
-> `contato@ninnaappbr.com.br` não recebe. Trocar qualquer palavra depois de
-> enviado obriga a subir para a versão 2 e recolher o aceite de novo — é o que dá
-> sentido à frase fixa do fim. Ou seja: **ou o contato@ passa a funcionar antes
-> do envio, ou este termo vai com o gmail e fica com ele** para estas mães.
+> **Se alguém já aceitou a versão 1, o aceite dela não vale para esta.** Recolher
+> de novo, com a frase da versão 2.
 >
-> 🛑 **ESTE TERMO NÃO PODE SER ENVIADO COMO ESTÁ — e o problema não é de campo.**
->
-> O `PRODUTO.md` §8 diz que "o prazo de 21 dias e a data de 25/08" **morreram**.
-> Este arquivo ainda promete, em dois lugares, um teste que acaba em 25/08/2026 e
-> a exclusão de tudo nessa data por padrão. Isso deixou de ser verdade.
->
-> O mesmo §8 já prescreve o desfecho: **o termo vira versão 2 e o aceite é
-> recolhido de novo.** E isso depende de uma decisão ainda aberta no §7 — "a E1
-> continua?".
->
-> Os campos estão preenchidos e corretos. **A data não.** Preencher os campos
-> deixou o documento com cara de pronto, e ele não está.
+> **E-mail: `kauu2804@gmail.com`.** Conferido em 13/08/2026 — o
+> `contato@ninnaappbr.com.br` ainda não recebe (o apex do domínio não tem MX).
+> Pela regra do próprio termo, trocar depois do envio custaria uma versão 3, então
+> este vai com o gmail e fica com ele.
 >
 > **Apagar este bloco antes de gerar o PDF.**
 
@@ -30,10 +23,15 @@ curto, e está escrito pra ser lido de uma vez só, com bebê no colo.
 
 ## O que a Ninna é hoje
 
-Um app em construção, em teste fechado com três mães, até **25 de agosto de
-2026**. Não é produto pronto: pode ter erro, pode mudar de um dia pro outro, pode
-ficar fora do ar por algumas horas. Se algo te atrapalhar, me avisa — é
-exatamente pra isso que este teste existe.
+Um produto novo, em evolução — e **você está entre as primeiras a usar**.
+
+Isso tem os dois lados, e os dois são verdade: você vê tudo antes de todo mundo e
+o que você falar muda o app de verdade; e, por ser novo, ele pode ter erro, pode
+mudar de um dia pro outro, pode ficar fora do ar por algumas horas. Se algo te
+atrapalhar, me avisa. Não tem pergunta boba aqui.
+
+Não é um teste com data para acabar. A Ninna continua existindo, e você continua
+usando pelo tempo que quiser.
 
 ## Quem faz a Ninna
 
@@ -43,6 +41,15 @@ num contrato ou numa cobrança.
 
 No app você vê só "Ninna". É a mesma coisa: mesma pessoa, mesma empresa, mesmo
 responsável por tudo que está escrito aqui.
+
+## Quanto você paga: nada
+
+A Ninna é um app pago, mas **o seu acesso é cortesia**, porque você chegou no
+começo. Não tem prazo escondido e não vai aparecer cobrança nenhuma sem eu te
+avisar antes.
+
+Se um dia essa cortesia acabar, eu te falo primeiro e **quem decide o que fazer é
+você**. O que não acontece de jeito nenhum é virar cobrança sozinha.
 
 ## O que eu guardo
 
@@ -68,6 +75,15 @@ problema seu, te aviso antes.
 Rotina de bebê é dado sensível. Não é vendido, não é compartilhado com ninguém e
 não vai para publicidade.
 
+## Por quanto tempo eles ficam
+
+**Enquanto você quiser usar.** Seus registros são seus e não têm prazo de
+validade: eles ficam guardados na sua conta, e você pode voltar neles daqui a um
+ano.
+
+Eles somem quando **você** pedir — nunca por conta própria, nunca numa data que
+eu escolhi.
+
 ## A Ninna não dá conselho médico
 
 Ela descreve o que você registrou — "por volta de tal horário", "mais ou menos
@@ -77,8 +93,8 @@ preocupada com alguma coisa, confie no seu instinto e fale com ele.
 
 ## Como sair e apagar tudo
 
-Me manda uma mensagem no WhatsApp (11 91330-9213) dizendo "quero apagar meus
-dados".
+A qualquer momento, sem data e sem prazo para se decidir. Me manda uma mensagem
+no WhatsApp (11 91330-9213) dizendo "quero apagar meus dados".
 
 - confirmo o recebimento em até **1 dia**;
 - apago tudo em até **2 dias**: sua conta, seu bebê e todos os registros.
@@ -88,17 +104,11 @@ Uma ressalva honesta: o serviço que hospeda o banco guarda backups automáticos
 por alguns dias e eles expiram sozinhos — depois disso não sobra nada em lugar
 nenhum.
 
-## O que acontece no fim do teste, em 25/08/2026
-
-Por padrão, **eu apago tudo**. Se você quiser continuar usando e manter seus
-registros, é só me dizer — mas isso precisa ser dito: o silêncio significa
-apagar.
-
 ## Pra aceitar
 
 Se estiver tudo certo pra você, me responde aqui no WhatsApp com esta frase:
 
-> Li o termo versão 1 e aceito participar do beta da Ninna.
+> Li o termo versão 2 e aceito usar a Ninna.
 
 Guardo essa mensagem como registro do seu aceite. Você pode desistir quando
 quiser, sem explicação.

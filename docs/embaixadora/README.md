@@ -61,23 +61,27 @@ Não sobrou nenhum `[MAIÚSCULAS ENTRE COLCHETES]` na pasta. O que foi para onde
 | Nome | Kauane Pereira |
 | Empresa | Interdemo ME, CNPJ 64.006.872/0001-40 (dígitos conferidos) |
 | WhatsApp | 11 91330-9213 · `wa.me/5511913309213` |
-| E-mail | `kauu2804@gmail.com` — **provisório**, ver abaixo |
+| E-mail | `kauu2804@gmail.com` — decidido, ver abaixo |
 | Região do banco | Brasil (São Paulo) — já estava escrito no termo |
 
 E o número foi para `src/lib/contato.ts`, que é o destino do botão "Relatar
 problema". Com ele preenchido, o item **passa a aparecer** na aba Mais.
 
-### Duas coisas que continuam abertas
+### O e-mail — decidido em 13/08/2026
 
-**O e-mail é provisório.** É o gmail enquanto o `contato@ninnaappbr.com.br` não
-recebe. E isso não é detalhe de forma: o termo diz que trocar qualquer palavra
-depois de enviado obriga a subir para a versão 2 e recolher o aceite de novo.
-Então ou o `contato@` funciona **antes** do envio, ou o termo vai com o gmail e
-fica com ele para estas mães.
+**Fica o gmail.** O `contato@ninnaappbr.com.br` não recebe: o apex do domínio
+está sem MX, conferido no DNS autoritativo e não no painel. Como trocar qualquer
+palavra depois do envio custa uma versão nova do termo e um aceite recolhido de
+novo, o `kauu2804@gmail.com` entra na versão 2 e fica.
 
-**O link do app não é campo.** O `roteiro-instalacao.md` fala em "o link que eu
-te mandei", e ele viaja na mensagem do WhatsApp de propósito — PDF enviado não
-se edita, e o endereço ainda pode mudar para o domínio próprio.
+Quando o `contato@` passar a receber, ele **não** substitui este por conta
+própria — vira versão 3, ou espera a próxima que acontecer por outro motivo.
+
+### O link do app não é campo
+
+O `roteiro-instalacao.md` fala em "o link que eu te mandei", e ele viaja na
+mensagem do WhatsApp de propósito — PDF enviado não se edita, e o endereço ainda
+pode mudar para o domínio próprio.
 
 Os blocos marcados como "apagar antes de gerar o PDF" são instruções para você, e
 não podem chegar até ela.
@@ -86,8 +90,11 @@ não podem chegar até ela.
 
 1. O termo vai como PDF **com versão e data no topo**. Não como mensagem solta,
    que se perde na rolagem.
-2. Ela responde a frase fixa: *"Li o termo versão 1 e aceito participar do beta
-   da Ninna."*
+2. Ela responde a frase fixa: *"Li o termo versão 2 e aceito usar a Ninna."*
+
+   ⚠️ A frase mudou junto com a versão 2 — a da versão 1 dizia "participar do
+   beta", e beta com data de fim é exatamente o que deixou de existir. Aceite
+   colhido com a frase antiga é aceite de um documento que não está mais em uso.
 3. Você exporta a conversa (WhatsApp > conversa > Exportar conversa > Sem mídia)
    e guarda junto com uma cópia do PDF exato que ela recebeu. Print sozinho é
    frágil; o export traz data e hora.
