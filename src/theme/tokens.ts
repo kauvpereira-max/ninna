@@ -42,6 +42,16 @@ export const colors = {
   // Texto de headline (mais contraste que neutro600)
   headline: '#2B211D',
 
+  /**
+   * Texto terciário — o rótulo abaixo do detalhe no item de registro.
+   *
+   * Não é o `neutro300` (`#C4AA9A`), e a diferença é de papel, não de tom: o
+   * `neutro300` é chevron, ícone de estado vazio e placeholder. Este é texto
+   * que se lê. Sobrescrever um com o outro juntaria dois papéis que o protótipo
+   * separa.
+   */
+  textoTerciario: '#B8A69C',
+
   // ------------------------------------------------------------------
   // OS DOIS CORAIS, E ELES NÃO SÃO O MESMO
   //
@@ -138,6 +148,25 @@ export const typography = {
   // então a família não resolvia e caía no fallback do sistema. Regular é o mais próximo
   // disponível — trocar de volta pra Medium quando o arquivo da fonte entrar no projeto.
   caption: { fontSize: 12, lineHeight: 16, fontFamily: 'NunitoSans_400Regular' },
+
+  // ------------------------------------------------------------------
+  // Entradas do protótipo — nomeadas pelo elemento, não pela escala
+  //
+  // A escala acima é nomeada por TAMANHO, e cada entrada fixa uma família — ou
+  // seja, o peso vem carona no nome. O protótipo usa o mesmo tamanho em pesos
+  // diferentes (18px em 500 e em 600; 16px em 700 onde o `bodyLarge` tem 400),
+  // e isso não cabe numa escala de tamanho.
+  //
+  // Enquanto forem poucas, entram nomeadas pelo elemento — como o `radius.card`.
+  // Se virarem muitas, aí a tipografia passa a ser `{ tamanho, peso }`, e isso é
+  // refatoração, não item de bloco.
+  // ------------------------------------------------------------------
+
+  /** Item da lista, o detalhe: 16/700 no protótipo, contra o 16/400 do `bodyLarge`. */
+  itemDetalhe: { fontSize: 16, lineHeight: 24, fontFamily: 'NunitoSans_700Bold' },
+
+  /** O rótulo abaixo dele. O 12,5 é literal do protótipo, não arredondamento. */
+  itemRotulo: { fontSize: 12.5, lineHeight: 18, fontFamily: 'NunitoSans_600SemiBold' },
 } as const;
 
 // Elevação — sombra sempre suave, nunca pesada/3D (princípio do design system)

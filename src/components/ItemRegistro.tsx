@@ -51,9 +51,13 @@ export function ItemRegistro({ registro, horaLabel, resumo, onPress, acao }: Pro
   );
 }
 
-// Estilo herdado da lista da Home, onde este item nasceu — inclusive a elevação e
-// o peso SemiBold do resumo. A Rotina passa a usar o mesmo: duas listas de
-// registro com aparências diferentes seria a mãe achando que são duas coisas.
+// Estilo herdado da lista da Home, onde este item nasceu — inclusive a elevação.
+// A Rotina usa o mesmo: duas listas de registro com aparências diferentes seria a
+// mãe achando que são duas coisas.
+//
+// O resumo era `body` (14) em SemiBold; o protótipo pede 16 em Bold, e o rótulo
+// sai de 12/Regular para 12,5/SemiBold. É a diferença que mais muda a leitura da
+// lista, e ela é de PESO, não de layout.
 const styles = StyleSheet.create({
   item: {
     flexDirection: 'row',
@@ -74,9 +78,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  resumo: { ...typography.body, color: colors.headline, fontFamily: 'NunitoSans_600SemiBold' },
-  // Sono em andamento é timer ativo — um dos usos que o design system libera pro coral.
+  resumo: { ...typography.itemDetalhe, color: colors.headline },
+  // Sono em andamento é timer ativo — vigilância, que é o uso do coral #E15C42.
   ativo: { color: colors.coral600 },
-  categoria: { ...typography.caption, color: colors.neutro400 },
+  categoria: { ...typography.itemRotulo, color: colors.textoTerciario },
   hora: { ...typography.caption, color: colors.neutro500 },
 });
