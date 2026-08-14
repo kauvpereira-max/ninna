@@ -68,7 +68,7 @@ export function ItemRegistro({ registro, horaLabel, resumo, onPress, acao }: Pro
 
       <View style={styles.anel}>
         <View style={[styles.circulo, { backgroundColor: visual.bg }]}>
-          <IconeDoTipo nome={visual.icon} tamanho={20} cor={visual.tinta} />
+          <IconeDoTipo tipo={registro.tipo} tamanho={20} />
         </View>
       </View>
 

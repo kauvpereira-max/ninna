@@ -1,5 +1,5 @@
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
-import { IconeDoTipo } from './IconeDoTipo';
+import { Silhueta } from './IconeDoTipo';
 import type { NomeDoIcone } from '../theme/icones';
 import { colors, spacing, radius, typography } from '../theme/tokens';
 import type { ChaveDePadrao } from '../lib/copyInsight';
@@ -95,7 +95,7 @@ function Card({
   return (
     <View style={[estilos.card, { backgroundColor: cor.fundo, width: largura }]}>
       <View style={estilos.chip}>
-        <IconeDoTipo nome={cor.icone} tamanho={20} cor={cor.tinta} />
+        <Silhueta nome={cor.icone} tamanho={20} cor={cor.tinta} />
       </View>
       <Text style={[estilos.texto, { color: cor.tinta }]}>{texto}</Text>
     </View>

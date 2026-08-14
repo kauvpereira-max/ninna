@@ -2,7 +2,7 @@ import { View, Text, TextInput, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, typography } from '../theme/tokens';
 import { IconeDoTipo } from './IconeDoTipo';
-import type { NomeDoIcone } from '../theme/icones';
+import type { TipoRegistro } from '../lib/registros';
 import { proximoNoPasso } from '../lib/registroSchema.ts';
 
 /**
@@ -42,20 +42,18 @@ import { proximoNoPasso } from '../lib/registroSchema.ts';
  * que a Ninna sabe com certeza.
  */
 export function CardDeDica({
-  icone,
+  tipo,
   fundo,
-  tinta,
   texto,
 }: {
-  icone: NomeDoIcone;
+  tipo: TipoRegistro;
   fundo: string;
-  tinta: string;
   texto: string;
 }) {
   return (
     <View style={estilos.dica}>
       <View style={[estilos.dicaCirculo, { backgroundColor: fundo }]}>
-        <IconeDoTipo nome={icone} tamanho={30} cor={tinta} />
+        <IconeDoTipo tipo={tipo} tamanho={30} />
       </View>
       <Text style={estilos.dicaTexto}>{texto}</Text>
     </View>

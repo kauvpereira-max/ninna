@@ -403,9 +403,8 @@ export default function RegistroScreen() {
                 é instrução errada para quem está corrigindo um registro velho. */}
             {!editando ? (
               <CardDeDica
-                icone={CATEGORIA_POR_TIPO[tipo].icon}
+                tipo={tipo}
                 fundo={CATEGORIA_POR_TIPO[tipo].bg}
-                tinta={CATEGORIA_POR_TIPO[tipo].tinta}
                 texto={schema.dica(bebeAtivo.name)}
               />
             ) : null}

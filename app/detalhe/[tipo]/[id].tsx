@@ -141,7 +141,7 @@ export default function DetalheRegistroScreen() {
 
         <View style={styles.cabecalho}>
           <View style={[styles.badge, { backgroundColor: visual.bg }]}>
-            <IconeDoTipo nome={visual.icon} tamanho={24} cor={visual.tinta} />
+            <IconeDoTipo tipo={registro.tipo} tamanho={24} />
           </View>
           <Text style={styles.resumo}>{registro.resumo}</Text>
         </View>
