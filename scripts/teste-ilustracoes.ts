@@ -88,12 +88,28 @@ for (const [tipo, rel] of Object.entries(ILUSTRACAO)) {
 //
 // A lista é curta de propósito: ela é o lugar onde "não tem ilustração" para de
 // ser silêncio e vira uma frase que alguém escreveu.
-const SEM_ILUSTRACAO: Record<string, string> = {
-  circunferencia:
-    'o ic-head.png do protótipo é a MESMA menina do liz-full.png — cabelo cacheado, adereço rosa. ' +
-    'A 20px na timeline, onde Amamentar e Perímetro cefálico coexistem, viram o mesmo ícone. ' +
-    'Amamentar fica com a figura porque é o único tipo sem objeto; este cai na silhueta `donut`, ' +
-    'um anel de medida que não colide com nada. Decidido em 14/08/2026.',
+const SEM_ILUSTRACAO: Record<string, string> = {};
+
+/**
+ * ⚠️ Onde a tabela SAI do `PHOTO_ID` do protótipo, de propósito.
+ *
+ * Sem esta lista, as duas checagens abaixo reprovariam a decisão certa: a do
+ * mapeamento (porque o protótipo diz outro arquivo) e a de colisão (porque o PNG
+ * passa a servir dois tipos). Com ela, as duas continuam valendo para todo o
+ * resto — que é o ponto. Divergir precisa ser mais caro do que seguir.
+ */
+const DIVERGE_DO_PROTOTIPO: Record<string, { arquivo: string; porque: string }> = {
+  circunferencia: {
+    arquivo: 'ic-ruler.png',
+    porque:
+      'o ic-head.png do protótipo é a MESMA menina do liz-full.png — cabelo cacheado, adereço rosa. ' +
+      'A 20px na timeline, onde Amamentar e Perímetro cefálico coexistem, viravam o mesmo ícone. ' +
+      'Amamentar fica com a figura porque é o único tipo sem objeto. Aqui entra a régua da Altura: ' +
+      'as duas SÃO medidas com fita, e o rótulo desempata. Compartilhar é padrão do próprio ' +
+      'protótipo, que já reusa família de cor (verde em Mamadeira, Extração e Passeio). ' +
+      'A silhueta donut foi tentada antes e saiu: 15,8px de tinta contra 26,4 dos vizinhos, ' +
+      'e chapada entre ilustrações. Decidido em 14/08/2026.',
+  },
 };
 
 const tiposDoApp = [
@@ -162,32 +178,61 @@ const PHOTO_ID: Record<string, string> = {
 };
 
 for (const [tipo, rel] of Object.entries(ILUSTRACAO)) {
-  const esperado = PHOTO_ID[tipo];
+  const divergencia = DIVERGE_DO_PROTOTIPO[tipo];
+  const esperado = divergencia?.arquivo ?? PHOTO_ID[tipo];
   if (!esperado) {
     conferir(`"${tipo}" está no PHOTO_ID do protótipo`, false, 'tipo fora do mapeamento original — decida e registre');
     continue;
   }
   const posto = path.basename(rel);
   conferir(
-    `"${tipo}" aponta para o PNG do protótipo`,
+    divergencia ? `"${tipo}" segue a divergência declarada` : `"${tipo}" aponta para o PNG do protótipo`,
     posto === esperado,
-    `o protótipo diz ${esperado}, a tabela diz ${posto}`,
+    divergencia
+      ? `a divergência declara ${esperado}, a tabela diz ${posto}`
+      : `o protótipo diz ${esperado}, a tabela diz ${posto}`,
   );
 }
 
-// 4. Nenhum PNG serve a dois tipos — colisão é sintoma de copiar-e-colar.
+// 4. Nenhum PNG serve a dois tipos — SALVO compartilhamento declarado.
+//
+// Colisão continua sendo sintoma de copiar-e-colar em todo o resto. O que a
+// declaração compra é que o único par intencional não silencie os acidentais.
 const porArquivo = new Map<string, string[]>();
 for (const [tipo, rel] of Object.entries(ILUSTRACAO)) {
   const b = path.basename(rel);
   porArquivo.set(b, [...(porArquivo.get(b) ?? []), tipo]);
 }
 for (const [arq, tipos] of porArquivo) {
-  conferir(`"${arq}" serve a um tipo só`, tipos.length === 1, `usado por ${tipos.join(', ')}`);
+  if (tipos.length === 1) continue;
+  const declarados = tipos.filter((t) => DIVERGE_DO_PROTOTIPO[t]?.arquivo === arq);
+  conferir(
+    `"${arq}" serve a um tipo só, ou o extra é declarado`,
+    // Um dono original + os que declararam vir para cá. Dois indeclarados no
+    // mesmo arquivo continuam reprovando.
+    tipos.length - declarados.length === 1,
+    `usado por ${tipos.join(', ')} — declarados: ${declarados.join(', ') || 'nenhum'}`,
+  );
+}
+
+// 5. Divergência declarada tem que continuar sendo divergência.
+//
+// Mesmo motivo do PERMITIDOS do teste-copy-telas: entrada que virou igual ao
+// protótipo passa a autorizar em silêncio uma escolha que ninguém mais fez.
+for (const [tipo, d] of Object.entries(DIVERGE_DO_PROTOTIPO)) {
+  conferir(`a divergência de "${tipo}" é de um tipo que existe`, tiposDoApp.includes(tipo), 'o tipo saiu — apague a entrada');
+  conferir(`"${tipo}" ainda está na tabela`, tipo in ILUSTRACAO, 'saiu da tabela — a divergência ficou órfã');
+  conferir(
+    `a divergência de "${tipo}" ainda diverge`,
+    d.arquivo !== PHOTO_ID[tipo],
+    `virou igual ao protótipo (${d.arquivo}) — apague a entrada`,
+  );
+  conferir(`a divergência de "${tipo}" tem motivo escrito`, d.porque.trim().length > 40);
 }
 
 console.log(
   falhas === 0
-    ? `\nIlustrações: ${Object.keys(ILUSTRACAO).length} tipos com PNG, ${Object.keys(SEM_ILUSTRACAO).length} sem ilustração por decisão, mapeamento igual ao do protótipo.`
+    ? `\nIlustrações: ${Object.keys(ILUSTRACAO).length} tipos com PNG, ${Object.keys(SEM_ILUSTRACAO).length} sem ilustração e ${Object.keys(DIVERGE_DO_PROTOTIPO).length} divergência(s) — todas declaradas.`
     : `\n${falhas} falha(s) nas ilustrações.`,
 );
 

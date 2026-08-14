@@ -57,8 +57,8 @@ export const ILUSTRACAO: Partial<Record<TipoRegistro, ImageSourcePropType>> = {
   humor: require('../../assets/icones/ic-mood.png'),
   peso: require('../../assets/icones/ic-scale.png'),
   altura: require('../../assets/icones/ic-ruler.png'),
-  // ⚠️ `circunferencia` NÃO ENTRA, e a ausência é decisão — ver o bloco no fim
-  // deste arquivo. O `ic-head.png` fica no disco e não é requerido.
+  // ⚠️ COMPARTILHA a régua com `altura` — não é engano. Ver o bloco no fim.
+  circunferencia: require('../../assets/icones/ic-ruler.png'),
   atividade: require('../../assets/icones/ic-blocks.png'),
   passeio: require('../../assets/icones/ic-stroller.png'),
   leitura: require('../../assets/icones/ic-book.png'),
@@ -66,11 +66,11 @@ export const ILUSTRACAO: Partial<Record<TipoRegistro, ImageSourcePropType>> = {
 };
 
 /**
- * ⚠️ POR QUE O PERÍMETRO CEFÁLICO NÃO TEM ILUSTRAÇÃO
+ * ⚠️ POR QUE O PERÍMETRO CEFÁLICO USA A RÉGUA DA ALTURA
  *
  * O `ic-head.png` do protótipo é **a mesma menina do `liz-full.png`**: cabelo
  * castanho cacheado, adereço rosa na cabeça, corpo claro. A 30px na Home e a
- * 20px na timeline, Amamentar e Perímetro cefálico viram o mesmo ícone — e as
+ * 20px na timeline, Amamentar e Perímetro cefálico viravam o mesmo ícone — e as
  * duas coexistem na timeline, que é onde a mãe procura um registro rolando a
  * lista sem ler rótulo.
  *
@@ -78,15 +78,34 @@ export const ILUSTRACAO: Partial<Record<TipoRegistro, ImageSourcePropType>> = {
  * não há mamadeira, fralda nem termômetro para desenhar, e o app já é sobre um
  * bebê específico. Quem sai é o outro.
  *
- * No lugar entra a silhueta `donut` do `D` — um anel de medida, que não colide
- * com nada no conjunto e não precisa de arte nova. O `IconeDoTipo` já faz isso
- * sozinho: sem entrada aqui, ele cai na silhueta.
+ * ------------------------------------------------------------------
+ * A PRIMEIRA TENTATIVA FOI A SILHUETA `donut`, E ELA ESTAVA ERRADA
  *
- * **Isto não é pendência.** O `scripts/teste-ilustracoes.ts` declara a ausência
- * em `SEM_ILUSTRACAO` e reprova quem devolver o `circunferencia` para a tabela
- * acima — porque "consertar o que faltou" é exatamente o que alguém faria daqui
- * a três meses, e traria a colisão de volta.
+ * Resolvia a colisão e criava uma inconsistência de sistema. Medido na tela:
  *
- * O `ic-head.png` continua no disco, sem `require`: não é emitido no build, e
- * fica lá para o dia em que a decisão for outra.
+ *     donut ....................... 15,8px de tinta
+ *     média dos vizinhos .......... 26,4px
+ *
+ * 60% da marca dos outros, porque as duas reduções se multiplicam — a fração de
+ * 60% da silhueta, e o path do donut ocupando só 72% do próprio viewBox. Pior
+ * que o tamanho era a natureza: um anel **chapado** entre ilustrações pastel com
+ * sombra lia como marcador de lista, não como ícone de tipo.
+ *
+ * ------------------------------------------------------------------
+ * COMPARTILHAR ILUSTRAÇÃO É PADRÃO DO PROTÓTIPO, NÃO GAMBIARRA
+ *
+ * Ele já compartilha **família de cor** de propósito: verde cobre Mamadeira,
+ * Extração e Passeio. Ícone compartilhado entre dois tipos da mesma natureza é a
+ * mesma lógica — e Altura e Circunferência **são as duas medidas com fita**.
+ *
+ * O que desempata é o rótulo, que a timeline e o grid sempre mostram, do mesmo
+ * jeito que já desempata em outros pontos do app.
+ *
+ * O `scripts/teste-ilustracoes.ts` conhece esta divergência pelo nome: ela está
+ * declarada em `DIVERGE_DO_PROTOTIPO`, com motivo. Sem a declaração ele reprova
+ * — tanto o arquivo diferente do `PHOTO_ID` quanto o PNG servindo a dois tipos,
+ * que continua sendo sintoma de copiar-e-colar em todos os outros casos.
+ *
+ * O `ic-head.png` fica no disco sem `require`: não é emitido, e continua lá para
+ * o dia em que houver uma fita métrica própria.
  */
