@@ -82,18 +82,38 @@ export default function NinnaScreen() {
           contentContainerStyle={styles.scroll}
           onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })}
         >
-          <Text style={styles.titulo}>Ninna</Text>
+          {/* O cabeçalho do protótipo, sem o botão de voltar: lá isto é uma tela
+              empilhada; aqui é uma ABA, e a volta é a tab bar. Um voltar que
+              compete com ela ensinaria dois caminhos para a mesma coisa. */}
+          <View style={styles.cabecalho}>
+            <View style={styles.marca}>
+              <Ionicons name="chatbubble-ellipses" size={18} color={colors.rosa700} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.titulo}>Ninna</Text>
+              {bebeAtivo ? (
+                <Text style={styles.acompanhando}>Acompanhando {bebeAtivo.name}</Text>
+              ) : null}
+            </View>
+          </View>
 
           {falas.length === 0 ? (
             <View style={styles.vazio}>
-              {/* Diz o que ela É antes de dizer o que perguntar. A mãe que espera
-                  um chat sobre bebês vai se frustrar na primeira pergunta; a que
-                  sabe que é sobre os registros dela, não. */}
-              <Text style={styles.vazioTitulo}>
-                Eu sei o que você registrou{bebeAtivo ? ` de ${bebeAtivo.name}` : ''}.
-              </Text>
+              <View style={styles.circulo}>
+                <Ionicons name="chatbubble-ellipses" size={44} color={colors.rosa500} />
+              </View>
+
+              {/* ⚠️ O LIMITE VEM ANTES DA PROMESSA, e a ordem é a decisão.
+                  O protótipo convida: "pergunte sobre sono, mamadas, fases ou o
+                  que estiver te preocupando" — e "o que estiver te preocupando"
+                  é exatamente o que cai em `fora_de_escopo` e recebe a frase do
+                  pediatra. É a porta maior que a sala, na tela de entrada.
+                  Melhor ela ler o limite antes de formular a pergunta do que
+                  depois de receber a recusa. */}
+              <Text style={styles.vazioTitulo}>O que você quer saber?</Text>
               <Text style={styles.vazioTexto}>
-                Pergunta sobre horários, quantidades e o que vem se repetindo nos últimos dias.
+                Eu só sei o que você registrou{bebeAtivo ? ` de ${bebeAtivo.name}` : ''} — horários,
+                quantidades e o que vem se repetindo. Pergunte à vontade.
               </Text>
 
               <View style={styles.sugestoes}>
@@ -192,11 +212,50 @@ const styles = StyleSheet.create({
     maxWidth: 480,
     alignSelf: 'center',
   },
-  titulo: { ...typography.h1, color: colors.headline, marginBottom: spacing.lg },
+  cabecalho: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingBottom: 12,
+    marginBottom: spacing.respiro,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.linha,
+  },
+  marca: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.full,
+    backgroundColor: colors.rosa100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // 17 no protótipo, contra o `h1` de 26 que estava aqui. O nome dela não é o
+  // assunto da tela — a conversa é.
+  titulo: { ...typography.tituloCard, fontSize: 17, color: colors.headline },
+  acompanhando: { ...typography.itemRotulo, fontSize: 12, color: colors.neutro500 },
 
-  vazio: { gap: spacing.sm },
-  vazioTitulo: { ...typography.bodyLarge, color: colors.headline, fontFamily: 'NunitoSans_600SemiBold' },
-  vazioTexto: { ...typography.body, color: colors.neutro500 },
+  // Centralizado como no protótipo: o vazio é a tela inteira, não um aviso
+  // encostado à esquerda.
+  vazio: { alignItems: 'center', gap: 10, paddingTop: 26 },
+  circulo: {
+    width: 150,
+    height: 150,
+    borderRadius: radius.full,
+    backgroundColor: colors.rosa50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  vazioTitulo: { ...typography.h2, fontSize: 23, lineHeight: 28, color: colors.headline, textAlign: 'center' },
+  // `maxWidth: 270` é do protótipo, e não é enfeite: sem ele a frase estica até
+  // os 480 da coluna e vira uma linha longa e difícil de varrer com o olho.
+  vazioTexto: {
+    ...typography.saudacaoSub,
+    lineHeight: 22,
+    color: colors.neutro500,
+    textAlign: 'center',
+    maxWidth: 270,
+  },
   sugestoes: { marginTop: spacing.md, gap: spacing.sm },
   sugestao: {
     backgroundColor: colors.neutro0,

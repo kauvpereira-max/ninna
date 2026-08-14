@@ -458,7 +458,44 @@ menos 149,90. Conferido.
 > existia para preço — *o dado que vale é o que a Stripe cobra* — não precisou
 > ser usada.
 
-**9. O `object-position` do avatar não se aplica.** É enquadramento de foto, e o
+**9. A copy da aba Ninna é escrita do zero, e o limite vem ANTES da promessa.**
+
+O protótipo convida: *"Pergunte sobre sono, mamadas, **fases** ou **o que estiver
+te preocupando**."* As duas últimas são exatamente o que o assistente **recusa**
+— "fases" é conhecimento geral, e "o que estiver te preocupando" cai em
+`fora_de_escopo` e recebe a frase do pediatra. É a porta maior que a sala, na
+tela de entrada da conversa.
+
+O que ficou:
+
+> **O que você quer saber?**
+> Eu só sei o que você registrou de {bebê} — horários, quantidades e o que vem
+> se repetindo. Pergunte à vontade.
+
+Três decisões: **"saber"** em vez de "ajudar", porque ajudar inclui aconselhar e
+a Ninna não aconselha; **"só sei"** antes da lista, porque é melhor ela ler o
+limite antes de formular a pergunta do que depois de receber a recusa; e o artigo
+sumiu de "Acompanhando {bebê}", pela regra do `sex` nullable.
+
+**10. As três manchas radiais animadas ficam de fora — inteiras.**
+
+O protótipo tem três `radial-gradient` com `nnDrift` (16s, 21s, 19s). O
+`expo-linear-gradient` não faz gradiente radial, e o caminho seria
+`react-native-svg`.
+
+Ficam **fora**, não viram cor chapada: três manchas paradas são três blocos de
+cor sem a razão de existir — **o movimento era o ponto**. Se um dia o
+`react-native-svg` entrar por outro motivo, elas voltam.
+
+Pela mesma falta, o ícone da Ninna continua sendo o `chatbubble-ellipses`: o do
+protótipo é uma constelação de 40 círculos animados em SVG.
+
+**11. O cabeçalho da aba Ninna não tem botão de voltar.**
+
+No protótipo é uma tela empilhada; aqui é uma **aba**, e a volta é a tab bar. Um
+voltar que compete com ela ensinaria dois caminhos para a mesma coisa.
+
+**12. O `object-position` do avatar não se aplica.** É enquadramento de foto, e o
 avatar do app é a **inicial do nome num círculo**. Não há o que enquadrar.
 Quando houver foto de bebê, a propriedade volta a fazer sentido e este registro
 deixa de valer.
