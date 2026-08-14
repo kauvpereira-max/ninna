@@ -88,7 +88,13 @@ for (const [tipo, rel] of Object.entries(ILUSTRACAO)) {
 //
 // A lista é curta de propósito: ela é o lugar onde "não tem ilustração" para de
 // ser silêncio e vira uma frase que alguém escreveu.
-const SEM_ILUSTRACAO: Record<string, string> = {};
+const SEM_ILUSTRACAO: Record<string, string> = {
+  circunferencia:
+    'o ic-head.png do protótipo é a MESMA menina do liz-full.png — cabelo cacheado, adereço rosa. ' +
+    'A 20px na timeline, onde Amamentar e Perímetro cefálico coexistem, viram o mesmo ícone. ' +
+    'Amamentar fica com a figura porque é o único tipo sem objeto; este cai na silhueta `donut`, ' +
+    'um anel de medida que não colide com nada. Decidido em 14/08/2026.',
+};
 
 const tiposDoApp = [
   ...fs
@@ -109,6 +115,23 @@ for (const tipo of tiposDoApp) {
 
 for (const tipo of Object.keys(ILUSTRACAO)) {
   conferir(`"${tipo}" da tabela é um tipo de registro`, tiposDoApp.includes(tipo), 'sobrou da tabela ou o tipo saiu');
+}
+
+// ⚠️ A trava que faz a ausência VALER. Sem ela, `SEM_ILUSTRACAO` seria só um
+// comentário: bastaria alguém devolver o tipo à tabela — achando que faltava —
+// para a colisão voltar em silêncio, e o teste passaria, porque o `PHOTO_ID` do
+// protótipo continua dizendo que aquele PNG é daquele tipo.
+//
+// É o mesmo formato do `PERMITIDOS` do teste-copy-telas: exceção declarada tem
+// que continuar sendo exceção, e exceção que ninguém mais usa tem que sumir.
+for (const [tipo, motivo] of Object.entries(SEM_ILUSTRACAO)) {
+  conferir(
+    `"${tipo}" segue SEM ilustração, como foi decidido`,
+    !(tipo in ILUSTRACAO),
+    `voltou para a tabela. O motivo da ausência era:\n         ${motivo}`,
+  );
+  conferir(`a ausência de "${tipo}" é de um tipo que existe`, tiposDoApp.includes(tipo), 'o tipo saiu — apague a entrada');
+  conferir(`a ausência de "${tipo}" tem motivo escrito`, motivo.trim().length > 40);
 }
 
 // 3. ⚠️ O MAPEAMENTO É O DO PROTÓTIPO — a conferência que importa.
@@ -164,7 +187,7 @@ for (const [arq, tipos] of porArquivo) {
 
 console.log(
   falhas === 0
-    ? `\nIlustrações: ${Object.keys(ILUSTRACAO).length} tipos, arquivos no disco, mapeamento igual ao do protótipo.`
+    ? `\nIlustrações: ${Object.keys(ILUSTRACAO).length} tipos com PNG, ${Object.keys(SEM_ILUSTRACAO).length} sem ilustração por decisão, mapeamento igual ao do protótipo.`
     : `\n${falhas} falha(s) nas ilustrações.`,
 );
 

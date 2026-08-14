@@ -57,9 +57,36 @@ export const ILUSTRACAO: Partial<Record<TipoRegistro, ImageSourcePropType>> = {
   humor: require('../../assets/icones/ic-mood.png'),
   peso: require('../../assets/icones/ic-scale.png'),
   altura: require('../../assets/icones/ic-ruler.png'),
-  circunferencia: require('../../assets/icones/ic-head.png'),
+  // ⚠️ `circunferencia` NÃO ENTRA, e a ausência é decisão — ver o bloco no fim
+  // deste arquivo. O `ic-head.png` fica no disco e não é requerido.
   atividade: require('../../assets/icones/ic-blocks.png'),
   passeio: require('../../assets/icones/ic-stroller.png'),
   leitura: require('../../assets/icones/ic-book.png'),
   vacina: require('../../assets/icones/ic-syringe.png'),
 };
+
+/**
+ * ⚠️ POR QUE O PERÍMETRO CEFÁLICO NÃO TEM ILUSTRAÇÃO
+ *
+ * O `ic-head.png` do protótipo é **a mesma menina do `liz-full.png`**: cabelo
+ * castanho cacheado, adereço rosa na cabeça, corpo claro. A 30px na Home e a
+ * 20px na timeline, Amamentar e Perímetro cefálico viram o mesmo ícone — e as
+ * duas coexistem na timeline, que é onde a mãe procura um registro rolando a
+ * lista sem ler rótulo.
+ *
+ * Amamentar fica com a figura da criança porque é o único tipo **sem objeto**:
+ * não há mamadeira, fralda nem termômetro para desenhar, e o app já é sobre um
+ * bebê específico. Quem sai é o outro.
+ *
+ * No lugar entra a silhueta `donut` do `D` — um anel de medida, que não colide
+ * com nada no conjunto e não precisa de arte nova. O `IconeDoTipo` já faz isso
+ * sozinho: sem entrada aqui, ele cai na silhueta.
+ *
+ * **Isto não é pendência.** O `scripts/teste-ilustracoes.ts` declara a ausência
+ * em `SEM_ILUSTRACAO` e reprova quem devolver o `circunferencia` para a tabela
+ * acima — porque "consertar o que faltou" é exatamente o que alguém faria daqui
+ * a três meses, e traria a colisão de volta.
+ *
+ * O `ic-head.png` continua no disco, sem `require`: não é emitido no build, e
+ * fica lá para o dia em que a decisão for outra.
+ */
