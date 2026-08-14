@@ -173,7 +173,13 @@ export function ManchasDaNinna() {
     <View
       pointerEvents="none"
       accessible={false}
+      // Os três juntos, porque cada um cobre uma plataforma e nenhum cobre as
+      // três: `importantForAccessibility` é Android, `accessibilityElementsHidden`
+      // é iOS, e `aria-hidden` é a web. Conferido no navegador em 14/08/2026 — só
+      // com os dois primeiros, o atributo saía `null` no DOM.
       importantForAccessibility="no-hide-descendants"
+      accessibilityElementsHidden
+      aria-hidden
       style={StyleSheet.absoluteFill}
     >
       {MANCHAS.map((m) => (
