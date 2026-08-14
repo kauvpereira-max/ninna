@@ -41,9 +41,28 @@ import type { TipoRegistro } from '../lib/registros';
  * exato e não sobra folga para posicionar. Medido: o `liz-full.png` é 512×512
  * com margem transparente zero nos quatro lados. Traduzir seria escrever um
  * mecanismo de alinhamento que nunca alinha.
+ *
+ * ------------------------------------------------------------------
+ * ⚠️ O TAMANHO VEM DO CÍRCULO, E AS DUAS CAMADAS NÃO USAM A MESMA FRAÇÃO
+ *
+ * O protótipo desenha, dentro do mesmo círculo pastel:
+ *
+ *     70px  ->  PNG 56px (80%)   silhueta 42px (60%)
+ *     66px  ->  PNG 52px (79%)   silhueta 40px (61%)
+ *
+ * Não é inconsistência dele: a silhueta PREENCHE o próprio viewBox, e a
+ * ilustração tem margem transparente por dentro. Igualar as duas frações
+ * deixaria uma pequena e a outra estourando.
+ *
+ * Por isso quem chama passa o **círculo**, não o ícone. Passar o ícone foi o que
+ * fez tudo sair a 43–54% do círculo na primeira versão: aqueles px estavam
+ * calibrados para silhueta de uma cor, e a troca por ilustração não os reviu.
+ * Ninguém nota porque silhueta pequena continua legível — ilustração pequena
+ * vira um selo perdido no meio do pastel. Conferido no navegador em 14/08/2026.
  */
-export function IconeDoTipo({ tipo, tamanho }: { tipo: TipoRegistro; tamanho: number }) {
+export function IconeDoTipo({ tipo, circulo }: { tipo: TipoRegistro; circulo: number }) {
   const ilustracao = ILUSTRACAO[tipo];
+  const tamanho = Math.round(circulo * (ilustracao ? 0.8 : 0.6));
   if (ilustracao) {
     return (
       <Image

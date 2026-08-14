@@ -53,7 +53,7 @@ export function CardDeDica({
   return (
     <View style={estilos.dica}>
       <View style={[estilos.dicaCirculo, { backgroundColor: fundo }]}>
-        <IconeDoTipo tipo={tipo} tamanho={30} />
+        <IconeDoTipo tipo={tipo} circulo={56} />
       </View>
       <Text style={estilos.dicaTexto}>{texto}</Text>
     </View>

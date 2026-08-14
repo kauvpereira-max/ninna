@@ -65,7 +65,7 @@ export default function TiposScreen() {
               style={styles.item}
             >
               <View style={[styles.badge, { backgroundColor: c.bg }]}>
-                <IconeDoTipo tipo={c.key} tamanho={20} />
+                <IconeDoTipo tipo={c.key} circulo={36} />
               </View>
               <Text style={styles.itemLabel}>{c.label}</Text>
               <Ionicons name="chevron-forward" size={18} color={colors.neutro400} />

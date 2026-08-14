@@ -152,7 +152,7 @@ export default function HojeScreen() {
               style={styles.categoriaItem}
             >
               <View style={[styles.categoriaBadge, { backgroundColor: c.bg }]}>
-                <IconeDoTipo tipo={c.key} tamanho={30} />
+                <IconeDoTipo tipo={c.key} circulo={70} />
                 {/* O "+" do canto: 20px, branco translúcido. Diz que o círculo
                     ADICIONA, e não que ele filtra ou abre — a mesma dúvida que
                     fez o último item do grid se chamar "Mais" e não "Registros". */}
