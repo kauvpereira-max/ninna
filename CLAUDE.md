@@ -488,6 +488,27 @@ A terceira linha da tabela é a mais útil das três: **eu escrevi a violação
 enquanto aplicava a regra nos outros dois.** As varreduras existem porque quem
 escreve não se pega.
 
+## Decisão em aberto: o app presume que quem lê é a mãe
+
+A varredura de gênero cobre o **bebê**, e só ele — inclusive na regra do plural
+("vocês duas"), que reprova por presumir o gênero do bebê por tabela, não o de
+quem lê. Sobre quem lê, o app presume mulher em todo lugar: *"Bem-vinda"*, *"se
+você estiver preocupada"*, *"a voz da mãe já é história o bastante"*.
+
+**Isso não é descuido — é o público declarado**: mães de primeira viagem. E
+diferente do `sex` do bebê, aqui não existe campo nullable: o app nunca pergunta
+quem está segurando o telefone.
+
+A pergunta em aberto é de produto, não de copy: **a Ninna um dia fala com o pai,
+ou com outra cuidadora?** Enquanto ninguém responder isso, não há regra a aplicar
+— reescrever para o neutro custaria o calor de toda a copy sem ninguém do outro
+lado para ganhar com a troca.
+
+⚠️ **E por isso não vira varredura.** Uma regra que reprova "sozinha" e
+"cansada" reprovaria a copy inteira hoje, seria desligada na primeira rodada, e
+levaria junto o que ela pegava. Se a decisão de produto mudar, a regra nasce
+**junto com** a reescrita, não antes dela.
+
 ## Copy de saúde — regras travadas
 
 Ao salvar QUALQUER sintoma, o app mostra uma linha e devolve a decisão para a

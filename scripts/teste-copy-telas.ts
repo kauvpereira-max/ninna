@@ -79,6 +79,25 @@ const REGRAS: { nome: string; padrao: RegExp; alvo?: RegExp; explica: string }[]
     padrao: /\([oa]s?\)|\b[oa]\/[oa]\b/i,
     explica: '"agitado(a)" não resolve: vira substantivo ("Agitação")',
   },
+  {
+    /**
+     * O gênero do bebê ESCONDIDO NUM PLURAL — achado em 14/08/2026, na dica de
+     * banho do protótipo: *"Um momento só de vocês duas."*
+     *
+     * Não é família nova. Contar duas pessoas do mesmo gênero presume o gênero
+     * do bebê **por tabela**: se for menino, "vocês duas" já está errado pela
+     * regra do `sex` nullable que existe desde sempre — só que escrita de um
+     * jeito que nenhuma das cinco regras enxergava.
+     *
+     * ⚠️ `as duas` ficou DE FORA de propósito. "As duas mamadas da manhã" é copy
+     * legítima, e uma regra que reprova texto certo é desligada na primeira vez
+     * que atrapalha — aí some junto com o que ela pegava. As formas aqui são as
+     * inequivocamente pessoais.
+     */
+    nome: 'gênero do bebê escondido num plural que inclui a mãe',
+    padrao: /\b(?:voc[êe]s|n[óo]s)\s+duas\b|\bambas\b|\bjunt(?:a|inha)s\b/i,
+    explica: 'contar duas pessoas do mesmo gênero presume o gênero do bebê',
+  },
 ];
 
 /**
@@ -146,6 +165,10 @@ const DEVE_REPROVAR = [
   'Seu filho dormiu bem',
   'Ele está agitado(a) hoje',
   "Bem-vind${sexo === 'F' ? 'a' : 'o'} de volta",
+  // Os três da regra do plural, que entrou em 14/08/2026.
+  'Um momento só de vocês duas.',
+  'Ambas dormiram bem',
+  'Vocês duas merecem esse descanso',
 ];
 
 const DEVE_PASSAR = [
@@ -155,6 +178,9 @@ const DEVE_PASSAR = [
   'Pelos últimos dias, as mamadas de ${n} têm ficado a ${formatarIntervalo(v)} uma da outra.',
   'Bem-vinda de volta',
   'Já registrei — pode conferir na aba Rotina.',
+  // O controle da regra do plural: numeral sobre COISA continua passando.
+  'as duas mamadas da manhã',
+  'Duas horas entre uma mamada e outra',
 ];
 
 for (const texto of DEVE_REPROVAR) {

@@ -349,6 +349,18 @@ export type SchemaRegistro = {
   subtitulo: string;
   acao: string;
   /**
+   * A dica do card do modal — uma frase por tipo, do protótipo.
+   *
+   * É FUNÇÃO e não string porque cinco delas dizem o nome do bebê, e o nome é o
+   * que dá calor a elas. No protótipo eram "a Liz" e "ela"; aqui o artigo sai e
+   * o pronome vira o nome, que é a única coisa que a Ninna sabe com certeza.
+   *
+   * Seis das vinte reprovavam nas varreduras — cinco por artigo ou pronome, e a
+   * de banho por "vocês duas", que conta duas pessoas do mesmo gênero e por
+   * tabela presume o do bebê.
+   */
+  dica: (nome: string) => string;
+  /**
    * Pede confirmação antes de salvar, com a frase que a mãe lê.
    *
    * Só o grupo de saúde usa. Dose errada é a única coisa neste app em que o erro
@@ -549,6 +561,7 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
     titulo: 'Amamentação',
     subtitulo: 'Anota rapidinho — dá pra ajustar depois.',
     acao: 'Salvar mamada',
+    dica: () => 'Deixe o peito de partida marcado — dá pra ajustar depois.',
     campos: [
       HORA('Começou às'),
       {
@@ -570,6 +583,7 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
     titulo: 'Mamadeira',
     subtitulo: 'Anota rapidinho — dá pra ajustar depois.',
     acao: 'Salvar mamadeira',
+    dica: (nome: string) => `Anote o volume que ${nome} aceitou. Sobrou? Também conta.`,
     campos: [
       HORA('Começou às'),
       {
@@ -610,6 +624,7 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
     titulo: 'Troca de fralda',
     subtitulo: 'Um toque e já volto pra Home.',
     acao: 'Salvar troca',
+    dica: () => 'Registre o conteúdo. Se estranhar algo, a cor ajuda a lembrar.',
     campos: [
       HORA('Horário da troca'),
       {
@@ -631,6 +646,7 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
     subtitulo:
       'Deixo o sono correndo a partir desse horário — você encerra na Home quando acabar.',
     acao: 'Começar sono',
+    dica: (nome: string) => `Toque em começar quando ${nome} pegar no sono.`,
     emAberto: true,
     // Sem observação: o sono é o único tipo sem campo de texto livre.
     campos: [HORA('Começou às')],
@@ -641,6 +657,7 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
     titulo: 'Humor',
     subtitulo: 'O estado do momento. Não saber o motivo também é uma resposta.',
     acao: 'Salvar humor',
+    dica: (nome: string) => `Como ${nome} está agora.`,
     campos: [
       HORA('Horário'),
       {
@@ -669,6 +686,7 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
     titulo: 'Sintoma',
     subtitulo: 'Anotar ajuda a enxergar o padrão depois — aqui não é diagnóstico.',
     acao: 'Salvar sintoma',
+    dica: () => 'Descreva o que você notou, com suas palavras.',
     campos: [
       HORA('Horário'),
       {
@@ -727,6 +745,7 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
     titulo: 'Banho',
     subtitulo: 'Um toque e já volto pra Home.',
     acao: 'Salvar banho',
+    dica: (nome: string) => `Um momento só seu com ${nome}.`,
     // Sem duração: ninguém abre cronômetro para dar banho. É um momento, e o que
     // se quer dele é a hora.
     campos: [HORA('Horário do banho'), OBSERVACAO],
@@ -737,6 +756,7 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
     titulo: 'Passeio',
     subtitulo: 'Anota rapidinho — dá pra ajustar depois.',
     acao: 'Salvar passeio',
+    dica: () => 'Ar fresco também é rotina.',
     campos: [
       HORA('Começou às'),
       DURACAO('Duração em minutos (opcional)', 'ex.: 40'),
@@ -747,8 +767,12 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
   leitura: {
     tipo: 'leitura',
     titulo: 'Leitura',
-    subtitulo: 'O que vocês leram juntas hoje.',
+    // Era "O que vocês leram juntas hoje" — e "juntas" conta duas pessoas do
+    // mesmo gênero, presumindo o do bebê por tabela. Pego pela regra do plural
+    // em 14/08/2026, na primeira vez que ela rodou.
+    subtitulo: 'O que vocês leram hoje.',
     acao: 'Salvar leitura',
+    dica: () => 'A voz da mãe já é história o bastante.',
     campos: [
       HORA('Começou às'),
       DURACAO('Duração em minutos (opcional)', 'ex.: 15'),
@@ -765,6 +789,7 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
     titulo: 'Atividade',
     subtitulo: 'O que vocês fizeram, e por quanto tempo.',
     acao: 'Salvar atividade',
+    dica: () => 'Tempo de barriga pra baixo, brincadeira, música.',
     campos: [
       HORA('Começou às'),
       {
@@ -794,6 +819,7 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
     titulo: 'Comida',
     subtitulo: 'O que deu pra comer, e quanto foi.',
     acao: 'Salvar refeição',
+    dica: (nome: string) => `O que ${nome} provou hoje — mesmo que tenha sido pouquinho.`,
     campos: [
       HORA('Horário'),
       {
@@ -818,6 +844,7 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
     titulo: 'Hidratação',
     subtitulo: 'Água, chá ou suco — fora das mamadas.',
     acao: 'Salvar',
+    dica: () => 'Água oferecida ao longo do dia.',
     campos: [
       HORA('Horário'),
       {
@@ -855,6 +882,7 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
     titulo: 'Extração',
     subtitulo: 'O leite que você tirou — só seu, não entra na conta das mamadas.',
     acao: 'Salvar extração',
+    dica: () => 'Guarde o volume e o horário da extração.',
     campos: [
       HORA('Começou às'),
       MILILITROS('Quantidade (ml)', 'Quantidade em ml, ex.: 120.'),
@@ -893,6 +921,7 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
     titulo: 'Peso',
     subtitulo: 'Anota como veio da balança.',
     acao: 'Salvar peso',
+    dica: () => 'Só um número. Nada além disso.',
     campos: [
       HORA('Horário'),
       MEDIDA({
@@ -919,6 +948,7 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
     titulo: 'Altura',
     subtitulo: 'Do topo da cabeça ao calcanhar.',
     acao: 'Salvar altura',
+    dica: () => 'Medida do momento.',
     campos: [
       HORA('Horário'),
       MEDIDA({
@@ -942,6 +972,7 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
     titulo: 'Perímetro cefálico',
     subtitulo: 'A medida da cabeça, como o pediatra faz.',
     acao: 'Salvar medida',
+    dica: () => 'A medida da cabeça, como o pediatra anota.',
     campos: [
       HORA('Horário'),
       MEDIDA({
@@ -983,6 +1014,7 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
     titulo: 'Medicação',
     subtitulo: 'O que foi dado, e quanto.',
     acao: 'Salvar medicação',
+    dica: () => 'Nome, dose e horário — pra não ficar na memória.',
     confirmaAntesDeSalvar: 'Confere antes de salvar — depois este registro não pode ser editado.',
     imutavel: true,
     campos: [
@@ -1012,6 +1044,7 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
     titulo: 'Vitamina',
     subtitulo: 'A suplementação do dia.',
     acao: 'Salvar vitamina',
+    dica: () => 'A gotinha do dia.',
     confirmaAntesDeSalvar: 'Confere antes de salvar — depois este registro não pode ser editado.',
     imutavel: true,
     campos: [
@@ -1038,6 +1071,7 @@ export const SCHEMAS: Record<TipoRegistro, SchemaRegistro> = {
     titulo: 'Vacina',
     subtitulo: 'O que foi aplicado, como está na caderneta.',
     acao: 'Salvar vacina',
+    dica: () => 'Qual dose e onde foi aplicada.',
     confirmaAntesDeSalvar: 'Confere antes de salvar — depois este registro não pode ser editado.',
     imutavel: true,
     campos: [

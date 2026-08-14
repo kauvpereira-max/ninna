@@ -19,12 +19,14 @@ import { AnelDoSono } from '../../src/components/AnelDoSono';
 import { useAgoraTick } from '../../src/hooks/useAgoraTick';
 import { TextField } from '../../src/components/TextField';
 import {
+  CardDeDica,
   RotuloCampo,
   CampoHora,
   EscolhaEmGrade,
   StepperNumero,
   CampoTextoLivre,
 } from '../../src/components/CamposDoRegistro';
+import { CATEGORIA_POR_TIPO } from '../../src/theme/categorias';
 import {
   aplicarMascaraHora,
   horaAtual,
@@ -395,6 +397,19 @@ export default function RegistroScreen() {
           </View>
 
           <View style={styles.form}>
+            {/* A dica só aparece ao CRIAR. Editando, o subtítulo já virou "Ajusta
+                o que precisar e salva." — e metade das dicas fala do gesto de
+                registrar ("Toque em começar quando ${nome} pegar no sono"), que
+                é instrução errada para quem está corrigindo um registro velho. */}
+            {!editando ? (
+              <CardDeDica
+                icone={CATEGORIA_POR_TIPO[tipo].icon}
+                fundo={CATEGORIA_POR_TIPO[tipo].bg}
+                tinta={CATEGORIA_POR_TIPO[tipo].tinta}
+                texto={schema.dica(bebeAtivo.name)}
+              />
+            ) : null}
+
             {/* O anel só existe no tipo de duração aberta — hoje, o sono. Vem do
                 `emAberto` do schema, e não de `tipo === 'sono'`: se um dia
                 nascer outro tipo que fica correndo, ele ganha o anel sem ninguém

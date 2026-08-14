@@ -1,6 +1,8 @@
 import { View, Text, TextInput, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, typography } from '../theme/tokens';
+import { IconeDoTipo } from './IconeDoTipo';
+import type { NomeDoIcone } from '../theme/icones';
 import { proximoNoPasso } from '../lib/registroSchema.ts';
 
 /**
@@ -30,6 +32,35 @@ import { proximoNoPasso } from '../lib/registroSchema.ts';
  * colunas derivado da contagem. É o mesmo protótipo, no controle que ele mesmo
  * usa quando a opção é só texto.
  */
+
+/**
+ * O card de dica do modal — círculo pastel de 56px e uma frase por tipo.
+ *
+ * O texto vem do `dica` do schema, que é função porque cinco das dezenove dizem
+ * o nome do bebê. No protótipo elas diziam "a Liz" e "ela"; aqui o artigo saiu e
+ * o pronome virou o nome — que é mais quente que o pronome, e é a única coisa
+ * que a Ninna sabe com certeza.
+ */
+export function CardDeDica({
+  icone,
+  fundo,
+  tinta,
+  texto,
+}: {
+  icone: NomeDoIcone;
+  fundo: string;
+  tinta: string;
+  texto: string;
+}) {
+  return (
+    <View style={estilos.dica}>
+      <View style={[estilos.dicaCirculo, { backgroundColor: fundo }]}>
+        <IconeDoTipo nome={icone} tamanho={30} cor={tinta} />
+      </View>
+      <Text style={estilos.dicaTexto}>{texto}</Text>
+    </View>
+  );
+}
 
 /** O rótulo de campo: 13/700, com o "· opcional" em 600 mais claro. */
 export function RotuloCampo({ texto, opcional }: { texto: string; opcional?: boolean }) {
@@ -231,6 +262,31 @@ export function CampoTextoLivre({
 }
 
 const estilos = StyleSheet.create({
+  dica: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: colors.neutro0,
+    borderRadius: radius.card,
+    padding: spacing.md,
+    marginBottom: 18,
+  },
+  dicaCirculo: {
+    width: 56,
+    height: 56,
+    flexShrink: 0,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dicaTexto: {
+    flex: 1,
+    ...typography.saudacaoSub,
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: 'NunitoSans_600SemiBold',
+    color: colors.neutro600,
+  },
   rotulo: {
     ...typography.label,
     fontFamily: 'NunitoSans_700Bold',
