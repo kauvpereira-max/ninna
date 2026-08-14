@@ -10,6 +10,33 @@ arquivo.
 
 ---
 
+## 🏁 O escopo visual fechou em 14/08/2026
+
+Última coisa a entrar: as três manchas radiais da aba Ninna (divergência 10, que
+reabriu). Conferidas no navegador, na PWA em produção, e as quatro passaram:
+visíveis nas posições certas, em movimento lento e perceptível ao longo de ~20s,
+cada uma no próprio ritmo, e o toque atravessando — campo de texto e sugestão
+responderam com as manchas por cima. Sem barra de rolagem horizontal.
+
+Duas notas da conferência que valem mais do que o "passou":
+
+- **O inspetor mostrou `will-change: transform` nas três**, cada uma em camada de
+  composição própria. Ninguém escreveu isso — é o `react-native-web` reagindo ao
+  `Animated.View`. É também por que a animação fica suave sendo dirigida por JS:
+  o JS só escreve o `transform`, e quem redesenha é o compositor. O aviso usual
+  contra deixar `will-change` fixo não se aplica aqui, porque estas três animam
+  **sempre**, não de vez em quando.
+- **O `aria-hidden` não estava saindo.** `importantForAccessibility` é Android e
+  o `react-native-web` não o traduz. Corrigido com os três atributos juntos. O
+  `teste-acessibilidade` não pegaria: ele varre tocável **sem** papel, e aqui era
+  o contrário — decoração que devia sumir e não sumia.
+
+O que continua fora, por decisão e não por esquecimento: o ícone da aba Ninna (a
+constelação de 40 círculos animados), o Amamentar de dois cronômetros, e a folha
+a 78% sobre a Home. Os três estão registrados abaixo com o motivo.
+
+---
+
 ## ✅ O markup do protótipo ESTÁ no repositório desde 13/08/2026
 
 `docs/prototipo/markup-extraido.html` — 113 KB, o markup desescapado.
