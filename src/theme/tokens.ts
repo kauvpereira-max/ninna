@@ -206,6 +206,18 @@ export const spacing = {
    * Compõe-se de 74 (altura) + 16 (distância do fundo) + folga. Se a altura da
    * barra mudar, este número muda junto — eles são o mesmo número visto de dois
    * lados.
+   *
+   * ⚠️ MEDIDO EM 14/08/2026, e a folga NÃO é igual entre as telas:
+   *
+   *     Rotina  → 82px entre o último item e a barra
+   *     Home    → 34px
+   *
+   * **A Home é a mais apertada, e é a que mais cresce** — ela ganhou os cards de
+   * Padrões e os mini-stats no mesmo mês. Se algum dia um item passar por baixo
+   * da barra, aparece ali primeiro.
+   *
+   * Então: ao somar seção à Home, role até o fim no navegador. Nenhum dos três
+   * do fechamento enxerga conteúdo atrás de uma barra absoluta.
    */
   abaixoDaBarra: 124,
   xl: 32,

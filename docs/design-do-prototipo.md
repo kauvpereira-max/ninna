@@ -107,6 +107,37 @@ teria passado do mesmo jeito.
 
 ---
 
+## ✅ Escopo visual FECHADO — conferido em 14/08/2026
+
+Tab bar, aba Ninna e Planos medidos no navegador, junto com a Home e os modais
+das conferências anteriores.
+
+| | Medido |
+|---|---|
+| Tab bar | `x:14`, folgas `14/14/16`, altura `74`, raio `26`, `#FFFDFA`, borda `#F2E3DA`, sombra `rgba(92,74,66,.07) 0 6px 22px` |
+| Aba Ninna | os três textos, "Acompanhando lix" **sem artigo**, campo visível e funcional |
+| Planos | dois cards, anual primeiro, borda `#F4796B` (ação, não vigilância), selo "Economize R$ 148,90" |
+
+### ⚠️ A folga embaixo NÃO é igual entre as telas
+
+```
+Rotina  → 82px entre o último item e a barra
+Home    → 34px
+```
+
+Rolados até o fim de verdade (`scrollTop >= scrollHeight - clientHeight`), não
+"parece que cabe".
+
+**A Home é a mais apertada, e é a que mais cresce** — ganhou os cards de Padrões
+e os mini-stats no mesmo mês. Se um dia algum item passar por baixo da barra,
+**aparece ali primeiro**.
+
+> Ao somar seção à Home, role até o fim no navegador. Barra com
+> `position: absolute` não reserva espaço, e nenhum dos três do fechamento
+> enxerga conteúdo escondido atrás dela.
+
+---
+
 ## ✅ As cinco decisões de 13/08/2026
 
 Tomadas ao comparar a tela real com este documento. Ficam aqui porque são o
