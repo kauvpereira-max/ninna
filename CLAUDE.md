@@ -417,6 +417,12 @@ Todos puros, rodando no Node sem banco — exceto os quatro últimos:
   repositorio, e se prova antes de varrer: a primeira versao dela acusou 25
   faltas onde havia 2, porque o `>` de `onPress={() => x}` fechava a captura
   antes dos atributos seguintes
+- `teste-deriva.ts` — a conta do fundo animado da aba Ninna. As três manchas são
+  a coisa **menos** testável do app (só existem no navegador, ao longo de 21s), e
+  este teste cobre a única parte que pode errar em silêncio: o deslocamento de
+  fase que substitui o atraso negativo do CSS. Erra de dois jeitos — entrada não
+  crescente faz o `interpolate` jogar exceção (tela branca), e fase errada não
+  quebra nada. Três mutações que ele **tem** que reprovar
 - `teste-horario.ts`, `teste-paginacao.ts`
 - `teste-rls-delete.mjs` — contra o banco real. Prova que A não apaga registro de
   B, e que medicação recusa edição no banco (gatilho da `007`) enquanto fralda

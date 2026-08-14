@@ -508,18 +508,52 @@ a Ninna não aconselha; **"só sei"** antes da lista, porque é melhor ela ler o
 limite antes de formular a pergunta do que depois de receber a recusa; e o artigo
 sumiu de "Acompanhando {bebê}", pela regra do `sex` nullable.
 
-**10. As três manchas radiais animadas ficam de fora — inteiras.**
+**10. ~~As três manchas radiais animadas ficam de fora~~ — VOLTARAM em
+14/08/2026.**
 
-O protótipo tem três `radial-gradient` com `nnDrift` (16s, 21s, 19s). O
-`expo-linear-gradient` não faz gradiente radial, e o caminho seria
-`react-native-svg`.
+O registro original dizia: o protótipo tem três `radial-gradient` com `nnDrift`
+(16s, 21s, 19s), o `expo-linear-gradient` não faz gradiente radial, e o caminho
+seria `react-native-svg`. Ficavam **fora**, não viravam cor chapada — três
+manchas paradas são três blocos de cor sem a razão de existir, porque **o
+movimento era o ponto**. E fechava com a condição: *"se um dia o
+`react-native-svg` entrar por outro motivo, elas voltam"*.
 
-Ficam **fora**, não viram cor chapada: três manchas paradas são três blocos de
-cor sem a razão de existir — **o movimento era o ponto**. Se um dia o
-`react-native-svg` entrar por outro motivo, elas voltam.
+Ele entrou, pelos 21 ícones dos atalhos. Elas voltaram, em
+`src/components/ManchasDaNinna.tsx`, com as medidas literais:
 
-Pela mesma falta, o ícone da Ninna continua sendo o `chatbubble-ellipses`: o do
-protótipo é uma constelação de 40 círculos animados em SVG.
+| # | posição | tamanho | cor | animação |
+|---|---|---|---|---|
+| 1 | `top:-70 left:-60` | 260 | `#FBE3DC` → 0 a 70% | `nnDrift 16s`, sem atraso |
+| 2 | `top:120 right:-90` | 240 | `#EFE9F8` → 0 a 70% | `nnDrift 21s`, **-6s** |
+| 3 | `bottom:80 left:-40` | 220 | `#FCF3DC` → 0 a 70% | `nnDrift 19s`, **-11s** |
+
+Três detalhes de tradução, e nenhum é escolha estética:
+
+- **O atraso negativo virou deslocamento de keyframe.** `nnDrift 21s -6s` quer
+  dizer "já começa no meio", e `Animated` não tem isso. Em vez de atrasar o
+  tempo, `comFase()` desloca o desenho — as quebras da curva vão para onde `u`
+  leva `(u + fase)` a uma quebra original, e entre elas a função continua reta,
+  então é exato e não aproximado.
+- **O `ease-in-out` do CSS é por PERNA**, não pelo ciclo. Aplicá-lo ao ciclo
+  inteiro daria uma parada no meio que o protótipo não tem, então o driver anda
+  linear e a suavidade fica no desenho.
+- **O `border-radius: 999px` do CSS não recorta nada e não foi traduzido.** Num
+  quadrado de 260, o `radial-gradient(circle, …)` mede até o canto (130·√2 ≈
+  184), e a parada em 70% cai em 129px — a borda do círculo. A cor já chega a
+  zero onde a mancha acaba.
+
+E uma decisão que o protótipo não tinha como ter: **com "reduzir movimento"
+ligado no sistema, as três ficam paradas na pose inicial.** É o único caso em que
+"três blocos de cor" é a resposta certa — ali elas não são decoração sem razão,
+são a razão sendo respeitada.
+
+⚠️ Nada disto é visível para o `tsc`, para os testes ou para o `expo export`:
+uma animação quebrada empacota com o mesmo sucesso que uma correta. O pedaço que
+dá para provar — a conta da fase — foi para `src/lib/deriva.ts`, módulo puro, com
+`scripts/teste-deriva.ts` e três mutações. O resto se confere no navegador.
+
+O ícone da Ninna continua sendo o `chatbubble-ellipses`: o do protótipo é uma
+constelação de 40 círculos animados em SVG, e isso é outro tamanho de trabalho.
 
 **11. O cabeçalho da aba Ninna não tem botão de voltar.**
 

@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useBaby } from '../../src/contexts/BabyContext';
 import { perguntar } from '../../src/lib/assistente';
+import { ManchasDaNinna } from '../../src/components/ManchasDaNinna';
 import { colors, spacing, radius, typography } from '../../src/theme/tokens';
 
 /**
@@ -73,6 +74,10 @@ export default function NinnaScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {/* O fundo do protótipo, atrás de tudo. Voltou junto com o
+          `react-native-svg` dos ícones — a divergência 10 dizia isso. */}
+      <ManchasDaNinna />
+
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -202,7 +207,9 @@ export default function NinnaScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.superficie },
+  // `overflow: 'hidden'` é requisito das manchas: as três sangram para fora da
+  // tela de propósito, e sem o recorte a web ganha barra de rolagem lateral.
+  container: { flex: 1, backgroundColor: colors.superficie, overflow: 'hidden' },
   // Mesma coluna de 480 da Home: sem isso a web estica a conversa de ponta a ponta.
   scroll: {
     paddingHorizontal: spacing.respiro,
