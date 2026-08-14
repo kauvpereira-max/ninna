@@ -33,8 +33,16 @@ import { formatarDuracaoMin } from '../lib/horario';
  * não tem duração-alvo — o arco mediria uma meta que não existe, e desenhar meta
  * de sono é a Ninna opinando sobre quanto o bebê devia dormir.
  *
- * Sem o arco, o anel é um trilho: `View` com borda de 12px, sem precisar do
- * `react-native-svg`. Uma dependência a menos por uma semântica que não temos.
+ * Sem o arco, o anel é um trilho: `View` com borda de 12px.
+ *
+ * ⚠️ **O `react-native-svg` ENTROU em 14/08/2026**, pelos ícones dos tipos — e o
+ * arco continua fora. A falta da biblioteca era o motivo SECUNDÁRIO; o primeiro
+ * não mudou, e não é técnico.
+ *
+ * Quem vir a dependência instalada e concluir que "só faltava ela" vai
+ * reintroduzir uma barra de progresso rumo a uma meta que a Ninna não tem — e
+ * meta de sono desenhada na tela é a Ninna opinando sobre quanto o bebê devia
+ * dormir, que é a tese ao contrário.
  */
 export function AnelDoSono({ minutos }: { minutos: number | null }) {
   return (

@@ -1,5 +1,6 @@
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { IconeDoTipo } from './IconeDoTipo';
+import type { NomeDoIcone } from '../theme/icones';
 import { colors, spacing, radius, typography } from '../theme/tokens';
 import type { ChaveDePadrao } from '../lib/copyInsight';
 
@@ -33,14 +34,14 @@ import type { ChaveDePadrao } from '../lib/copyInsight';
  * que ele não calcula. É o que o `teste-linguagem-media` existe para barrar.
  */
 
-const PALETA: Record<ChaveDePadrao, { fundo: string; tinta: string; icone: 'moon' | 'heart' | 'time' }> = {
+const PALETA: Record<ChaveDePadrao, { fundo: string; tinta: string; icone: NomeDoIcone }> = {
   horario: { fundo: '#EAE5F7', tinta: '#5B4A86', icone: 'moon' },
   intervalo: { fundo: '#F6E7E2', tinta: '#A85A4E', icone: 'heart' },
   // O verde do protótipo era do card de "rotina mais consistente", que não
   // existe. Fica com a DURAÇÃO da soneca, que é a terceira métrica do motor e
   // não podia dividir o roxo com o horário: as duas são sono, e apareceriam
   // lado a lado indistinguíveis.
-  duracao: { fundo: '#DDEBDF', tinta: '#426B52', icone: 'time' },
+  duracao: { fundo: '#DDEBDF', tinta: '#426B52', icone: 'clock' },
 };
 
 type Props = {
@@ -94,7 +95,7 @@ function Card({
   return (
     <View style={[estilos.card, { backgroundColor: cor.fundo, width: largura }]}>
       <View style={estilos.chip}>
-        <Ionicons name={cor.icone} size={20} color={cor.tinta} />
+        <IconeDoTipo nome={cor.icone} tamanho={20} cor={cor.tinta} />
       </View>
       <Text style={[estilos.texto, { color: cor.tinta }]}>{texto}</Text>
     </View>

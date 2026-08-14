@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { IconeDoTipo } from '../../src/components/IconeDoTipo';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -151,7 +152,7 @@ export default function HojeScreen() {
               style={styles.categoriaItem}
             >
               <View style={[styles.categoriaBadge, { backgroundColor: c.bg }]}>
-                <Ionicons name={c.icon} size={26} color={c.tinta} />
+                <IconeDoTipo nome={c.icon} tamanho={30} cor={c.tinta} />
                 {/* O "+" do canto: 20px, branco translúcido. Diz que o círculo
                     ADICIONA, e não que ele filtra ou abre — a mesma dúvida que
                     fez o último item do grid se chamar "Mais" e não "Registros". */}

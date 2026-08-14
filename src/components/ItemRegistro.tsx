@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
+import { IconeDoTipo } from './IconeDoTipo';
 import { Ionicons } from '@expo/vector-icons';
 import type { RegistroRecente } from '../lib/registros';
 import { CATEGORIA_POR_TIPO } from '../theme/categorias';
@@ -67,7 +68,7 @@ export function ItemRegistro({ registro, horaLabel, resumo, onPress, acao }: Pro
 
       <View style={styles.anel}>
         <View style={[styles.circulo, { backgroundColor: visual.bg }]}>
-          <Ionicons name={visual.icon} size={20} color={visual.tinta} />
+          <IconeDoTipo nome={visual.icon} tamanho={20} cor={visual.tinta} />
         </View>
       </View>
 

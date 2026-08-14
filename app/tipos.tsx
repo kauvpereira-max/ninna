@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { IconeDoTipo } from '../src/components/IconeDoTipo';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -64,7 +65,7 @@ export default function TiposScreen() {
               style={styles.item}
             >
               <View style={[styles.badge, { backgroundColor: c.bg }]}>
-                <Ionicons name={c.icon} size={20} color={c.tinta} />
+                <IconeDoTipo nome={c.icon} tamanho={20} cor={c.tinta} />
               </View>
               <Text style={styles.itemLabel}>{c.label}</Text>
               <Ionicons name="chevron-forward" size={18} color={colors.neutro400} />

@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { IconeDoTipo } from '../../../src/components/IconeDoTipo';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -140,7 +141,7 @@ export default function DetalheRegistroScreen() {
 
         <View style={styles.cabecalho}>
           <View style={[styles.badge, { backgroundColor: visual.bg }]}>
-            <Ionicons name={visual.icon} size={24} color={visual.tinta} />
+            <IconeDoTipo nome={visual.icon} tamanho={24} cor={visual.tinta} />
           </View>
           <Text style={styles.resumo}>{registro.resumo}</Text>
         </View>

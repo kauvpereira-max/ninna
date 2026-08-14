@@ -5,18 +5,21 @@
 // três cópias do mesmo mapa é como um tipo de registro acaba com cor diferente
 // em cada tela.
 
-// `import type`, e não import comum: `Ionicons` só aparece em posição de tipo
-// (`keyof typeof Ionicons.glyphMap`). Como valor, ele arrastaria o
-// `@expo/vector-icons` inteiro — que não resolve no Node — para dentro de
-// qualquer teste que importe este módulo.
-import type { Ionicons } from '@expo/vector-icons';
+// O ícone deixou de ser nome do Ionicons e passou a ser chave do `icones.ts`,
+// que guarda os paths do protótipo. Ionicons não era fidelidade, era
+// substituição: outro traço, e vários destes desenhos não existem em biblioteca
+// nenhuma — a fralda, a bomba de extração e a balança do peso são próprios.
+//
+// Efeito colateral bom: este módulo deixou de tocar no `@expo/vector-icons`, que
+// não resolve no Node e já tinha derrubado um teste por ser importado como valor.
+import type { NomeDoIcone } from './icones.ts';
 import type { TipoRegistro } from '../lib/registros';
 import { pastel } from './tokens.ts';
 
 export type Categoria = {
   key: TipoRegistro;
   label: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: NomeDoIcone;
   /** O círculo. Pastel. */
   bg: string;
   /** O ícone sobre ele. Escuro — fundo pastel com ícone branco some. */
@@ -60,24 +63,24 @@ const de = (f: (typeof pastel)[keyof typeof pastel]) => ({ bg: f.fundo, tinta: f
  */
 export const CATEGORIA_POR_TIPO: Record<TipoRegistro, Categoria> = {
   amamentar: { key: 'amamentar', label: 'Amamentar', icon: 'heart', ...de(pastel.coral) },
-  fralda: { key: 'fralda', label: 'Fralda', icon: 'water', ...de(pastel.amarelo) },
+  fralda: { key: 'fralda', label: 'Fralda', icon: 'diaper', ...de(pastel.amarelo) },
   sono: { key: 'sono', label: 'Sono', icon: 'moon', ...de(pastel.roxo) },
-  mamadeira: { key: 'mamadeira', label: 'Mamadeira', icon: 'flask', ...de(pastel.verde) },
-  humor: { key: 'humor', label: 'Humor', icon: 'happy', ...de(pastel.rosa) },
-  sintoma: { key: 'sintoma', label: 'Sintoma', icon: 'thermometer', ...de(pastel.coral) },
-  banho: { key: 'banho', label: 'Banho', icon: 'sparkles', ...de(pastel.azul) },
-  passeio: { key: 'passeio', label: 'Passeio', icon: 'walk', ...de(pastel.verde) },
+  mamadeira: { key: 'mamadeira', label: 'Mamadeira', icon: 'bottle', ...de(pastel.verde) },
+  humor: { key: 'humor', label: 'Humor', icon: 'face', ...de(pastel.rosa) },
+  sintoma: { key: 'sintoma', label: 'Sintoma', icon: 'thermo', ...de(pastel.coral) },
+  banho: { key: 'banho', label: 'Banho', icon: 'drop', ...de(pastel.azul) },
+  passeio: { key: 'passeio', label: 'Passeio', icon: 'stroller', ...de(pastel.verde) },
   leitura: { key: 'leitura', label: 'Leitura', icon: 'book', ...de(pastel.lavanda) },
-  atividade: { key: 'atividade', label: 'Atividade', icon: 'color-palette', ...de(pastel.terra) },
-  comida: { key: 'comida', label: 'Comida', icon: 'restaurant', ...de(pastel.terra) },
-  hidratacao: { key: 'hidratacao', label: 'Hidratação', icon: 'water-outline', ...de(pastel.azul) },
-  extracao: { key: 'extracao', label: 'Extração', icon: 'medical', ...de(pastel.verde) },
+  atividade: { key: 'atividade', label: 'Atividade', icon: 'blocks', ...de(pastel.terra) },
+  comida: { key: 'comida', label: 'Comida', icon: 'bowl', ...de(pastel.terra) },
+  hidratacao: { key: 'hidratacao', label: 'Hidratação', icon: 'cup', ...de(pastel.azul) },
+  extracao: { key: 'extracao', label: 'Extração', icon: 'pump', ...de(pastel.verde) },
   peso: { key: 'peso', label: 'Peso', icon: 'scale', ...de(pastel.ameixa) },
-  altura: { key: 'altura', label: 'Altura', icon: 'resize', ...de(pastel.salvia) },
-  circunferencia: { key: 'circunferencia', label: 'Perímetro cefálico', icon: 'ellipse-outline', ...de(pastel.lavanda) },
-  medicacao: { key: 'medicacao', label: 'Medicação', icon: 'medkit', ...de(pastel.rosa) },
-  vitamina: { key: 'vitamina', label: 'Vitamina', icon: 'nutrition', ...de(pastel.amarelo) },
-  vacina: { key: 'vacina', label: 'Vacina', icon: 'shield-checkmark', ...de(pastel.azul) },
+  altura: { key: 'altura', label: 'Altura', icon: 'ruler', ...de(pastel.salvia) },
+  circunferencia: { key: 'circunferencia', label: 'Perímetro cefálico', icon: 'donut', ...de(pastel.lavanda) },
+  medicacao: { key: 'medicacao', label: 'Medicação', icon: 'pill', ...de(pastel.rosa) },
+  vitamina: { key: 'vitamina', label: 'Vitamina', icon: 'drop', ...de(pastel.amarelo) },
+  vacina: { key: 'vacina', label: 'Vacina', icon: 'syringe', ...de(pastel.azul) },
   // Habilidade tem família no protótipo (ameixa) e ainda não é tipo do app —
   // `PRODUTO.md` §3.4. Quando entrar, a cor já está decidida.
 };
