@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
   // maxWidth vale pra Home inteira, não só pro grid: na web o ScrollView ocupa a
   // janela toda e esticava header, card e lista de ponta a ponta. 480 é largura de
   // celular grande — a Home continua sendo uma coluna, mesmo num monitor.
-  scroll: { paddingHorizontal: spacing.respiro, paddingVertical: spacing.lg, width: '100%', maxWidth: 480, alignSelf: 'center' },
+  scroll: { paddingHorizontal: spacing.respiro, paddingVertical: spacing.lg, paddingBottom: spacing.abaixoDaBarra, width: '100%', maxWidth: 480, alignSelf: 'center' },
   // `alignItems: 'flex-start'` e não `center`: o pill acompanha o TOPO do bloco
   // de texto. Centralizado, ele desce junto com o subtítulo e desalinha da
   // saudação, que é a linha que o olho usa como régua.

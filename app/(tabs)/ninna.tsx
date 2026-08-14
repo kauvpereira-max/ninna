@@ -225,6 +225,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: spacing.sm,
     padding: spacing.md,
+    // O rodape fica FORA do scroll, entao a barra flutuante passaria por cima do
+    // campo de digitar. A compensacao mora aqui, nao no scroll.
+    paddingBottom: spacing.abaixoDaBarra,
     width: '100%',
     maxWidth: 480,
     alignSelf: 'center',

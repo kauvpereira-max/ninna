@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
   scroll: {
     paddingHorizontal: spacing.respiro,
     paddingVertical: spacing.lg,
-    paddingBottom: spacing.xxl,
+    paddingBottom: spacing.abaixoDaBarra,
     width: '100%',
     maxWidth: 480,
     alignSelf: 'center',

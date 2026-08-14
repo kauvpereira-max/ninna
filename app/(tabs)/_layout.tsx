@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../src/theme/tokens';
+import { colors, radius, elevation } from '../../src/theme/tokens';
 
 // BETA (21 dias): três abas, e só. O esqueleto inicial tinha seis — Ninna, Insights
 // e Evolução eram telas que diziam "não implementada", e mãe de primeira viagem que
@@ -18,13 +18,42 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: colors.rosa500,
         tabBarInactiveTintColor: colors.neutro400,
+        /**
+         * A barra FLUTUANTE do protótipo: descolada das três bordas, com raio e
+         * sombra próprios.
+         *
+         * ⚠️ `position: absolute` faz a barra parar de RESERVAR ESPAÇO. O
+         * conteúdo passa a correr por baixo dela, e sem compensação o último
+         * item de qualquer lista fica escondido — a última mamada da noite, que
+         * é justamente a que a mãe abre o app para conferir.
+         *
+         * A compensação é o `spacing.abaixoDaBarra` no rodapé de cada tela. Os
+         * dois números são o mesmo visto de dois lados: mexeu na altura daqui,
+         * mexeu lá.
+         *
+         * `borderWidth: 1` nos QUATRO lados — a barra virou um retângulo
+         * arredondado solto, e não uma faixa com traço em cima. O padrão do
+         * React Navigation é só `borderTopWidth`, que aqui apareceria como um
+         * risco atravessando o topo do arredondado.
+         */
         tabBarStyle: {
-          backgroundColor: colors.neutro0,
-          borderTopColor: colors.linhaTabBar,
+          position: 'absolute',
+          left: 14,
+          right: 14,
+          bottom: 16,
+          height: 74,
+          paddingBottom: 0,
+          backgroundColor: colors.superficie,
+          borderWidth: 1,
+          borderColor: colors.linhaTabBar,
+          borderRadius: radius.barra,
+          ...elevation.barra,
         },
+        tabBarItemStyle: { paddingTop: 10, paddingBottom: 10 },
         tabBarLabelStyle: {
           fontFamily: 'NunitoSans_600SemiBold',
-          fontSize: 10,
+          // 11 no protótipo, contra os 10 de antes.
+          fontSize: 11,
         },
       }}
     >

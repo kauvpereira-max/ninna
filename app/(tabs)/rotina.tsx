@@ -235,7 +235,7 @@ function Aviso({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.superficie },
   // Mesma coluna de 480 da Home: sem isso a web estica a lista de ponta a ponta.
-  scroll: { paddingHorizontal: spacing.respiro, paddingVertical: spacing.lg, width: '100%', maxWidth: 480, alignSelf: 'center' },
+  scroll: { paddingHorizontal: spacing.respiro, paddingVertical: spacing.lg, paddingBottom: spacing.abaixoDaBarra, width: '100%', maxWidth: 480, alignSelf: 'center' },
   cabecalho: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   titulo: { ...typography.h1, color: colors.headline },
   subtitulo: { ...typography.body, color: colors.neutro500 },

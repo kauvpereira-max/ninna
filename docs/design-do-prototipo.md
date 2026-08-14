@@ -431,7 +431,34 @@ Progresso rumo a quê? Sono não tem duração-alvo, e desenhar meta de sono é 
 Ninna opinando sobre quanto o bebê devia dormir. Sem o arco, o anel é um trilho
 com borda — e o `react-native-svg` deixa de ser necessário.
 
-**7. O `object-position` do avatar não se aplica.** É enquadramento de foto, e o
+**7. O destaque do plano anual usa `coralAcao` (`#F4796B`), não o `#E15C42`.**
+
+O protótipo põe borda de 2px e badge em `#E15C42` — **o coral de vigilância** —
+para destacar o plano recomendado. Aqui o protótipo perde, e é a segunda inversão
+do trabalho todo.
+
+Borda promocional é **decoração**, e a regra de vigilância foi fechada dois dias
+antes justamente para isso: `#E15C42` significa "está acontecendo agora". Usá-lo
+para vender plano é o caso que a regra proíbe pelo nome.
+
+**8. O badge do plano anual diz "Economize R$ 148,90", não "Mais escolhido pelas
+mães".**
+
+O app tem **uma** usuária. "Mais escolhido pelas mães" é afirmação social que a
+Ninna não pode verificar — e está **na tela onde a mãe decide pagar**.
+
+> Se ela descobrir que era invenção, contamina tudo o que a Ninna diz sobre o
+> bebê dela. A tese inteira depende de a Ninna só afirmar o que pode verificar.
+
+"Economize R$ 148,90" é aritmética que ela confere sozinha: 24,90 × 12 = 298,80,
+menos 149,90. Conferido.
+
+> **O preço, esse, bate.** R$ 24,90/mês e R$ 149,90/ano no protótipo e no app,
+> com "R$ 12,49 por mês" e "7 dias grátis" iguais. A exceção de precedência que
+> existia para preço — *o dado que vale é o que a Stripe cobra* — não precisou
+> ser usada.
+
+**9. O `object-position` do avatar não se aplica.** É enquadramento de foto, e o
 avatar do app é a **inicial do nome num círculo**. Não há o que enquadrar.
 Quando houver foto de bebê, a propriedade volta a fazer sentido e este registro
 deixa de valer.

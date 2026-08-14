@@ -196,6 +196,18 @@ export const spacing = {
    */
   respiro: 20,
   lg: 24,
+  /**
+   * O vão embaixo de toda tela com tab bar — 124px, do protótipo.
+   *
+   * ⚠️ A barra é FLUTUANTE (`position: absolute`), e barra absoluta **não
+   * reserva espaço**: sem este respiro, o último item de qualquer lista fica
+   * atrás dela. É o preço da barra destacada, e ele é pago aqui.
+   *
+   * Compõe-se de 74 (altura) + 16 (distância do fundo) + folga. Se a altura da
+   * barra mudar, este número muda junto — eles são o mesmo número visto de dois
+   * lados.
+   */
+  abaixoDaBarra: 124,
   xl: 32,
   xxl: 48,
 } as const;
@@ -207,6 +219,8 @@ export const radius = {
   mini: 12,
   /** O card "Converse com a Ninna" — único elemento com 22 no protótipo. */
   conversa: 22,
+  /** A tab bar flutuante. */
+  barra: 26,
   /** Cards de conteúdo — o raio mais comum do protótipo. Entre `md` e `lg`. */
   card: 20,
   lg: 24,
@@ -341,6 +355,20 @@ export const elevation = {
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
     shadowRadius: 20,
+    elevation: 8,
+  },
+
+  /**
+   * A tab bar flutuante — a quarta sombra do protótipo.
+   *
+   * Larga e fraca (22 de raio, 7%%): ela nao empurra a barra para frente, so
+   * descola do fundo o suficiente para ela nao parecer colada na borda.
+   */
+  barra: {
+    shadowColor: colors.neutro600,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.07,
+    shadowRadius: 22,
     elevation: 8,
   },
 
