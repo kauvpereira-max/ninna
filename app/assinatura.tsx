@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../src/components/Button';
 import { assinar, estadoDaAssinatura, gerenciar, type Assinatura } from '../src/lib/assinatura';
 import { assinaturaValida } from '../src/lib/acesso';
-import { colors, spacing, radius, typography } from '../src/theme/tokens';
+import { colors, spacing, radius, typography, elevation } from '../src/theme/tokens';
 
 /**
  * A tela de assinatura.
@@ -29,20 +29,42 @@ import { colors, spacing, radius, typography } from '../src/theme/tokens';
  * verdade — e não um "pronto!" que pode ser desmentido no próximo toque.
  */
 
+/**
+ * ⚠️ O ANUAL VEM PRIMEIRO, e o destacado é ele — como no protótipo.
+ *
+ * E o SELO é a única coisa desta tela que o protótipo perdeu. Ele dizia
+ * "Mais escolhido pelas mães": afirmação social, com uma usuária, na tela onde
+ * ela decide pagar. Se ela descobrir que era invenção, contamina tudo o que a
+ * Ninna diz sobre o bebê dela — a tese inteira depende de a Ninna só afirmar o
+ * que pode verificar.
+ *
+ * "Economize R$ 148,90" é aritmética que ela confere sozinha: 24,90 × 12 =
+ * 298,80, menos 149,90. Conferido em 14/08/2026.
+ *
+ * Os VALORES batem com o protótipo e com a Stripe. A exceção de precedência que
+ * existia aqui — preço é dado, e o dado que vale é o que a Stripe cobra — não
+ * precisou ser usada.
+ */
 const PLANOS = [
-  {
-    id: 'mensal' as const,
-    titulo: 'Mensal',
-    preco: 'R$ 24,90',
-    periodo: 'por mês',
-    detalhe: null as string | null,
-  },
   {
     id: 'anual' as const,
     titulo: 'Anual',
     preco: 'R$ 149,90',
-    periodo: 'por ano',
-    detalhe: 'Sai por R$ 12,49 por mês',
+    periodo: '/ano',
+    detalhe: 'Apenas R$ 12,49 por mês',
+    selo: 'Economize R$ 148,90',
+    destaque: true,
+    acao: 'Começar meus 7 dias grátis',
+  },
+  {
+    id: 'mensal' as const,
+    titulo: 'Mensal',
+    preco: 'R$ 24,90',
+    periodo: '/mês',
+    detalhe: null as string | null,
+    selo: null as string | null,
+    destaque: false,
+    acao: 'Assinar mensalmente',
   },
 ];
 
@@ -223,6 +245,9 @@ export default function AssinaturaScreen() {
               </Text>
             </View>
 
+            {/* Um CARD por plano, o destacado primeiro — como no protótipo. A
+                lista de duas linhas com chevron não dizia qual valia mais a
+                pena; o card diz, e diz com aritmética. */}
             <View style={styles.planos}>
               {PLANOS.map((plano) => (
                 <Pressable
@@ -231,21 +256,38 @@ export default function AssinaturaScreen() {
                   disabled={ocupado !== null}
                   accessibilityRole="button"
                   accessibilityLabel={`Assinar plano ${plano.titulo}, ${plano.preco} ${plano.periodo}`}
-                  style={[styles.plano, ocupado !== null && styles.planoInativo]}
+                  style={[
+                    styles.plano,
+                    plano.destaque && styles.planoDestaque,
+                    ocupado !== null && styles.planoInativo,
+                  ]}
                 >
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.planoTitulo}>{plano.titulo}</Text>
-                    {plano.detalhe ? <Text style={styles.planoDetalhe}>{plano.detalhe}</Text> : null}
-                  </View>
-                  <View style={styles.planoPreco}>
+                  {plano.selo ? (
+                    <View style={styles.selo}>
+                      <Text style={styles.seloTexto}>{plano.selo}</Text>
+                    </View>
+                  ) : null}
+
+                  <Text style={styles.planoTitulo}>{plano.titulo}</Text>
+
+                  <View style={styles.linhaDoPreco}>
                     <Text style={styles.precoValor}>{plano.preco}</Text>
                     <Text style={styles.precoPeriodo}>{plano.periodo}</Text>
                   </View>
-                  {ocupado === plano.id ? (
-                    <ActivityIndicator size="small" color={colors.rosa500} />
-                  ) : (
-                    <Ionicons name="chevron-forward" size={18} color={colors.neutro300} />
-                  )}
+
+                  {plano.detalhe ? <Text style={styles.planoDetalhe}>{plano.detalhe}</Text> : null}
+
+                  <View style={[styles.cta, plano.destaque && styles.ctaDestaque]}>
+                    {ocupado === plano.id ? (
+                      <ActivityIndicator size="small" color={colors.neutro0} />
+                    ) : (
+                      <Text
+                        style={[styles.ctaTexto, plano.destaque && styles.ctaTextoDestaque]}
+                      >
+                        {plano.acao}
+                      </Text>
+                    )}
+                  </View>
                 </Pressable>
               ))}
             </View>
@@ -302,19 +344,58 @@ const styles = StyleSheet.create({
 
   planos: { marginTop: spacing.xl, gap: spacing.sm },
   plano: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
     backgroundColor: colors.neutro0,
-    borderRadius: radius.md,
-    padding: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.linha,
+    padding: spacing.respiro,
+    gap: spacing.sm,
+  },
+  /**
+   * A borda de destaque é `coralAcao`, e NÃO o `#E15C42` do protótipo.
+   *
+   * Borda promocional é decoração, e o `#E15C42` é a cor de vigilância — ela
+   * significa "está acontecendo agora". Usá-la para vender plano é exatamente o
+   * caso que a regra do `CLAUDE.md` proíbe pelo nome.
+   */
+  planoDestaque: {
+    borderWidth: 2,
+    borderColor: colors.coralAcao,
+    ...elevation.acaoCoral,
   },
   planoInativo: { opacity: 0.6 },
-  planoTitulo: { ...typography.bodyLarge, color: colors.headline },
-  planoDetalhe: { ...typography.caption, color: colors.rosa700, marginTop: 2 },
-  planoPreco: { alignItems: 'flex-end' },
-  precoValor: { ...typography.bodyLarge, color: colors.headline, fontFamily: 'NunitoSans_700Bold' },
-  precoPeriodo: { ...typography.caption, color: colors.neutro500 },
+  selo: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.coralAcao,
+    borderRadius: radius.full,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginBottom: spacing.xs,
+  },
+  seloTexto: {
+    ...typography.itemRotulo,
+    fontFamily: 'NunitoSans_700Bold',
+    fontSize: 11.5,
+    letterSpacing: 0.4,
+    color: colors.onDark,
+  },
+  planoTitulo: { ...typography.tituloCard, color: colors.headline },
+  linhaDoPreco: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
+  precoValor: { ...typography.display, fontSize: 30, letterSpacing: -0.5, color: colors.headline },
+  precoPeriodo: { ...typography.itemRotulo, color: colors.neutro500 },
+  planoDetalhe: { ...typography.itemRotulo, color: colors.rosa700 },
+  cta: {
+    height: 48,
+    borderRadius: radius.full,
+    borderWidth: 1.5,
+    borderColor: colors.rosa200,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.xs,
+  },
+  ctaDestaque: { backgroundColor: colors.rosa500, borderColor: colors.rosa500 },
+  ctaTexto: { ...typography.cta, fontSize: 15, color: colors.rosa700 },
+  ctaTextoDestaque: { color: colors.neutro0 },
 
   cartaoAtivo: {
     marginTop: spacing.xl,

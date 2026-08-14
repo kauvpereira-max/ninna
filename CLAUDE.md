@@ -462,6 +462,32 @@ duas cópias divergiriam na primeira correção que só uma recebesse.
 - Largura máxima de 480px, centralizada, em toda tela — sem isso a web estica de
   ponta a ponta
 
+## ⚠️ De onde vem o "calor extra" numa copy — e por que ele quase sempre custa
+
+Observado três vezes em 14/08/2026, no mesmo dia:
+
+| Onde | A frase "mais calorosa" | O que ela assumia |
+|---|---|---|
+| Copy do protótipo, aba Ninna | *"…ou o que estiver te preocupando"* | que a Ninna avalia preocupação — ela **recusa** |
+| Cards de Padrões do protótipo | *"a rotina ficou mais consistente"* | julgamento sobre o bebê que o motor não faz |
+| Uma alternativa que EU escrevi | *"é tudo que eu sei dela"* | pronome de gênero, com `sex` nullable |
+
+> **O calor extra vinha sempre de assumir algo sobre o bebê, ou de prometer algo
+> que a Ninna não faz.**
+
+Não é acaso: as regras de tom deste app removem justamente os recursos baratos de
+afeto — o pronome, o adjetivo, a projeção, a promessa larga. Quem escreve copy
+aqui vai sentir a frase "seca" e vai querer aquecê-la, e o atalho disponível é
+sempre um dos quatro.
+
+**O teste prático, antes de trocar uma frase por outra mais bonita:** o que a
+versão nova afirma que a antiga não afirmava? Se a resposta for algo sobre o bebê
+ou sobre o que a Ninna faz, o calor está sendo pago com a tese.
+
+A terceira linha da tabela é a mais útil das três: **eu escrevi a violação
+enquanto aplicava a regra nos outros dois.** As varreduras existem porque quem
+escreve não se pega.
+
 ## Copy de saúde — regras travadas
 
 Ao salvar QUALQUER sintoma, o app mostra uma linha e devolve a decisão para a
