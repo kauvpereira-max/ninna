@@ -206,10 +206,20 @@ function indiceDoDia(agora: Date, fusoHorario?: string): number {
   return soma;
 }
 
+export type ChaveDePadrao = 'intervalo' | 'duracao' | 'horario';
+
 export type InsightDaHome = {
   texto: string;
   /** `true` quando é a frase de aprendizado, não um padrão de verdade. */
   aprendendo: boolean;
+  /**
+   * Qual métrica virou frase hoje — `null` quando é a de aprendizado.
+   *
+   * Existe para a seção "Padrões" poder EXCLUIR esta métrica dos cards dela. Sem
+   * isso, a mesma frase apareceria duas vezes na mesma rolagem: uma no card de
+   * monitoramento e outra no carrossel logo abaixo.
+   */
+  chave: ChaveDePadrao | null;
 };
 
 /**
@@ -236,7 +246,11 @@ export function escolherInsight(
     : [];
 
   if (candidatas.length === 0) {
-    return { texto: APRENDIZADO[semente % APRENDIZADO.length](nomeBebe), aprendendo: true };
+    return {
+      texto: APRENDIZADO[semente % APRENDIZADO.length](nomeBebe),
+      aprendendo: true,
+      chave: null,
+    };
   }
 
   const escolhida = candidatas[semente % candidatas.length];
@@ -245,7 +259,50 @@ export function escolherInsight(
   // dias que caem na mesma métrica cairiam sempre na mesma frase.
   const variacao = variacoes[Math.floor(semente / candidatas.length) % variacoes.length];
 
-  return { texto: variacao(nomeBebe, escolhida.metrica.valor!), aprendendo: false };
+  return { texto: variacao(nomeBebe, escolhida.metrica.valor!), aprendendo: false, chave: escolhida.chave };
+}
+
+/**
+ * Todas as métricas publicáveis, cada uma já virada frase — os cards de "Padrões".
+ *
+ * ------------------------------------------------------------------
+ * MESMO FILTRO E MESMAS FRASES DO CARD DE MONITORAMENTO
+ *
+ * O filtro é o do `escolherInsight`: só `suficiente` com valor. `nao_se_aplica`
+ * fica de fora em silêncio, porque não é falta de dado — é conta que não
+ * descreve este bebê.
+ *
+ * E as frases saem do MESMO `FRASES`. Um texto próprio para o carrossel seria um
+ * segundo lugar onde a Ninna fala sobre o bebê, e o segundo lugar é onde a copy
+ * deriva: o `teste-copy-insight` varre o que sai daqui e do `escolherInsight`
+ * contra as nove proibições, e frase que nasce fora dos dois não é varrida.
+ *
+ * ⚠️ Quem chama é responsável por tirar a métrica que o card já está narrando —
+ * é para isso que o `escolherInsight` devolve a `chave`.
+ */
+export function descreverPadroes(
+  padroes: Padroes | null,
+  nomeBebe: string,
+  opcoes: { agora?: Date; fusoHorario?: string } = {}
+): { chave: ChaveDePadrao; texto: string }[] {
+  if (!padroes) return [];
+  const semente = indiceDoDia(opcoes.agora ?? new Date(), opcoes.fusoHorario);
+
+  return (
+    [
+      { chave: 'intervalo' as const, metrica: padroes.intervaloMedioMamadas },
+      { chave: 'duracao' as const, metrica: padroes.duracaoMediaSoneca },
+      { chave: 'horario' as const, metrica: padroes.horarioMedioSoneca },
+    ]
+      .filter((c) => c.metrica.confianca === 'suficiente' && c.metrica.valor !== null)
+      .map(({ chave, metrica }) => {
+        const variacoes = FRASES[chave][faixaDe(metrica.amostras)];
+        // A variação anda com o dia, como no card — mas somando o índice da
+        // métrica, para as duas não caírem sempre na mesma posição da lista.
+        const i = (semente + chave.length) % variacoes.length;
+        return { chave, texto: variacoes[i](nomeBebe, metrica.valor!) };
+      })
+  );
 }
 
 // ==================================================================

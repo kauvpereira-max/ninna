@@ -9,9 +9,10 @@ import { useRegistrosRecentes } from '../../src/hooks/useRegistrosRecentes';
 import { usePadroes } from '../../src/hooks/usePadroes';
 import { useContagensDeHoje } from '../../src/hooks/useContagensDeHoje';
 import { useAgoraTick } from '../../src/hooks/useAgoraTick';
-import { escolherInsight } from '../../src/lib/copyInsight';
+import { escolherInsight, descreverPadroes } from '../../src/lib/copyInsight';
 import { CardInsight } from '../../src/components/CardInsight';
 import { CardConversa } from '../../src/components/CardConversa';
+import { CardsDePadroes } from '../../src/components/CardsDePadroes';
 import { encerrarSono, resumirSonoEmAndamento } from '../../src/lib/registros';
 import { formatarIdade, formatarIdadeCorrigida } from '../../src/lib/idade';
 import { formatarMomento } from '../../src/lib/horario';
@@ -51,6 +52,13 @@ export default function HojeScreen() {
   // Enquanto ele não tiver do que falar, a Ninna diz que ainda está conhecendo,
   // em vez de fingir um padrão que não aprendeu.
   const insight = escolherInsight(padroes, bebeAtivo.name);
+
+  // Os cards de padrão são o RESTO: tudo que o motor publica menos o que o card
+  // acima já disse. Com uma métrica só, sobra zero e a seção não aparece — o
+  // card de monitoramento já é a superfície certa para uma coisa só.
+  const padroesParaCards = descreverPadroes(padroes, bebeAtivo.name).filter(
+    (p) => p.chave !== insight.chave
+  );
 
   async function handleEncerrarSono(sonoId: string) {
     setEncerrandoId(sonoId);
@@ -172,6 +180,11 @@ export default function HojeScreen() {
             </Pressable>
           ) : null}
         </View>
+
+        {/* "Padrões de {bebê}" — as métricas publicáveis MENOS a que o card de
+            monitoramento já está narrando. Sem esse filtro, a mesma frase
+            apareceria duas vezes na mesma rolagem. */}
+        <CardsDePadroes nomeBebe={bebeAtivo.name} padroes={padroesParaCards} />
 
         {/* Os três números de hoje. Só entram DEPOIS de a resposta chegar —
             três zeros antes disso a mãe lê como registro perdido, não como

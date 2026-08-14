@@ -14,6 +14,7 @@
 
 import {
   escolherInsight,
+  descreverPadroes,
   formatarHorario,
   formatarDuracao,
   formatarIntervalo,
@@ -113,6 +114,15 @@ for (const amostras of AMOSTRAS_POR_FAIXA) {
     for (let d = 1; d <= 60; d++) {
       const agora = new Date(Date.UTC(2026, 7, d, 15, 0));
       todasAsFrases.add(escolherInsight(padroes, NOME, { agora, fusoHorario: FUSO }).texto);
+
+      // Os cards de "Padrões" também escrevem sobre o bebê, e escrevem com as
+      // MESMAS frases — mas por um caminho próprio. Se um dia esse caminho
+      // ganhar texto seu, ele precisa cair nesta varredura junto com o resto:
+      // frase que nasce fora da enumeração não é conferida contra nenhuma das
+      // nove proibições.
+      for (const p of descreverPadroes(padroes, NOME, { agora, fusoHorario: FUSO })) {
+        todasAsFrases.add(p.texto);
+      }
     }
   }
 }
