@@ -641,7 +641,7 @@ sessão.
 
 ⚠️ **E não basta apagar do disco.** O repositório vive **dentro do OneDrive**
 (`~/OneDrive/Área de Trabalho/`), e `Documentos` também está redirecionada — por
-isso o dump mora em `C:\ninna-backup\`, na raiz, fora do perfil. Se ele em algum
+isso o backup mora em `C:/ninna-backup/`, na raiz, fora do perfil. Se ele em algum
 momento tocar uma pasta sincronizada, apagar o arquivo local não apaga as versões
 na nuvem.
 
