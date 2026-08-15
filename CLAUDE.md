@@ -618,15 +618,21 @@ afirmação sobre uma fila, não sobre código.
 
 ## ⏳ Com data marcada
 
-### Apagar o dump da `006` em **15/09/2026**
+### Apagar o backup da `006` em **15/09/2026** — a pasta inteira
 
 ```
-C:\ninna-backup\ninna-<data>-antes-do-006.sql
+C:/ninna-backup/
 ```
 
 O JSON contém **dado de rotina de bebê** e existe só para a janela em que a `006`
 pode ter apagado algo errado. Passada a janela, backup de dado sensível guardado
 "por via das dúvidas" é o oposto do que o termo LGPD promete.
+
+⚠️ **Não é `pg_dump`, e o procedimento de restauração não está no repositório.**
+O `npx supabase db dump` do plano roda o `pg_dump` dentro de um contêiner e exige
+Docker, que não está nesta máquina — conferido em 15/08/2026. O backup saiu em
+JSON pelo SQL Editor, e o `COMO-RESTAURAR.md` mora **junto com ele**, em
+`C:/ninna-backup/`, porque os dois vencem no mesmo dia.
 
 **Por que o lembrete está aqui e não no plano de migração:** o plano vence junto
 com a `006` — pela regra 4, ele é SQL de transição e será apagado. O lembrete
