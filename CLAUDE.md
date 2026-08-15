@@ -624,7 +624,7 @@ afirmação sobre uma fila, não sobre código.
 C:\ninna-backup\ninna-<data>-antes-do-006.sql
 ```
 
-Ele contém **dado de rotina de bebê** e existe só para a janela em que a `006`
+O JSON contém **dado de rotina de bebê** e existe só para a janela em que a `006`
 pode ter apagado algo errado. Passada a janela, backup de dado sensível guardado
 "por via das dúvidas" é o oposto do que o termo LGPD promete.
 

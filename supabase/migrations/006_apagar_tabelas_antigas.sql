@@ -1,7 +1,23 @@
 -- Ninna — migration 006: apagar as cinco tabelas antigas de registro
 --
 -- ⚠️ ESTE É O ÚNICO PASSO IRREVERSÍVEL DO PLANO DE MIGRAÇÃO.
---    NÃO RODAR SEM O DUMP FEITO E CONFERIDO. Ver o roteiro no fim do arquivo.
+--    NÃO RODAR SEM O BACKUP FEITO E CONFERIDO.
+--
+-- O plano de migração previa `npx supabase db dump`. Esse comando roda o
+-- `pg_dump` DENTRO DE UM CONTÊINER e exige Docker Desktop — que não está
+-- instalado nesta máquina, nem o `pg_dump` avulso. Conferido em 15/08/2026.
+--
+-- O backup foi feito pelo SQL Editor, em JSON, e o procedimento inteiro — a
+-- consulta que o gera e a restauração — está em:
+--
+--     C:/ninna-backup/COMO-RESTAURAR.md
+--
+-- A restauração precisa RECRIAR as tabelas antes de repovoar, porque o JSON tem
+-- os dados e não o schema.
+--
+-- As instruções moram ao lado do backup, e não aqui, de propósito: as duas
+-- coisas vencem juntas em 15/09/2026. Backup cujo procedimento de restauração
+-- ficou noutro lugar é backup que ninguém consegue usar na hora do aperto.
 --
 -- ------------------------------------------------------------------
 -- POR QUE ELA TEM O NÚMERO 006 E CHEGA DEPOIS DA 011
@@ -114,10 +130,10 @@ commit;
 -- no-op — ela não passa a "fazer a coisa errada com sucesso", que é o dano
 -- contra o qual a regra 4 existe. Fica como registro histórico.
 --
--- **O que vence é o dump.** Ele contém dado de rotina de bebê e existe só para
+-- **O que vence é o backup.** Ele contém dado de rotina de bebê e existe só para
 -- a janela em que este arquivo pode ter apagado algo errado.
 --
---     APAGAR C:\ninna-backup\ninna-<data>-antes-do-006.sql EM 15/09/2026
+--     APAGAR A PASTA C:/ninna-backup/ INTEIRA EM 15/09/2026
 --
 -- Registrado no `CLAUDE.md`, não aqui: este arquivo é sobre o banco, e quem
 -- vier ler o lembrete daqui a um mês não vem por uma migration.
