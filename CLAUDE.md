@@ -383,7 +383,8 @@ modelo seria procurar quem responda o que a Ninna decidiu não responder.
 
 ### Banco
 
-Cinco migrations, todas aplicadas e conferidas no projeto de São Paulo:
+Dez migrations, todas aplicadas e conferidas no projeto de São Paulo (não há
+`006`: o número está reservado para o `drop` das 5 tabelas antigas):
 
 - `001` — 7 tabelas com RLS
 - `002` — cascata de exclusão. **8 chaves** em `CASCADE` (as 7 dela mais a da
@@ -393,6 +394,17 @@ Cinco migrations, todas aplicadas e conferidas no projeto de São Paulo:
 - `005` — **`registros`**, a tabela de eventos: uma linha por registro, o que
   varia por tipo mora em `dados` (jsonb). É **gerada** do `registroSchema.ts`
   por `scripts/gerar-registros-sql.ts` — o vocabulário tem uma origem só
+- `007` — imutabilidade dos três tipos de saúde, por gatilho
+- `008` — o programa de afiliadas: `afiliadas`, `indicacoes`, `comissoes`.
+  ⚠️ **`indicacoes` tem RLS ligada e ZERO policies, de propósito** — ler a linha
+  seria ler quem é a mãe. Comissão é **única**, 20% da primeira fatura paga,
+  com o percentual **gravado na linha** para o programa não reescrever o passado
+- `009` — um crédito por indicação, para sempre (índice único)
+- `010` — carência de 30 dias, e a distinção entre "total" e "disponível"
+- `011` — **`saques`**. Policy só de SELECT; a escrita passa por
+  `solicitar_saque()`, e o estado só se move com `service_role`. A RPC ganhou
+  `sacado_centavos` e desconta o que já foi pedido — sem isso ela saca duas
+  vezes o mesmo dinheiro
 
 **As 5 tabelas antigas ainda existem, e o app não as toca desde 11/08/2026.** As
 97 linhas foram copiadas para `registros` (passo 3), e o `drop` é uma migration
@@ -423,11 +435,31 @@ Todos puros, rodando no Node sem banco — exceto os quatro últimos:
   fase que substitui o atraso negativo do CSS. Erra de dois jeitos — entrada não
   crescente faz o `interpolate` jogar exceção (tela branca), e fase errada não
   quebra nada. Três mutações que ele **tem** que reprovar
+- `teste-ilustracoes.ts` — as 19 ilustrações dos tipos. Não confere só se o
+  arquivo existe: confere o mapeamento contra o `PHOTO_ID` **do protótipo**,
+  porque existir e ser PNG não impede fralda de apontar para o desenho do banho.
+  Divergência e ausência têm que ser **declaradas**, com motivo
+- `teste-saque.ts` — o mínimo do saque está escrito duas vezes, na `011` e no
+  módulo puro, porque a tela não pode perguntar ao banco a cada tecla. Este teste
+  não confere aritmética: confere o **módulo contra o SQL** — mínimo, os quatro
+  estados, os códigos de retorno e a ordem das validações
+- `teste-niveis.ts` — o nível é derivado da contagem, então mexer num limiar
+  **rebaixa gente em silêncio e retroativamente**. O teste guarda uma cópia
+  congelada dos limiares e transforma a regra em asserção: limiar existente só
+  pode BAIXAR, nível novo só entra ACIMA. Guarda também a copy do selo, que é
+  onde o "calor extra" entra numa tela de conquista
 - `teste-horario.ts`, `teste-paginacao.ts`
 - `teste-rls-delete.mjs` — contra o banco real. Prova que A não apaga registro de
   B, e que medicação recusa edição no banco (gatilho da `007`) enquanto fralda
   continua editável — o controle que impede um gatilho genérico de quebrar o
   encerrar sono. **Obrigatório depois de qualquer mexida em policy ou gatilho**
+
+  Desde 15/08/2026 ele também guarda o **fechamento das afiliadas**, e o caso que
+  importa é o INSERT, não o SELECT: zero linhas na leitura é ambíguo — pode ser
+  "a tabela é fechada" ou "não há linha minha". O INSERT recusado desfaz a
+  ambiguidade nas quatro tabelas. Uma policy de select somada a `indicacoes` com
+  a melhor das intenções derruba o requisito do termo, e nada mais no
+  repositório reclamaria
 - `teste-motor-banco.ts` — o motor contra a massa semeada
 - `teste-lista-banco.ts` — a lista paginada contra o **PostgREST**, não contra um
   array. Metade do cursor desceu para o banco no bloco 3, e Node não tem
@@ -547,9 +579,13 @@ O que essa copy **nunca** faz — vale para qualquer texto de saúde futuro:
 
 ## Próximos passos
 
-**A fila está no `PRODUTO.md` §7.** Em resumo: cobrança por Stripe → painel de
-afiliadas → refatorar registro (schema-driven) → os 14 tipos → notificações →
-previsões → canal nativo.
+**A fila está no `PRODUTO.md` §7.** ~~Cobrança por Stripe~~ → ~~painel de
+afiliadas~~ → ~~refatorar registro~~ → os 14 tipos → notificações → previsões →
+canal nativo.
+
+Os três primeiros fecharam. O **1b** fechou em 15/08/2026 com a etapa 5 (saque)
+e os níveis; o que sobra do 1c é o passo 6, pendente-por-decisão até a primeira
+assinante real.
 
 ## Dívidas conhecidas
 

@@ -294,7 +294,8 @@ ou deixada: em modo teste ela não cobra ninguém.
 - **A atribuição que sobrevive dias.** Ela é aproximação por decisão — funciona
   no mesmo navegador. O caso "tocou no link, voltou cinco dias depois com o
   storage limpo" é buraco conhecido e declarado em `src/lib/indicacao.ts`.
-- **O saque.** A etapa 5 do bloco não existe: não há tabela de solicitação nem
-  estado. O rodapé do painel diz para chamar no WhatsApp, e é honesto sobre isso.
+- ~~**O saque.**~~ **Fechado em 15/08/2026.** A etapa 5 entrou com a `011`:
+  tabela `saques`, `solicitar_saque()` e os quatro estados, conferidos na tela.
+  O rodapé continua sem prometer data — o pagamento segue manual.
 - **O modo live.** Tudo acima é modo teste. O endpoint live precisa nascer com os
   **seis** eventos — `PRODUTO.md` §7, bloco 1c.

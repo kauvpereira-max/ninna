@@ -487,9 +487,10 @@ visual carregar uma mudança de banco, e um bloco que muda schema não fecha com
 
 ---
 
-### 3.5 Painel de afiliadas — registrado em 11/08/2026, não construído
+### 3.5 Painel de afiliadas — ✅ construído e fechado em 15/08/2026
 
-**Trabalho: 1,5–2 semanas. Relógio: —. Depende da cobrança existir.**
+**Registrado em 11/08/2026. O que segue é o escopo como foi pedido; o que
+efetivamente ficou de pé está no fim da seção.**
 
 Escopo mínimo, um nível só, como pedido:
 
@@ -526,6 +527,36 @@ vezes.
    preferência de tela.
 3. **Comissão é evento fiscal.** Pagamento manual adia a questão, não a resolve.
    Vale saber disso antes de a primeira afiliada acumular saldo.
+
+#### ✅ O que ficou de pé — 15/08/2026
+
+| Etapa | Onde |
+|---|---|
+| 1 · migrations com RLS | `008` (`afiliadas`, `indicacoes`, `comissoes`), `009`, `010`, `011` (`saques`) |
+| 2 · atribuição do `?ref=` | `app/_layout.tsx` + `registrar_indicacao()` |
+| 3 · comissão no `invoice.paid` | `supabase/functions/stripe-webhook` |
+| 4 · painel | `app/afiliada.tsx` + `painel_da_afiliada()` |
+| 5 · saque | `011` + `src/lib/saque.ts`, quatro estados conferidos na tela |
+| — · níveis | `src/lib/niveis.ts`, **fora do escopo original** |
+
+**Os três requisitos do topo desta seção continuam valendo, e o segundo agora
+está provado e não só afirmado:** o `teste-rls-delete.mjs` mostra que as quatro
+tabelas recusam INSERT direto. Zero linhas na leitura seria ambíguo.
+
+**O que os níveis somaram, e o que eles deliberadamente não fazem:** o critério é
+`indicacoes_pagas`, derivado e nunca gravado; o nível dá **reconhecimento e não
+comissão** — 25% deixaria a margem do anual em R$4,37, e comissão por nível cria
+pressão para vender num público de mãe de recém-nascido; e o painel **não promete
+placa nem nada físico**, porque entrega física combinada por fora não vira
+promessa em tela.
+
+⚠️ **Os limiares 1/5/15/40 são provisórios** — 45 dias de produto e zero
+afiliadas. A revisão tem regra mecânica, guardada por teste: limiar existente só
+pode BAIXAR, nível novo só entra ACIMA. Subir rebaixaria quem já chegou, em
+silêncio e retroativamente.
+
+**Continua em aberto, e não é dívida técnica:** comissão é evento fiscal. O
+pagamento manual adiou a questão; ela não foi resolvida.
 
 **Uma nota de tom:** este é o primeiro produto da Ninna cujo público não é a mãe.
 As varreduras de gênero e de linguagem de média existem para a copy que a mãe lê;
@@ -883,7 +914,7 @@ assistente de último para primeiro. Agora o canal nativo desce de segundo para
 | 0 | Fechar o que está aberto | 1 sem | DNS | Semeador, SMTP (§11.2), projeto antigo, tela do assistente |
 | 1 | **Cobrança por Stripe** | 1 sem | — | O assistente tem custo marginal; cada dia grátis no ar é dinheiro saindo |
 | 1c | **Virada para a conta live** | 1 dia | ✅ **conta APROVADA em 12/08/2026**, sem pendência | Não é meio dia nem é "trocar de modo": troca de CONTA — detalhe abaixo |
-| 1b | Painel de afiliadas (§3.5) | 1,5–2 sem | — | ✅ **etapas 1–4 provadas ponta a ponta em 12/08/2026** (link → comissão → painel). Falta a etapa 5, o saque — ver abaixo |
+| 1b | Painel de afiliadas (§3.5) | 1,5–2 sem | — | ✅ **FECHADO em 15/08/2026.** Etapas 1–4 provadas em 12/08; a **5 (saque)** entrou com a `011` e foi conferida na tela nos quatro estados. Somou os **níveis**, que não estavam no escopo original |
 | 2 | Refatorar registro (schema-driven) | 1,5 sem | — | Bloqueia o bloco 3 e paga a si mesmo no quinto tipo |
 | 3 | ~~Monitoramento ampliado~~ | — | — | ✅ **FEITO em 11–12/08/2026.** 19 tipos no ar e conferidos no navegador. Falta Habilidade, que não é o último da fila — ver o fim do §3.4 |
 | 4 | Notificações (Web Push) | 2–3 sem | 1 sem | Funciona em PWA instalada; o agendador é o mesmo que o nativo usaria |
