@@ -22,6 +22,7 @@ import {
   impedimentoDoSaque,
   rotuloDoEstado,
 } from '../src/lib/saque';
+import { fraseDoNivel, fraseDoProgresso, nivelDe } from '../src/lib/niveis';
 import { Button } from '../src/components/Button';
 import { TextField } from '../src/components/TextField';
 import { formatarMomento } from '../src/lib/horario';
@@ -193,6 +194,27 @@ export default function PainelAfiliadaScreen() {
         </View>
 
         <Text style={styles.nome}>{afiliada.nome}</Text>
+
+        {/* O selo, e ele diz duas coisas: o nome do nível e O FATO QUE O PRODUZIU.
+            Nada além. A placa existe fora do app e é combinada fora do app —
+            mencioná-la aqui viraria dívida que outra pessoa cumpre à mão, que é
+            a mesma razão de o rodapé do saque não prometer data.
+
+            O nível é DERIVADO da contagem, nunca guardado: não há coluna, não há
+            consulta nova, e não há estado para sair de sincronia. */}
+        {(() => {
+          const pagas = numeros?.indicacoesPagas ?? 0;
+          const nivel = nivelDe(pagas);
+          const progresso = fraseDoProgresso(pagas);
+          if (!nivel && !progresso) return null;
+          return (
+            <View style={styles.selo}>
+              {nivel ? <Text style={styles.seloNivel}>{nivel.nome}</Text> : null}
+              <Text style={styles.seloFato}>{fraseDoNivel(pagas)}</Text>
+              {progresso ? <Text style={styles.seloProgresso}>{progresso}</Text> : null}
+            </View>
+          );
+        })()}
 
         <View style={styles.linkCard}>
           <Text style={styles.campoRotulo}>Seu link</Text>
@@ -429,6 +451,17 @@ const styles = StyleSheet.create({
   // vigilancia, e um saque recusado nao pede acao imediata de ninguem.
   valorRecusado: { ...typography.bodyLarge, color: colors.textoTerciario },
   formulario: { marginBottom: spacing.md },
+  selo: {
+    backgroundColor: colors.superficieRosada,
+    borderWidth: 1,
+    borderColor: colors.bordaRosada,
+    borderRadius: radius.card,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  seloNivel: { ...typography.tituloCard, color: colors.headline },
+  seloFato: { ...typography.caption, color: colors.neutro500, marginTop: 2 },
+  seloProgresso: { ...typography.caption, color: colors.textoTerciario, marginTop: 6 },
   avisoCampo: { ...typography.caption, color: colors.neutro500, marginBottom: spacing.md },
   rodape: { ...typography.caption, color: colors.neutro500, marginTop: spacing.xl },
   avisoTitulo: { ...typography.h2, color: colors.headline, textAlign: 'center' },
