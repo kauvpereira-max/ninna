@@ -471,6 +471,84 @@ async function provarImutabilidadeDaSaude(cliente, babyId) {
 }
 
 // ------------------------------------------------------------------
+// O fechamento do esquema de afiliadas
+// ------------------------------------------------------------------
+//
+// ⚠️ O REQUISITO É "A AFILIADA NÃO VÊ QUEM INDICOU", E ELE MORA NA AUSÊNCIA DE
+// UMA POLICY — QUE É A COISA MAIS FÁCIL DE ALGUÉM SOMAR SEM PERCEBER.
+//
+// `indicacoes` tem RLS ligada e zero policies desde a 008. Um `create policy`
+// bem-intencionado ("deixa ela ver as próprias indicações") derruba o requisito
+// do termo de uma vez, e nada no repositório reclamaria: o `tsc` não abre banco,
+// as varreduras leem texto, e o `expo export` empacota.
+//
+// Este caso roda contra o banco de verdade — é o único lugar onde a falha mora.
+//
+// A conta usada aqui NÃO é afiliada, e isso é o que torna o teste honesto para o
+// que ele afirma: ela não pode nem ler nem escrever, e a distinção entre "não há
+// linha minha" e "a tabela é fechada" aparece no INSERT, que tem que ser
+// RECUSADO em vez de devolver vazio.
+
+async function provarFechamentoDasAfiliadas(cliente) {
+  // Leitura: as três continuam sem devolver nada para quem não é afiliada.
+  for (const tabela of ['indicacoes', 'afiliadas', 'comissoes', 'saques']) {
+    const { data, error } = await cliente.from(tabela).select('*').limit(1);
+    registra(
+      'afiliadas',
+      `${tabela}: leitura não vaza`,
+      !error && (data ?? []).length === 0,
+      error ? `${error.code} ${error.message}` : `veio ${(data ?? []).length} linha(s)`
+    );
+  }
+
+  // ⚠️ A PARTE DISCRIMINANTE. Zero linhas é ambíguo — pode ser "a tabela é
+  // fechada" ou "não há linha minha". O INSERT desfaz a ambiguidade: sem policy
+  // de escrita, o Postgres recusa. Se algum dia passar, alguém somou uma policy.
+  const insercoes = [
+    ['indicacoes', { afiliada_user_id: SEM_DONO, indicada_user_id: SEM_DONO, codigo: 'x', percentual: 20 }],
+    ['afiliadas', { user_id: SEM_DONO, codigo: 'teste-rls-invasor', nome: 'x' }],
+    ['comissoes', { afiliada_user_id: SEM_DONO, indicacao_id: SEM_DONO, tipo: 'credito', valor_centavos: 1 }],
+    // O saque é a primeira coisa que a afiliada origina, e mesmo assim ele NÃO
+    // ganhou policy de insert: a escrita passa por `solicitar_saque()`. Se este
+    // insert passar, a validação de saldo e de mínimo virou decoração.
+    ['saques', { afiliada_user_id: SEM_DONO, valor_centavos: 1, chave_pix: 'invasor@teste' }],
+  ];
+
+  for (const [tabela, linha] of insercoes) {
+    const { data, error } = await cliente.from(tabela).insert(linha).select();
+    registra(
+      'afiliadas',
+      `${tabela}: escrita direta é recusada`,
+      Boolean(error) && (data ?? []).length === 0,
+      error ? '' : 'O INSERT PASSOU — existe policy de escrita onde não deveria'
+    );
+  }
+
+  // E o caminho legítimo continua existindo: a RPC responde, e responde com as
+  // seis colunas da 011. Sem isto, "tudo recusado" também passaria com o
+  // esquema inteiro quebrado.
+  const { data: painel, error: erroPainel } = await cliente.rpc('painel_da_afiliada');
+  const linha = Array.isArray(painel) ? painel[0] : painel;
+  registra(
+    'afiliadas',
+    'painel_da_afiliada responde',
+    !erroPainel,
+    erroPainel ? `${erroPainel.code} ${erroPainel.message}` : ''
+  );
+  if (linha) {
+    registra(
+      'afiliadas',
+      'o painel devolve sacado_centavos (011)',
+      'sacado_centavos' in linha,
+      `colunas: ${Object.keys(linha).join(', ')}`
+    );
+  }
+}
+
+/** Um uuid que não é de ninguém. Serve só para o INSERT ter forma válida. */
+const SEM_DONO = '00000000-0000-0000-0000-000000000000';
+
+// ------------------------------------------------------------------
 // Execução
 // ------------------------------------------------------------------
 
@@ -616,6 +694,7 @@ async function main() {
     }
 
     await provarImutabilidadeDaSaude(b.cliente, bebeB);
+    await provarFechamentoDasAfiliadas(b.cliente);
   } finally {
     // No `finally`: falha no meio do teste não pode deixar bebê e registro de
     // teste no mesmo banco que as embaixadoras vão usar.

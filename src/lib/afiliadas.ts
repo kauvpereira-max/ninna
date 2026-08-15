@@ -22,6 +22,7 @@
  */
 
 import { supabase } from './supabase';
+import { ehCodigoDoSaque, fraseDoSaque, type CodigoDoSaque, type EstadoDoSaque } from './saque.ts';
 
 type Resultado<T> = { data: T; error: string | null };
 
@@ -43,6 +44,24 @@ export type NumerosDaAfiliada = {
   disponivelCentavos: number;
   /** O que ainda espera a carência. Existe para a tela não deixar ela subtraindo de cabeça. */
   emCarenciaCentavos: number;
+  /**
+   * O que já foi pedido e ainda não foi recusado — pendente, aprovado ou pago.
+   *
+   * Vem do banco, e não de uma soma do histórico na tela, pelo mesmo motivo do
+   * `disponivel`: conta de dinheiro que mora no cliente é conta que diverge da
+   * que o servidor pagaria.
+   */
+  sacadoCentavos: number;
+};
+
+/** Uma linha do histórico de saque. A chave é a DELA — não há dado de terceiro aqui. */
+export type Saque = {
+  id: string;
+  valorCentavos: number;
+  chavePix: string;
+  estado: EstadoDoSaque;
+  motivo: string | null;
+  solicitadoEm: string;
 };
 
 /** Uma linha do extrato. Sem identidade — só o que aconteceu com o dinheiro. */
@@ -92,9 +111,68 @@ export async function buscarNumeros(): Promise<Resultado<NumerosDaAfiliada | nul
       totalCentavos: Number(linha.total_centavos ?? 0),
       disponivelCentavos: Number(linha.disponivel_centavos ?? 0),
       emCarenciaCentavos: Number(linha.em_carencia_centavos ?? 0),
+      sacadoCentavos: Number(linha.sacado_centavos ?? 0),
     },
     error: null,
   };
+}
+
+/** O histórico de saque, do mais recente para o mais antigo. */
+export async function listarSaques(limite = 20): Promise<Resultado<Saque[]>> {
+  const { data, error } = await supabase
+    .from('saques')
+    .select('id, valor_centavos, chave_pix, estado, motivo, solicitado_em')
+    .order('solicitado_em', { ascending: false })
+    .limit(limite);
+
+  if (error) {
+    console.warn('[afiliadas] falha ao buscar saques:', error.message);
+    return { data: [], error: ERRO };
+  }
+
+  return {
+    data: (data ?? []).map((l) => ({
+      id: String(l.id),
+      valorCentavos: Number(l.valor_centavos),
+      chavePix: String(l.chave_pix),
+      estado: l.estado as EstadoDoSaque,
+      motivo: l.motivo === null || l.motivo === undefined ? null : String(l.motivo),
+      solicitadoEm: String(l.solicitado_em),
+    })),
+    error: null,
+  };
+}
+
+/**
+ * Pede um saque. Devolve o código do desfecho, nunca uma exceção.
+ *
+ * ⚠️ A validação daqui NÃO é a regra — a regra é a da `solicitar_saque()` na
+ * 011. Esta chamada só entrega o que a tela juntou e traduz a resposta. Um
+ * cliente fabricado à mão encontra o mesmo servidor e a mesma recusa.
+ *
+ * A função do banco devolve TEXTO em vez de levantar exceção justamente para
+ * este ponto: se levantasse, a causa chegaria aqui como mensagem do PostgREST, e
+ * o app teria que adivinhá-la por texto que muda entre versões do Postgres.
+ */
+export async function solicitarSaque(
+  valorCentavos: number,
+  chavePix: string,
+): Promise<{ codigo: CodigoDoSaque; frase: string }> {
+  const { data, error } = await supabase.rpc('solicitar_saque', {
+    valor_centavos: valorCentavos,
+    chave_pix: chavePix,
+  });
+
+  if (error) {
+    console.warn('[afiliadas] falha ao solicitar saque:', error.message);
+    return { codigo: 'erro', frase: fraseDoSaque('erro') };
+  }
+
+  // Texto que não seja um código conhecido não vira estado: um `null` ou uma
+  // string nova de uma migration futura cai no erro genérico em vez de a tela
+  // decidir que deu certo.
+  const codigo: CodigoDoSaque = ehCodigoDoSaque(data) ? data : 'erro';
+  return { codigo, frase: fraseDoSaque(codigo) };
 }
 
 /** O extrato, do mais recente para o mais antigo. */

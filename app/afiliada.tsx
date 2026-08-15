@@ -7,11 +7,23 @@ import {
   buscarAfiliada,
   buscarNumeros,
   listarExtrato,
+  listarSaques,
+  solicitarSaque,
   emReais,
   type Afiliada,
   type NumerosDaAfiliada,
   type MovimentoComissao,
+  type Saque,
 } from '../src/lib/afiliadas';
+import {
+  SAQUE_MINIMO_CENTAVOS,
+  centavosDoTexto,
+  fraseDoSaque,
+  impedimentoDoSaque,
+  rotuloDoEstado,
+} from '../src/lib/saque';
+import { Button } from '../src/components/Button';
+import { TextField } from '../src/components/TextField';
 import { formatarMomento } from '../src/lib/horario';
 import { colors, spacing, radius, typography } from '../src/theme/tokens';
 
@@ -57,8 +69,15 @@ export default function PainelAfiliadaScreen() {
   const [afiliada, setAfiliada] = useState<Afiliada | null>(null);
   const [numeros, setNumeros] = useState<NumerosDaAfiliada | null>(null);
   const [extrato, setExtrato] = useState<MovimentoComissao[]>([]);
+  const [saques, setSaques] = useState<Saque[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+
+  const [valorTexto, setValorTexto] = useState('');
+  const [chavePix, setChavePix] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  /** A resposta do último pedido, boa ou ruim. Some quando ela mexe nos campos. */
+  const [aviso, setAviso] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -78,12 +97,13 @@ export default function PainelAfiliadaScreen() {
           return;
         }
 
-        const [n, e] = await Promise.all([buscarNumeros(), listarExtrato()]);
+        const [n, e, s] = await Promise.all([buscarNumeros(), listarExtrato(), listarSaques()]);
         if (!ativo) return;
 
         setNumeros(n.data);
         setExtrato(e.data);
-        setErro(n.error ?? e.error);
+        setSaques(s.data);
+        setErro(n.error ?? e.error ?? s.error);
         setCarregando(false);
       }
 
@@ -93,6 +113,38 @@ export default function PainelAfiliadaScreen() {
       };
     }, [])
   );
+
+  const disponivel = numeros?.disponivelCentavos ?? 0;
+  const valorCentavos = centavosDoTexto(valorTexto);
+  const impedimento = impedimentoDoSaque(valorCentavos, chavePix, disponivel);
+  /**
+   * Um pedido aberto por vez — a mesma regra do índice parcial da 011.
+   *
+   * A tela esconde o formulário, o banco recusa de qualquer jeito. As duas
+   * coisas existem porque esconder é gentileza e recusar é a regra: quem chegar
+   * por fora da tela encontra a segunda.
+   */
+  const pedidoAberto = saques.find((s) => s.estado === 'pendente' || s.estado === 'aprovado');
+
+  async function pedir() {
+    if (impedimento || enviando) return;
+    setEnviando(true);
+    setAviso(null);
+
+    const { codigo, frase } = await solicitarSaque(valorCentavos ?? 0, chavePix.trim());
+    setAviso(frase);
+
+    if (codigo === 'ok') {
+      setValorTexto('');
+      setChavePix('');
+      // Relê do servidor em vez de somar na tela: o disponível agora desconta o
+      // pedido, e quem faz essa conta é a RPC.
+      const [n, s] = await Promise.all([buscarNumeros(), listarSaques()]);
+      setNumeros(n.data);
+      setSaques(s.data);
+    }
+    setEnviando(false);
+  }
 
   if (carregando) {
     return (
@@ -190,6 +242,87 @@ export default function PainelAfiliadaScreen() {
           </View>
         </View>
 
+        <Text style={styles.sectionLabel}>SAQUE</Text>
+
+        {pedidoAberto ? (
+          <Text style={styles.vazio}>
+            Já existe um pedido de {emReais(pedidoAberto.valorCentavos)} em andamento. Assim
+            que fechar, dá pra pedir outro.
+          </Text>
+        ) : afiliada.ativa === false ? (
+          <Text style={styles.vazio}>
+            {fraseDoSaque('pausada')}
+          </Text>
+        ) : disponivel < SAQUE_MINIMO_CENTAVOS ? (
+          <Text style={styles.vazio}>
+            O saque mínimo é {emReais(SAQUE_MINIMO_CENTAVOS)}. Falta{' '}
+            {emReais(SAQUE_MINIMO_CENTAVOS - disponivel)} pra liberar o primeiro pedido.
+          </Text>
+        ) : (
+          <View style={styles.formulario}>
+            <TextField
+              label="Valor"
+              value={valorTexto}
+              onChangeText={(t) => {
+                setValorTexto(t);
+                setAviso(null);
+              }}
+              placeholder={`De ${emReais(SAQUE_MINIMO_CENTAVOS)} até ${emReais(disponivel)}`}
+              keyboardType="decimal-pad"
+              inputMode="decimal"
+            />
+            {/* A chave fica na SOLICITAÇÃO, não no cadastro. Custa digitar de
+                novo a cada saque, e compra não guardar chave viva de quem parou
+                de indicar — nem ter que manter um lugar onde ela troca a chave. */}
+            <TextField
+              label="Chave Pix"
+              value={chavePix}
+              onChangeText={(t) => {
+                setChavePix(t);
+                setAviso(null);
+              }}
+              placeholder="CPF, e-mail, telefone ou chave aleatória"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <Button
+              label="Solicitar saque"
+              onPress={pedir}
+              disabled={impedimento !== null}
+              loading={enviando}
+            />
+            {/* O impedimento aparece SÓ depois de ela ter digitado alguma coisa:
+                abrir a tela e já ver "o saque mínimo é R$ 20,00" em vermelho
+                seria o app reclamando de um formulário vazio. */}
+            {impedimento && valorTexto !== '' ? (
+              <Text style={styles.avisoCampo}>{fraseDoSaque(impedimento)}</Text>
+            ) : null}
+          </View>
+        )}
+
+        {aviso ? <Text style={styles.avisoCampo}>{aviso}</Text> : null}
+
+        {saques.length > 0 ? (
+          <View style={styles.lista}>
+            {saques.map((s) => (
+              <View key={s.id} style={styles.movimento}>
+                <View style={styles.movimentoTexto}>
+                  <Text style={styles.movimentoTipo}>{rotuloDoEstado(s.estado)}</Text>
+                  <Text style={styles.movimentoData}>
+                    {formatarMomento(s.solicitadoEm)} · {s.chavePix}
+                  </Text>
+                  {s.motivo ? <Text style={styles.movimentoData}>{s.motivo}</Text> : null}
+                </View>
+                <Text
+                  style={s.estado === 'recusado' ? styles.valorRecusado : styles.valorPositivo}
+                >
+                  {emReais(s.valorCentavos)}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
         <Text style={styles.sectionLabel}>EXTRATO</Text>
 
         {extrato.length === 0 ? (
@@ -215,12 +348,14 @@ export default function PainelAfiliadaScreen() {
           </View>
         )}
 
-        {/* Sem prazo prometido: o pagamento é manual, e prometer data seria
-            passar para outra pessoa uma promessa que ela vai ter que cumprir à
-            mão. Ver PRODUTO.md §3.5. */}
+        {/* Sem prazo prometido, e isso não mudou com o botão existir: o
+            pagamento continua sendo manual, e prometer data seria passar para
+            outra pessoa uma promessa que ela vai ter que cumprir à mão. O que
+            mudou é que o pedido agora fica registrado em vez de virar mensagem.
+            Ver PRODUTO.md §3.5. */}
         <Text style={styles.rodape}>
-          Para receber, é só me chamar. O pagamento é combinado direto, e eu confirmo aqui
-          quando sair.
+          O pagamento é feito à mão, então não tem data automática. O pedido fica
+          registrado aqui, e o estado muda assim que o Pix sair.
         </Text>
       </ScrollView>
     </SafeAreaView>
@@ -290,6 +425,11 @@ const styles = StyleSheet.create({
   movimentoData: { ...typography.caption, color: colors.neutro500 },
   valorPositivo: { ...typography.bodyLarge, color: colors.headline },
   valorNegativo: { ...typography.bodyLarge, color: colors.coral600 },
+  // Recusado nao e erro nem alarme: e um estado. Cinza, nao coral — o coral e
+  // vigilancia, e um saque recusado nao pede acao imediata de ninguem.
+  valorRecusado: { ...typography.bodyLarge, color: colors.textoTerciario },
+  formulario: { marginBottom: spacing.md },
+  avisoCampo: { ...typography.caption, color: colors.neutro500, marginBottom: spacing.md },
   rodape: { ...typography.caption, color: colors.neutro500, marginTop: spacing.xl },
   avisoTitulo: { ...typography.h2, color: colors.headline, textAlign: 'center' },
   avisoTexto: {
