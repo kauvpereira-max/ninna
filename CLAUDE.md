@@ -547,6 +547,25 @@ lado para ganhar com a troca.
 levaria junto o que ela pegava. Se a decisão de produto mudar, a regra nasce
 **junto com** a reescrita, não antes dela.
 
+## Decisão em aberto, com gatilho: a nota fiscal da comissão
+
+Comissão é **evento fiscal**, e o pagamento manual adiou a questão em vez de
+resolvê-la. Está registrado desde 11/08/2026 e segue verdadeiro.
+
+O que mudou com a etapa 5 não é a resposta — é o **custo de errar**. Antes o
+saque era conversa de WhatsApp; agora existe tabela, estado e histórico, e um
+saque pago deixa registro com data e valor.
+
+> **Gatilho:** a primeira afiliada que não seja o dono do projeto acumular saldo
+> real e pedir saque.
+> **Data-limite:** 15/02/2027, mesmo sem o gatilho disparar.
+
+Os dois, pela razão da regra 4: o gatilho pode não ser notado — um saque de R$20
+não parece evento contábil — e a data é sempre generosa demais.
+
+**Hoje não há saldo de ninguém**, e por isso isto é decisão adiada com
+consciência, não pendência esquecida. Detalhe em `PRODUTO.md` §3.5.
+
 ## Copy de saúde — regras travadas
 
 Ao salvar QUALQUER sintoma, o app mostra uma linha e devolve a decisão para a
@@ -580,12 +599,22 @@ O que essa copy **nunca** faz — vale para qualquer texto de saúde futuro:
 ## Próximos passos
 
 **A fila está no `PRODUTO.md` §7.** ~~Cobrança por Stripe~~ → ~~painel de
-afiliadas~~ → ~~refatorar registro~~ → os 14 tipos → notificações → previsões →
-canal nativo.
+afiliadas~~ → ~~refatorar registro~~ → ~~os tipos de registro~~ → notificações →
+previsões → canal nativo.
 
-Os três primeiros fecharam. O **1b** fechou em 15/08/2026 com a etapa 5 (saque)
-e os níveis; o que sobra do 1c é o passo 6, pendente-por-decisão até a primeira
-assinante real.
+Os **quatro** primeiros fecharam. O **1b** fechou em 15/08/2026 com a etapa 5
+(saque) e os níveis; o que sobra do 1c é o passo 6, pendente-por-decisão até a
+primeira assinante real.
+
+⚠️ **Esta linha dizia "os 14 tipos" até 15/08/2026, e estava errada desde
+12/08.** Os 19 estão no ar desde o bloco 3, e o que falta é **Habilidade** — que
+não é o décimo quarto item de uma fila, é decisão de produto em aberto
+(`PRODUTO.md` §3.4, "Habilidade — o tipo que ficou").
+
+O erro nasceu de uma soma: o §3.4 dizia 14 e listava 13. O `PRODUTO.md` foi
+corrigido em 12/08, este arquivo não — e a fila continuou prometendo trabalho que
+não existe. **Nenhum teste pega isto**: os 19 tipos estão certos, e "faltam 14" é
+afirmação sobre uma fila, não sobre código.
 
 ## Dívidas conhecidas
 

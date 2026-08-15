@@ -4,6 +4,14 @@
 reversibilidade assimétrica. Plano de execução: `docs/plano-migracao-registros.md`.
 **Escrita em:** 11/08/2026, com o `registroSchema.ts` já pronto.
 
+> ⚠️ **"São 14 tipos pendentes", mais abaixo, era verdade em 11/08 e não é mais.**
+> Foram construídos 13 em 11–12/08 — a soma original estava errada, e o que
+> faltava era **Habilidade**, hoje decisão de produto em aberto e não item de
+> fila (`PRODUTO.md` §3.4). São **19 tipos no ar**.
+>
+> O documento fica como está: ele registra o estado em que a decisão foi tomada,
+> e reescrevê-lo apagaria o motivo de ela ter sido tomada assim.
+
 O bloco 2 terminou com o tipo de registro declarado num lugar só. Isso mudou o
 custo desta decisão: hoje **as duas opções custam o mesmo no código do app**,
 porque o app não conhece mais tabela nenhuma — ele conhece o schema. O que

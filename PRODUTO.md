@@ -555,8 +555,37 @@ afiliadas. A revisão tem regra mecânica, guardada por teste: limiar existente 
 pode BAIXAR, nível novo só entra ACIMA. Subir rebaixaria quem já chegou, em
 silêncio e retroativamente.
 
-**Continua em aberto, e não é dívida técnica:** comissão é evento fiscal. O
-pagamento manual adiou a questão; ela não foi resolvida.
+#### ⏳ Decisão em aberto, com gatilho: a nota fiscal da comissão
+
+**Comissão é evento fiscal, e o pagamento manual adiou a questão em vez de
+resolvê-la.** Isso está escrito desde 11/08/2026 como um dos três "vão morder", e
+segue verdadeiro.
+
+**O que mudou em 15/08/2026 não é a resposta — é o custo de errar.** Antes o
+saque era uma conversa de WhatsApp; agora existe tabela, estado e histórico. Um
+saque pago passa a ter registro com data e valor, que é exatamente o tipo de
+coisa que a Receita lê como pagamento a prestador.
+
+> **GATILHO:** a primeira afiliada que **não seja eu** acumular saldo real e
+> pedir saque. Não antes.
+>
+> **DATA-LIMITE:** revisar em **15/02/2027** mesmo que o gatilho não tenha
+> disparado — se em seis meses ninguém sacou, a pergunta certa deixou de ser
+> "como emitir nota" e passou a ser "o programa de afiliadas está de pé?".
+
+Os dois, e não um, pela mesma razão da regra 4 do `CLAUDE.md`: **o gatilho pode
+não ser notado** (um saque de R$20 não parece um evento contábil) e **a data é
+sempre generosa demais** (seis meses passam sem ninguém abrir este arquivo).
+
+**Hoje não há saldo de ninguém.** As únicas comissões que existiram foram as do
+teste ponta a ponta e as da conferência da etapa 5, todas apagadas. Então isto é
+decisão adiada com consciência, não pendência esquecida — e é por isso que ela
+está aqui e não nas Dívidas conhecidas.
+
+**O que a decisão vai precisar responder, quando chegar a hora:** se a afiliada
+emite nota contra a empresa, se o pagamento entra como despesa de marketing, e
+se há retenção. Nenhuma dessas perguntas tem resposta no código, e nenhuma delas
+fica mais barata sendo antecipada agora.
 
 **Uma nota de tom:** este é o primeiro produto da Ninna cujo público não é a mãe.
 As varreduras de gênero e de linguagem de média existem para a copy que a mãe lê;
