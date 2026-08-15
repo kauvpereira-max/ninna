@@ -235,11 +235,34 @@ function tabelasComBabyId() {
     while ((achado = criacoes.exec(sql)) !== null) {
       if (/\bbaby_id\b/.test(achado[2])) achadas.add(achado[1]);
     }
+    // ⚠️ E o que foi APAGADO também é decisão das migrations.
+    //
+    // Sem isto, a `006` some com cinco tabelas e esta função continua devolvendo
+    // as cinco — porque o `create table` da `001` segue no arquivo e o regex só
+    // olhava criação. O teste passaria a exercitar tabela morta, e a limpeza a
+    // varrer o que não existe.
+    for (const m of sql.matchAll(/drop table (?:if exists )?(\w+)/g)) {
+      achadas.delete(m[1]);
+    }
   }
   return [...achadas];
 }
 
 const TABELAS_DE_REGISTRO = tabelasComBabyId();
+
+/**
+ * Só os casos de tabela VIVA.
+ *
+ * Os seis blocos das cinco tabelas antigas continuam escritos mais abaixo, e
+ * param de rodar sozinhos no dia em que a `006` for aplicada — sem ninguém
+ * precisar lembrar de vir aqui apagá-los no mesmo commit, que é o tipo de
+ * lembrete que não sobrevive a um fim de semana.
+ *
+ * A asserção de cobertura continua valendo na direção que importa: ela pergunta
+ * se toda tabela COM `baby_id` tem caso, e filtrar casos não cria caso nenhum.
+ * Tabela nova sem teste continua reprovando.
+ */
+const soVivas = (casos) => casos.filter((c) => TABELAS_DE_REGISTRO.includes(c.tabela));
 
 /**
  * Apaga registros e depois o bebê, nesta ordem — de propósito.
@@ -272,7 +295,7 @@ async function limpar(cliente, babyId, rotulo) {
 
 const AGORA = new Date().toISOString();
 
-const TIPOS = [
+const TIPOS = soVivas([
   {
     nome: 'amamentar',
     tabela: 'feeding_records',
@@ -376,7 +399,7 @@ const TIPOS = [
     linha: (babyId) => ({ baby_id: babyId, confidence_score: 1 }),
     edicao: { confidence_score: 99 },
   },
-];
+]);
 
 /**
  * O gatilho da `007`: medicação, vitamina e vacina não se editam.

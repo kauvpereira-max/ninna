@@ -51,3 +51,17 @@ supabase/.temp/
 /ios
 /android
 node_modules
+
+# Dumps de banco. NUNCA no repositório: eles carregam dado de rotina de bebê, e
+# um `git add -A` distraído publica o que o termo LGPD promete guardar.
+#
+# ⚠️ E o .gitignore é o cinto, não o suspensório: este repositório vive DENTRO do
+# OneDrive, então um dump salvo em qualquer lugar da árvore sincroniza para a
+# Microsoft mesmo sem entrar no git. O lugar é C:\ninna-backup\, fora do perfil.
+*.sql.gz
+*.dump
+/backup*
+# E o caso que os tres acima NAO pegam: um dump em .sql puro. Nao da para
+# ignorar *.sql — as migrations sao .sql. Entao ignora so a RAIZ, que e onde um
+# dump cai por acidente; supabase/migrations/ continua versionado.
+/*.sql

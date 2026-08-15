@@ -616,6 +616,29 @@ corrigido em 12/08, este arquivo não — e a fila continuou prometendo trabalho
 não existe. **Nenhum teste pega isto**: os 19 tipos estão certos, e "faltam 14" é
 afirmação sobre uma fila, não sobre código.
 
+## ⏳ Com data marcada
+
+### Apagar o dump da `006` em **15/09/2026**
+
+```
+C:\ninna-backup\ninna-<data>-antes-do-006.sql
+```
+
+Ele contém **dado de rotina de bebê** e existe só para a janela em que a `006`
+pode ter apagado algo errado. Passada a janela, backup de dado sensível guardado
+"por via das dúvidas" é o oposto do que o termo LGPD promete.
+
+**Por que o lembrete está aqui e não no plano de migração:** o plano vence junto
+com a `006` — pela regra 4, ele é SQL de transição e será apagado. O lembrete
+precisa sobreviver ao arquivo que o gerou, e este é o documento que se lê toda
+sessão.
+
+⚠️ **E não basta apagar do disco.** O repositório vive **dentro do OneDrive**
+(`~/OneDrive/Área de Trabalho/`), e `Documentos` também está redirecionada — por
+isso o dump mora em `C:\ninna-backup\`, na raiz, fora do perfil. Se ele em algum
+momento tocar uma pasta sincronizada, apagar o arquivo local não apaga as versões
+na nuvem.
+
 ## Dívidas conhecidas
 
 - **§11.2 / D3b — fechado em 12/08/2026.** SMTP no ar pelo Resend, SPF e DKIM
