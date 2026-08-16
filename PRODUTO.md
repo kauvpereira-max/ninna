@@ -267,6 +267,47 @@ mitigação.
 
 **Trabalho: 2–3 semanas. Relógio: 1 semana.**
 
+#### ⚠️ Este bloco NÃO é retenção — decidido em 16/08/2026
+
+O bloco entrou na fila com o diagnóstico *"sem notificação a mãe registra dois
+dias e esquece o app"*. **O diagnóstico está certo e a solução não segue dele.**
+
+A notificação de retenção que o mercado usa é **"você não registrou nada hoje"**.
+Isso é culpa, e culpa é o que o tom da Ninna proíbe — não é redação a ajustar,
+é a categoria inteira. E *"está na hora da mamada"* é previsão e prescrição sobre
+um motor que só descreve o passado.
+
+O que sobra, depois de tirar as duas, é honesto e **é raro por natureza**:
+
+| | o que é | frequência |
+|---|---|---|
+| **A · sono em aberto** | fato sobre o ESTADO DO APP, não sobre o bebê | quando acontece |
+| **B · a Ninna passou a saber** | métrica cruzando de `insuficiente` para `suficiente` | 3 vezes na vida da conta |
+
+**Nenhuma das duas traz a mãe de volta todo dia, e elas não foram escolhidas
+para isso.** A A resolve um problema real — o timer que fica correndo a noite
+toda e estraga o dado do dia. A B entrega a promessa do produto no instante em
+que ela se cumpre.
+
+> **A retenção depende de o produto ter valor de uso diário, não de avisar mais.**
+> Notificação que fosse capaz de sustentar retenção sozinha seria, neste app,
+> necessariamente uma que viola a tese. Registrado para ninguém reabrir o bloco
+> daqui a três meses achando que faltou volume.
+
+C (o padrão mudou) e D (resumo do dia) ficam fora desta versão, e voltam com dado
+de uso real — não por princípio, por ordem.
+
+#### ⚠️ Badge puro não existe em Web Push
+
+Descoberto ao desenhar o service worker, em 16/08/2026. `PushManager.subscribe`
+exige `userVisibleOnly: true`, e Chrome e iOS obrigam **toda** mensagem recebida
+a virar notificação visível — service worker que recebe push e não chama
+`showNotification` faz o navegador mostrar uma genérica ou revogar a permissão.
+
+O que dá é o vizinho: **notificação silenciosa** (`silent: true`) **mais** badge
+no ícone. Aparece na central, não buzina. É quase o que se queria, e chamá-lo de
+"badge" seria descrever errado o que o sistema faz.
+
 #### A regra da tese, aplicada
 
 Permitido: **"Liz costuma dormir por volta de agora."**
