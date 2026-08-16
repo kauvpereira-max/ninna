@@ -16,13 +16,17 @@
 // isso, a lista de proibições poderia estar vazia e o teste passaria igual.
 
 import {
+  REGISTROS_ANTES_DO_CONVITE,
   SILENCIO_COMECA,
   SILENCIO_TERMINA,
   TETO_DIARIO_PADRAO,
+  copyDoConvite,
   dentroDoSilencio,
   impedimentoDoAviso,
+  impedimentoDoConvite,
   montarAviso,
   type Estado,
+  type EstadoDoConvite,
   type Pedido,
 } from '../src/lib/notificacoes.ts';
 
@@ -96,12 +100,27 @@ conferir(
 // 3. A copy — e o que ela não pode virar
 // ------------------------------------------------------------------
 
+const convite = copyDoConvite('Liz');
+
 const TODAS = [
-  montarAviso(sono),
-  montarAviso({ tipo: 'padrao_novo', metrica: 'intervalo_mamadas', nome: 'Liz' }),
-  montarAviso({ tipo: 'padrao_novo', metrica: 'duracao_soneca', nome: 'Liz' }),
-  montarAviso({ tipo: 'padrao_novo', metrica: 'horario_soneca', nome: 'Liz' }),
-].flatMap((a) => [a.titulo, a.corpo]);
+  ...[
+    montarAviso(sono),
+    montarAviso({ tipo: 'padrao_novo', metrica: 'intervalo_mamadas', nome: 'Liz' }),
+    montarAviso({ tipo: 'padrao_novo', metrica: 'duracao_soneca', nome: 'Liz' }),
+    montarAviso({ tipo: 'padrao_novo', metrica: 'horario_soneca', nome: 'Liz' }),
+  ].flatMap((a) => [a.titulo, a.corpo]),
+  // ⚠️ A copy do CONVITE entra na mesma varredura, e é a que mais precisa.
+  //
+  // Ela é a tela que promete o que vai chegar, e é exatamente ali que o "calor
+  // extra" do CLAUDE.md se instala: prometer mais para ela aceitar mais. Uma
+  // promessa a mais aqui não é redação — é a notificação que este bloco decidiu
+  // não ter, entrando pela porta da frente.
+  convite.titulo,
+  convite.corpo,
+  convite.silencio,
+  convite.aceitar,
+  convite.recusar,
+];
 
 const PROIBIDO: { padrao: RegExp; porque: string }[] = [
   // As duas categorias que este bloco decidiu não ter.
@@ -168,6 +187,134 @@ conferir(
 // módulo. Não é detalhe de estilo: é o que fica visível na tela de bloqueio.
 conferir('o padrão diz o nome', montarAviso(padrao).corpo.includes('Liz'));
 conferir('o sono em aberto NÃO diz o nome', !montarAviso(sono).corpo.includes('Liz'));
+
+// ------------------------------------------------------------------
+// 5. O convite — quando ele pode aparecer
+// ------------------------------------------------------------------
+//
+// ⚠️ O que está sendo defendido aqui não é uma tela: é o PROMPT DO NAVEGADOR,
+// que só existe uma vez na vida da conta. Um convite que aparece cedo demais faz
+// a mãe tocar em "Bloquear", e `denied` não se desfaz de dentro do app — o canal
+// morre para aquele aparelho, para sempre, sem nada no repositório reclamando.
+//
+// Por isso o teste não confere casos escolhidos a dedo: ele varre TODAS as
+// combinações e caracteriza o `null` por completo. Condição nova que alguém
+// somar à função sem somar aqui derruba a segunda metade; condição que alguém
+// afrouxar derruba a primeira.
+
+// ⚠️ O PISO DO LIMIAR, congelado — e ele existe porque a varredura abaixo NÃO o
+// defende. Ela deriva a expectativa do próprio `REGISTROS_ANTES_DO_CONVITE`, e
+// por isso passaria inteira com o limiar em zero. É a mesma armadilha do
+// `teste-niveis.ts`: constante que o teste importa não é constante que o teste
+// guarda.
+//
+// Subir é livre — mais conservador nunca queima o prompt. Descer é o que não
+// pode: com 0, o convite volta a ser a primeira coisa que a mãe vê, que é
+// exatamente o desenho que este bloco recusou.
+conferir(
+  'o limiar do convite não desceu',
+  REGISTROS_ANTES_DO_CONVITE >= 3,
+  `está ${REGISTROS_ANTES_DO_CONVITE}; o piso é 3`,
+);
+
+const PERMISSOES = ['default', 'granted', 'denied'] as const;
+let combinacoes = 0;
+let convitesPossiveis = 0;
+
+for (const suportado of [true, false]) {
+  for (const permissao of PERMISSOES) {
+    for (const jaInscrito of [true, false]) {
+      for (const dispensado of [true, false]) {
+        for (let registros = 0; registros <= REGISTROS_ANTES_DO_CONVITE + 2; registros++) {
+          const e: EstadoDoConvite = { suportado, permissao, jaInscrito, dispensado, registros };
+          const merece =
+            suportado &&
+            permissao === 'default' &&
+            !jaInscrito &&
+            !dispensado &&
+            registros >= REGISTROS_ANTES_DO_CONVITE;
+
+          const resultado = impedimentoDoConvite(e);
+          combinacoes++;
+          if (merece) convitesPossiveis++;
+
+          conferir(
+            'o convite aparece exatamente quando deve',
+            (resultado === null) === merece,
+            `${JSON.stringify(e)} → ${resultado ?? 'aparece'}`,
+          );
+        }
+      }
+    }
+  }
+}
+
+// Contra-prova da varredura acima: se `merece` fosse sempre falso, ou sempre
+// verdadeiro, o laço passaria inteiro sem provar nada.
+conferir('a varredura do convite tem os dois desfechos', convitesPossiveis > 0 && convitesPossiveis < combinacoes);
+
+// A precedência, que a varredura não vê: ela só olha `null` contra não-`null`, e
+// para ela tanto faz QUAL impedimento voltou. O motivo é o que a tela mostraria.
+conferir(
+  'sem suporte vence tudo',
+  impedimentoDoConvite({
+    suportado: false,
+    permissao: 'default',
+    jaInscrito: false,
+    dispensado: false,
+    registros: 99,
+  }) === 'sem_suporte',
+);
+conferir(
+  'já inscrito vence a permissão',
+  impedimentoDoConvite({
+    suportado: true,
+    permissao: 'granted',
+    jaInscrito: true,
+    dispensado: false,
+    registros: 99,
+  }) === 'ja_inscrito',
+);
+conferir(
+  'permissão já respondida vence o "cedo demais"',
+  impedimentoDoConvite({
+    suportado: true,
+    permissao: 'denied',
+    jaInscrito: false,
+    dispensado: false,
+    registros: 0,
+  }) === 'ja_respondeu',
+);
+
+// O limiar, nas duas bordas: um a menos cala, o limiar convida.
+conferir(
+  `${REGISTROS_ANTES_DO_CONVITE - 1} registros ainda é cedo`,
+  impedimentoDoConvite({
+    suportado: true,
+    permissao: 'default',
+    jaInscrito: false,
+    dispensado: false,
+    registros: REGISTROS_ANTES_DO_CONVITE - 1,
+  }) === 'cedo_demais',
+);
+conferir(
+  `${REGISTROS_ANTES_DO_CONVITE} registros já convida`,
+  impedimentoDoConvite({
+    suportado: true,
+    permissao: 'default',
+    jaInscrito: false,
+    dispensado: false,
+    registros: REGISTROS_ANTES_DO_CONVITE,
+  }) === null,
+);
+
+// O convite diz o silêncio, e diz o silêncio DE VERDADE. Sem isto, mudar
+// `SILENCIO_COMECA` deixaria a tela prometendo uma janela que não existe mais —
+// e a mãe descobriria pelo telefone vibrando às 21h30.
+conferir('o convite anuncia o silêncio real', convite.silencio.includes(`${SILENCIO_COMECA}h`) && convite.silencio.includes(`${SILENCIO_TERMINA}h`), convite.silencio);
+
+// Ele fala do bebê dela pelo nome — é a tese, na tela que pede permissão.
+conferir('o convite diz o nome', convite.corpo.includes('Liz'), convite.corpo);
 
 console.log(
   falhas === 0

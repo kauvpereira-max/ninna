@@ -119,11 +119,91 @@ export function impedimentoDoAviso(pedido: Pedido, estado: Estado): Impedimento 
 // dela; o segundo é sobre o estado do app, e o nome ali não acrescentaria nada
 // além de exposição na tela de bloqueio.
 
+// ------------------------------------------------------------------
+// O convite, que vem ANTES do prompt do sistema
+// ------------------------------------------------------------------
+//
+// ⚠️ O prompt do navegador é IRREVERSÍVEL na prática. Ele aparece uma vez; se ela
+// tocar em "Bloquear", a resposta passa a ser `denied` para sempre, e desfazer
+// exige achar a lista de permissões do site — coisa que quase ninguém faz.
+//
+// Então o prompt do sistema não pode ser a primeira vez que ela ouve falar do
+// assunto. Antes dele vem um convite da própria Ninna, que diz quais são os dois
+// avisos e que a madrugada é silenciosa. Quem toca "Quero receber" já sabe o que
+// está aceitando, e a taxa de "Bloquear" despenca.
+//
+// A outra metade da regra é QUANDO convidar. Convite no primeiro minuto pega a
+// mãe que ainda não sabe o que o app faz, e a resposta dela é não. Por isso ele
+// espera ela ter registrado alguma coisa: o convite chega para quem já usou.
+
+export const REGISTROS_ANTES_DO_CONVITE = 3;
+
+export type EstadoDoConvite = {
+  /** O navegador tem service worker, PushManager e Notification. */
+  suportado: boolean;
+  permissao: 'default' | 'granted' | 'denied';
+  /** Este aparelho já está inscrito. */
+  jaInscrito: boolean;
+  /** Quantos registros ela já tem. */
+  registros: number;
+  /** Ela já respondeu "agora não" alguma vez. */
+  dispensado: boolean;
+};
+
+/** Por que o convite não aparece. `null` quer dizer que aparece. */
+export type ImpedimentoDoConvite =
+  | 'sem_suporte'
+  | 'ja_inscrito'
+  | 'ja_respondeu'
+  | 'dispensado'
+  | 'cedo_demais';
+
+export function impedimentoDoConvite(estado: EstadoDoConvite): ImpedimentoDoConvite | null {
+  if (!estado.suportado) return 'sem_suporte';
+
+  // Antes da permissão: inscrita é inscrita, e o convite não tem o que oferecer.
+  if (estado.jaInscrito) return 'ja_inscrito';
+
+  // `granted` sem inscrição não precisa de convite — dá para inscrever calado,
+  // porque não há prompt a disparar. `denied` não tem caminho por aqui: insistir
+  // com quem o navegador já bloqueou só gasta a tela.
+  if (estado.permissao !== 'default') return 'ja_respondeu';
+
+  if (estado.dispensado) return 'dispensado';
+  if (estado.registros < REGISTROS_ANTES_DO_CONVITE) return 'cedo_demais';
+
+  return null;
+}
+
 const FRASES_DE_PADRAO: Record<MetricaDePadrao, (nome: string) => string> = {
   intervalo_mamadas: (nome) => `Já dá pra ver o intervalo entre as mamadas de ${nome}.`,
   duracao_soneca: (nome) => `Já dá pra ver quanto duram as sonecas de ${nome}.`,
   horario_soneca: (nome) => `Já dá pra ver que horas ${nome} costuma pegar no sono.`,
 };
+
+/**
+ * A copy do convite mora AQUI, e não na tela, para cair na mesma varredura que a
+ * copy dos avisos: é uma tela que promete o que o app vai mandar, e prometer
+ * demais aqui é como nasce a notificação que a Ninna decidiu não ter.
+ *
+ * Ela diz exatamente as duas, e diz o silêncio — que é a parte que faz a mãe
+ * aceitar. "Notificações da Ninna?" sem isso é um cheque em branco.
+ */
+export function copyDoConvite(nome: string): {
+  titulo: string;
+  corpo: string;
+  silencio: string;
+  aceitar: string;
+  recusar: string;
+} {
+  return {
+    titulo: 'Duas coisas valem um aviso',
+    corpo: `O timer de sono que ficou correndo, e o dia em que a Ninna passar a conhecer o ritmo de ${nome}.`,
+    silencio: `Só essas duas — e nada entre ${SILENCIO_COMECA}h e ${SILENCIO_TERMINA}h.`,
+    aceitar: 'Quero receber',
+    recusar: 'Agora não',
+  };
+}
 
 export function montarAviso(pedido: Pedido): Aviso {
   if (pedido.tipo === 'sono_aberto') {

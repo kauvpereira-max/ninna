@@ -14,6 +14,7 @@ import { escolherInsight, descreverPadroes } from '../../src/lib/copyInsight';
 import { CardInsight } from '../../src/components/CardInsight';
 import { CardConversa } from '../../src/components/CardConversa';
 import { CardsDePadroes } from '../../src/components/CardsDePadroes';
+import { ConvitePush } from '../../src/components/ConvitePush';
 import { encerrarSono, resumirSonoEmAndamento } from '../../src/lib/registros';
 import { formatarIdade, formatarIdadeCorrigida } from '../../src/lib/idade';
 import { formatarMomento } from '../../src/lib/horario';
@@ -136,6 +137,15 @@ export default function HojeScreen() {
         />
 
         <CardConversa nomeBebe={bebeAtivo.name} onPress={() => router.push('/(tabs)/ninna')} />
+
+        {/* O convite de notificação, que quase sempre não aparece: ele exige
+            navegador com suporte, permissão ainda não respondida, e ela já ter
+            registrado alguma coisa. A regra inteira está em
+            `impedimentoDoConvite` — aqui só entra a contagem.
+
+            `registros.length` é a lista dos 8 mais recentes, não o total. Serve:
+            o limiar é 3, e quem tem 3 dos últimos 8 tem pelo menos 3. */}
+        <ConvitePush nomeBebe={bebeAtivo.name} registros={registros.length} />
 
         {/* A divisória do protótipo: 1px, `linha`, entre o bloco de cima e os
             atalhos. O documento especifica UMA — esta. */}

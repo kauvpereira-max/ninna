@@ -37,6 +37,16 @@ export default function MaisScreen() {
             onPress={() => router.push('/assinatura')}
           />
 
+          {/* Não some quando o navegador não suporta: a tela é quem explica o
+              porquê. Item que aparece e desaparece conforme o aparelho faz a mãe
+              achar que perdeu uma configuração. */}
+          <Item
+            icone="notifications-outline"
+            label="Notificações"
+            descricao="Quais avisos chegam, e como desligar"
+            onPress={() => router.push('/notificacoes')}
+          />
+
           <Item
             icone="heart-outline"
             label="Sobre a Ninna"

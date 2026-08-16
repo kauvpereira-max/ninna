@@ -321,6 +321,38 @@ idênticas — mesmo layout, mesma faixa, mesma cor —, e a **única** diferen�
 confiável é o `acct_` na URL. Detalhe no `PRODUTO.md` §7, "Onde a cobrança mora
 hoje".
 
+### ⚠️ O par VAPID não se rotaciona — trocar é desligar todo mundo
+
+O par é o que assina o push. A privada é o secret `VAPID_PRIVATE_KEY` do
+Supabase; a pública é a env `EXPO_PUBLIC_VAPID_PUBLIC_KEY` do Vercel, e vai
+dentro do bundle.
+
+> **A pública fica GRAVADA dentro de cada inscrição.** O navegador amarra o
+> `applicationServerKey` ao endpoint no instante do `subscribe()`. Trocar o par
+> depois não é rotação de segredo: é invalidar toda inscrição que existe. Cada
+> aparelho precisa se inscrever de novo, um por um, e **nada no app avisa que
+> parou de chegar** — nem para a mãe, nem para nós. O push simplesmente para.
+
+Não há erro na tela, não há log de falha do lado dela, e o envio continua saindo
+daqui como se estivesse tudo bem. É a família da regra 2d: **errado em silêncio,
+no runtime que importa.**
+
+**A cópia durável mora em `C:/ninna-segredos/vapid.json`** — fora do repositório
+e **fora do OneDrive**, pela mesma razão do backup em `C:/ninna-backup/`: pasta
+sincronizada guarda versão na nuvem depois de o arquivo local ser apagado.
+
+A cópia não é zelo. O `secrets list` do Supabase devolve **digest, nunca valor** —
+perdido o arquivo, a privada não se recupera de lugar nenhum, e o único caminho
+de volta é gerar um par novo, que é a rotação acima. Guardar as duas metades
+juntas é o que mantém a decisão reversível.
+
+> **E o `secrets list` é como se confere de que par se está falando** — regra 1
+> aplicada a chave. O digest é SHA-256 do valor: `sha256(<privada>)` contra o que
+> a lista mostra diz, sem margem, se o arquivo local é o que está no ar. Foi
+> assim que se descobriu, em 16/08/2026, que já havia um par no servidor
+> diferente do que acabara de ser gerado — sete minutos de diferença, e nenhuma
+> tela contava isso.
+
 ### O motor e a copy — o núcleo da tese
 
 - `src/lib/padroes.ts` — três métricas sobre *este* bebê: intervalo entre

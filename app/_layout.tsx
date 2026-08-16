@@ -8,6 +8,7 @@ import { BabyProvider, useBaby } from '../src/contexts/BabyContext';
 import { BannerInstalar } from '../src/components/BannerInstalar';
 import { CAMINHO_NOVA_SENHA } from '../src/lib/urls';
 import { guardarIndicacao, refDaUrl } from '../src/lib/indicacao';
+import { registrarServiceWorker } from '../src/lib/push';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -92,6 +93,9 @@ function RootNavigator() {
             afiliada ve um aviso neutro — a checagem e do banco, nao da rota. */}
         <Stack.Screen name="afiliada" options={{ presentation: 'modal' }} />
         <Stack.Screen name="sobre" options={{ presentation: 'modal' }} />
+        {/* Ligar e desligar o push. Modal como o resto de Mais: é ajuste, e a mãe
+            volta pra onde estava. */}
+        <Stack.Screen name="notificacoes" options={{ presentation: 'modal' }} />
         {/* Assinatura NÃO é modal: é o destino de volta do Checkout, e quem chega
             da Stripe chega numa carga fria, sem pilha por baixo pra modal usar. */}
         <Stack.Screen name="assinatura" />
@@ -102,6 +106,21 @@ function RootNavigator() {
 
 export default function RootLayout() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
+
+  /**
+   * Registra o service worker, e SÓ isso — nada de permissão, nada de prompt.
+   *
+   * Fica na raiz e sem depender de sessão porque registrar é invisível e barato,
+   * e porque o `subscribe` do convite precisa de um SW já ativo no momento do
+   * toque dela. Deixar para registrar na hora do "Quero receber" somaria uma
+   * espera bem no instante em que o navegador exige gesto do usuário.
+   *
+   * No nativo e no Node dos testes a função sai pela guarda de suporte, sem tocar
+   * em `window`.
+   */
+  useEffect(() => {
+    void registrarServiceWorker();
+  }, []);
 
   useEffect(() => {
     async function loadFonts() {
